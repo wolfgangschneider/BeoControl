@@ -19,7 +19,7 @@ The hardware and adapter layers are completely independent of any user interface
 | Frontend | Status | Description |
 |---|---|---|
 | **Terminal (TUI)** | ✅ included | Full-featured console UI using [RazorConsole](https://github.com/lofcz/razorconsole) — great for headless servers and SSH sessions |
-| **Web (Blazor)** | ✅ included | ASP.NET Core Blazor Server UI, accessible from any browser on the local network |
+| **Web (Blazor)** | 🧪 POC | ASP.NET Core Blazor Server UI — proof of concept showing the web frontend path |
 | **Mobile** | 🔧 possible | A .NET MAUI app could connect over BLE directly to the ESP32 or talk to a Blazor backend — no core changes needed |
 | **REST / API** | 🔧 possible | Wrap `IDevice` in a minimal ASP.NET Core API to integrate with Home Assistant, shortcuts, scripts, etc. |
 | **Desktop (WPF/WinUI)** | 🔧 possible | A native Windows UI is just another consumer of `IDevice` |
@@ -40,6 +40,7 @@ Any UI  ──→  IDevice  ──→  Adapter  ──→  Transport  ──→ 
 │  │ BeoControl   │  │ BeoControl   │  │  Mobile App  │  │   ...   │ │
 │  │     TUI      │  │   Blazor     │  │ (.NET MAUI)  │  │         │ │
 │  │(RazorConsole)│  │(Blazor Server│  │  (possible)  │  │         │ │
+│  │              │  │    POC)      │  │              │  │         │ │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └────┬────┘ │
 └─────────┼─────────────────┼─────────────────┼───────────────┼──────┘
           └─────────────────┴─────────────────┴───────────────┘
