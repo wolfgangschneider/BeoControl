@@ -174,17 +174,18 @@ For greater range, a BC847 NPN transistor switches a higher current through thre
                            │       │       │
                          LED1    LED2    LED3   (TSHA 6203)
                            │       │       │
-           ┌───────────────┴───────┴───────┘
-           │          BC847 Collector
-           │
-  ┌────────┴─────────┐
-  │   M5 Atom S3     │
-  │                  │
-  │  G38 ────────────┼── R470 ── BC847 Base
-  │                  │
-  │  GND ────────────┼── BC847 Emitter
-  │                  │
-  └──────────────────┘
+                           └───────┴───────┘
+                                   │
+                           ┌───────┴───────┐
+                           │    BC847      │
+  ┌──────────────────┐     │               │
+  │   M5 Atom S3     │     │  C (Collector)│
+  │                  │     │               │
+  │  G38 ────────────┼─R470┤  B (Base)     │
+  │                  │     │               │
+  │  GND ────────────┼─────┤  E (Emitter)  │
+  │                  │     │               │
+  └──────────────────┘     └───────────────┘
 ```
 
 > **G38** → **R470** limits base current into the **BC847**. Each of the 3× **TSHA 6203** IR LEDs has its own **R10** resistor in series to V+. All three LED+R10 branches are in parallel, connected to the **BC847** collector. **GND** connects to the emitter.
