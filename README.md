@@ -165,31 +165,31 @@ If you place the ESP32 very close to the B&O IR receiver, a single IR LED wired 
 
 ## Advanced HW — Transistor Driver with 3× IR LEDs
 
-For greater range, a BC847 NPN transistor switches a higher current through three IR LEDs in series, powered from V+:
+For greater range, a BC847 NPN transistor switches a higher current through three IR LEDs in parallel, each with its own R10 current limiting resistor, powered from V+:
 
 ```
-          ┌──────────────────┐                        V+
-          │   M5 Atom S3     │                         │
-          │                  │                        R10 (10 Ω)
-          │  G38 ────────────┼── R470 ── BC847 Base    │
-          │                  │           │         Collector ── LED3 anode
-          │  GND ────────────┼── BC847 Emitter          │     TSHA 6203
-          │                  │                        LED3 cathode
-          └──────────────────┘                          │
-                                                      LED2 anode
-                                                        │     TSHA 6203
-                                                      LED2 cathode
-                                                        │
-                                                      LED1 anode
-                                                        │     TSHA 6203
-                                                      LED1 cathode
-                                                        │
-                                                   BC847 Collector
+                           V+      V+      V+
+                           │       │       │
+                          R10     R10     R10   (10 Ω each)
+                           │       │       │
+                         LED1    LED2    LED3   (TSHA 6203)
+                           │       │       │
+           ┌───────────────┴───────┴───────┘
+           │          BC847 Collector
+           │
+  ┌────────┴─────────┐
+  │   M5 Atom S3     │
+  │                  │
+  │  G38 ────────────┼── R470 ── BC847 Base
+  │                  │
+  │  GND ────────────┼── BC847 Emitter
+  │                  │
+  └──────────────────┘
 ```
 
-> **G38** → **R470** limits base current into the **BC847**. The collector drives 3× **TSHA 6203** IR LEDs in series. **R10** on the V+ side limits the LED current. **GND** connects to the emitter.
+> **G38** → **R470** limits base current into the **BC847**. Each of the 3× **TSHA 6203** IR LEDs has its own **R10** resistor in series to V+. All three LED+R10 branches are in parallel, connected to the **BC847** collector. **GND** connects to the emitter.
 
-
+## Credits & Acknowledgements
 
 - **[aanban/esp32_beo4](https://github.com/aanban/esp32_beo4)** — ESP32 Beo4 remote firmware. A huge thanks for this project which made ESP32-based control possible.
 - **[toresbe/beoported](https://github.com/toresbe/beoported/releases)** — The base and inspiration for the PC2/Masterlink protocol implementation.
