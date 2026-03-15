@@ -34,29 +34,39 @@ Any UI  ──→  IDevice  ──→  Adapter  ──→  Transport  ──→ 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                            UI Layer                                  │
-│                                                                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌─────────┐ │
-│  │ BeoControl   │  │ BeoControl   │  │  Mobile App  │  │   ...   │ │
-│  │     TUI      │  │   Blazor     │  │ (.NET MAUI)  │  │         │ │
-│  │(RazorConsole)│  │(Blazor Server│  │  (possible)  │  │         │ │
-│  │              │  │    POC)      │  │              │  │         │ │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └────┬────┘ │
-└─────────┼─────────────────┼─────────────────┼───────────────┼──────┘
+│                            UI Layer                                 │
+│                                                                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌─────────┐  │
+│  │ BeoControl   │  │ BeoControl   │  │  Mobile App  │  │   ...   │  │
+│  │     TUI      │  │   Blazor     │  │ (.NET MAUI)  │  │         │  │
+│  │(RazorConsole)│  │(Blazor Server│  │  (possible)  │  │         │  │
+│  │              │  │    POC)      │  │              │  │         │  │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └────┬────┘  │
+└─────────┼─────────────────┼─────────────────┼───────────────┼───────┘
           └─────────────────┴─────────────────┴───────────────┘
                                     │ IDevice
           ┌─────────────────────────┴────────────────────────┐
-          │                   Adapter Layer                   │
-          │   Beo4Device (Serial / BLE)                       │
-          │   Pc2Device  (USB PC2)                            │
+          │                   Adapter Layer                  │
+          │   Beo4Device (Serial / BLE)                      │
+          │   Pc2Device  (USB PC2)                           │
           └──────────┬──────────────────────┬────────────────┘
                      │ ITransport           │
           ┌──────────┴──────────┐  ┌────────┴───────────────┐
-          │  Transport Layer    │  │    Hardware Layer       │
-          │  SerialTransport    │  │  Pc2Core (event loop)   │
-          │  BluetoothTransport │  │  Pc2Mixer (audio HW)    │
-          │  (BLE NUS)          │  │  Beolink (Masterlink)   │
-          └─────────────────────┘  └────────────────────────┘
+          │  Transport Layer    │  │    Hardware Layer      │
+          │  SerialTransport    │  │  Pc2Core (event loop)  │
+          │  BluetoothTransport │  │  Pc2Mixer (audio HW)   │
+          │  (BLE NUS)          │  │  Beolink (Masterlink)  │
+          └────────┬────────────┘  └───────────┬────────────┘
+                   │                           │
+          ┌────────┴──────────────────────┐    │
+          │         Devices               │    │
+          │  ┌────────────┐  ┌──────────┐ │    │  ┌─────────────┐
+          │  │ M5 Atom S3 │  │M5 Stamp  │ │    └──│ Beolink PC2 │
+          │  │  (Serial / │  │   S3     │ │       │  (USB)      │
+          │  │    BLE)    │  │(Serial / │ │       └─────────────┘
+          │  └────────────┘  │  BLE)    │ │
+          │                  └──────────┘ │
+          └───────────────────────────────┘
 ```
 
 ## Projects
