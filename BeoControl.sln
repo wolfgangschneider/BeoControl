@@ -1,0 +1,68 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11520.95
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dotnet_pc2", "Hardware\dotnet_pc2\dotnet_pc2.csproj", "{0C24C5A2-17C3-73BF-069B-0E0DD1EF9EF2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeoControlInterfaces", "Interfaces\BeoControlInterfaces.csproj", "{79E20EF0-CF3C-42BF-BD26-98F6A09B629D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Beo4Adapter", "Adapters\Beo4Adapter\Beo4Adapter.csproj", "{5956DEBA-4C04-49A1-90FF-0E371E069826}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pc2Adapter", "Adapters\Pc2Adapter\Pc2Adapter.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Hardware", "Hardware", "{BF000001-0000-0000-0000-000000000001}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Adapters", "Adapters", "{BF000002-0000-0000-0000-000000000002}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UI", "UI", "{BF000003-0000-0000-0000-000000000003}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeoControlBlazor", "UI\BeoControlBlazor\BeoControlBlazor.csproj", "{0932951A-2544-975A-DD91-FF81514D32DD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeoControlTUI", "UI\BeoControlTUI\BeoControlTUI.csproj", "{6D1258DB-BC5F-F0C4-80F2-0B560F7783C7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0C24C5A2-17C3-73BF-069B-0E0DD1EF9EF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C24C5A2-17C3-73BF-069B-0E0DD1EF9EF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C24C5A2-17C3-73BF-069B-0E0DD1EF9EF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C24C5A2-17C3-73BF-069B-0E0DD1EF9EF2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{79E20EF0-CF3C-42BF-BD26-98F6A09B629D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79E20EF0-CF3C-42BF-BD26-98F6A09B629D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79E20EF0-CF3C-42BF-BD26-98F6A09B629D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79E20EF0-CF3C-42BF-BD26-98F6A09B629D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5956DEBA-4C04-49A1-90FF-0E371E069826}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5956DEBA-4C04-49A1-90FF-0E371E069826}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5956DEBA-4C04-49A1-90FF-0E371E069826}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5956DEBA-4C04-49A1-90FF-0E371E069826}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0932951A-2544-975A-DD91-FF81514D32DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0932951A-2544-975A-DD91-FF81514D32DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0932951A-2544-975A-DD91-FF81514D32DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0932951A-2544-975A-DD91-FF81514D32DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D1258DB-BC5F-F0C4-80F2-0B560F7783C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D1258DB-BC5F-F0C4-80F2-0B560F7783C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D1258DB-BC5F-F0C4-80F2-0B560F7783C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D1258DB-BC5F-F0C4-80F2-0B560F7783C7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{0C24C5A2-17C3-73BF-069B-0E0DD1EF9EF2} = {BF000001-0000-0000-0000-000000000001}
+		{5956DEBA-4C04-49A1-90FF-0E371E069826} = {BF000002-0000-0000-0000-000000000002}
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890} = {BF000002-0000-0000-0000-000000000002}
+		{0932951A-2544-975A-DD91-FF81514D32DD} = {BF000003-0000-0000-0000-000000000003}
+		{6D1258DB-BC5F-F0C4-80F2-0B560F7783C7} = {BF000003-0000-0000-0000-000000000003}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {01039ABA-4081-401D-8AE2-EBC92EC3E4B2}
+	EndGlobalSection
+EndGlobal

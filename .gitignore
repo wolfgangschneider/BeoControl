@@ -1,0 +1,25 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userprefs
+
+# Build output
+bin/
+obj/
+out/
+
+# NuGet packages
+packages/
+*.nupkg
+**/packages/*
+!**/packages/build/
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+
+# OS
+Thumbs.db
+.DS_Store

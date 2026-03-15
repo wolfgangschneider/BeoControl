@@ -1,0 +1,6 @@
+<Project>
+  <!-- Allow cross-compiling net-windows TFMs on Linux/macOS -->
+  <PropertyGroup>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+</Project>

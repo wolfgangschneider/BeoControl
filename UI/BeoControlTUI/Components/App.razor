@@ -1,0 +1,580 @@
+﻿@namespace BeoControl.Components
+
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using Beo4Adapter
+@using Beo4Adapter.Transport
+@using BeoControl
+@using BeoControl.Interfaces
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Pc2Adapter
+@using RazorConsole.Components
+@using Spectre.Console
+
+@implements IDisposable
+@if (_showHelp)
+{
+    <HelpWindow @bind-IsOpened="_showHelp"/>
+}
+else if (_showDeviceSelect && _scanDevices != null)
+{
+    <DeviceSelectWindow Devices="_scanDevices" OnSelected="OnDeviceSelected" />
+}
+else
+{
+    
+
+        <FullScreen @ref="_screen" Mode="@_mode" >
+
+    <Header>
+        <Figlet Content="BeoControl" Color="@Spectre.Console.Color.Cyan1" />
+        <Align Horizontal="@Spectre.Console.HorizontalAlignment.Center">
+            <Markup Content="@("Unified B&O controller  (ESP32 serial · ESP32 BLE · PC2 Masterlink)")" Foreground="@Spectre.Console.Color.Grey" />
+        </Align>
+    </Header>
+
+    <ChildContent>
+        <Scrollable TItem="LogEntry"
+                    Items="@_logView"
+                    PageSize="@_pageSize"
+                    @bind-ScrollOffset="_scrollOffset">
+            <Rows>
+                @foreach (var entry in context.Items)
+                {
+                    <Markup Content="@entry.Text" Foreground="@entry.Color" />
+                }
+            </Rows>
+        </Scrollable>
+    </ChildContent>
+
+    <Cmd>
+        <HistoryInput @bind-Value="_input"
+                      Placeholder="@_placeholder"
+                      OnSubmit="SendCommand"
+                      Completion="GetCompletion"
+                      FocusOrder="1"
+                      Expand="true" />
+    </Cmd>
+
+    <Status>
+        <Grid Expand="true">
+          
+                <Align Horizontal="@Spectre.Console.HorizontalAlignment.Left">
+                    <Markup Content="@_statusMain" Foreground="@StatusColor" />
+                </Align>
+
+       
+       
+
+                <Align Horizontal="@Spectre.Console.HorizontalAlignment.Right">
+                    @{
+                        var last = _settings.LastDevice == DeviceType.Serial ? _settings.LastSerial : _settings.LastBluetooth;
+                    }
+                    <Markup Content="@($"{_settings.LastDevice}  {last?.Name}  {last?.Id}")" Foreground="@StatusColor" />
+                </Align>
+    
+        </Grid>
+    </Status>
+
+    </FullScreen>
+  
+}
+
+
+@code {
+
+
+    // ── mode ────────────────────────────────────────────────────────
+    private FullScreen? _screen;
+    private bool _showHelp = false;
+    private FullScreen.FullScreenMode _mode =>
+        _log.Count == 0 ? FullScreen.FullScreenMode.Welcome
+                        : FullScreen.FullScreenMode.Normal;
+
+    // ── log ──────────────────────────────────────────────────────────
+    private record LogEntry(Spectre.Console.Color Color, string Text);
+    private Spectre.Console.Color StatusColor => _statusType switch
+    {
+        StatusType.Ok      => Spectre.Console.Color.Green,
+        StatusType.Working => Spectre.Console.Color.Yellow,
+        StatusType.Error   => Spectre.Console.Color.Red,
+        _                  => Spectre.Console.Color.Grey,
+    };
+
+    private void SetStatus(StatusType type, string text)
+    {
+        _statusType = type;
+        _statusMain = text;
+        StateHasChanged();
+    }
+
+    private readonly List<LogEntry> _log = [];
+    private IReadOnlyList<LogEntry> _logView => _log;
+    private int _scrollOffset = 0;
+    private int _pageSize => _screen?.ScrollablePageSize ?? Math.Max(1, Console.WindowHeight - 10);
+
+    private void AddLog(Spectre.Console.Color color, string text)
+    {
+        _log.Add(new LogEntry(color, text));
+        _scrollOffset = Math.Max(0, _log.Count - _pageSize);
+    }
+
+    // ── device & settings ────────────────────────────────────────────
+    private IDevice? _device;
+    private AppSettings _settings = AppSettings.Load();
+    private bool _showDebug = false;
+    private string _input = string.Empty;
+    private string _placeholder = "cd, vol+, bass+, /pc2, /bt, /port · ↑↓ history · /help";
+    private string _statusMain = "○ Not connected  — /port [COMx]  /bt  /pc2";
+    private StatusType _statusType = StatusType.Idle;
+    private CancellationTokenSource _refreshCts = new();
+    private CancellationTokenSource _connectCts = new();
+
+    // ── scan results (device select modal) ───────────────────────────
+    private List<DeviceInfo>? _scanDevices;
+    private bool _showDeviceSelect = false;
+
+    // ── merged command table for completion & validation ─────────────
+    private static readonly CommandInfo[] _allCommands =
+        [.. BeoCommands.All, .. Pc2Commands.All];
+
+    private static readonly HashSet<string> _allNames =
+        new(_allCommands.Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
+
+    // ── device helpers ───────────────────────────────────────────────
+    private void SubscribeDevice(IDevice device)
+    {
+        device.OnStatusChanged += msg =>
+        {
+            SetStatus(msg.Type, msg.Text);
+
+        };
+        device.OnLog += msg =>
+        {
+            if (msg.Level == LogLevel.Debug && !_showDebug) return;
+            var color = msg.Level switch
+            {
+                LogLevel.Error   => Spectre.Console.Color.Red,
+                LogLevel.Warning => Spectre.Console.Color.Yellow,
+                LogLevel.Debug   => Spectre.Console.Color.Grey,
+                _                => Spectre.Console.Color.Default,
+            };
+            AddLog(color, msg.Text);
+        };
+    }
+
+    private void ClearDevice()
+    {
+        _scanDevices = null;
+        _showDeviceSelect = false;
+        _device?.Disconnect();
+        _device?.Dispose();
+        _device = null;
+    }
+
+    private void SaveDevice()
+    {
+        _settings.LastDevice = _device!.Info.Type;
+        switch (_device.Info.Type)
+        {
+            case DeviceType.Serial:    _settings.LastSerial    = _device.Info; break;
+            case DeviceType.BT: _settings.LastBluetooth = _device.Info; break;
+        }
+        _settings.Save();
+        StateHasChanged();
+    }
+
+    private async Task<bool> ConnectAsync(IDevice newDevice, string? failLabel = null)
+    {
+        _device = newDevice;
+        SubscribeDevice(_device);
+        try
+        {
+            await _device.Connect();
+            SaveDevice();
+            return true;
+        }
+        catch (Exception)
+        {
+            if (failLabel is not null)
+                AddLog(Spectre.Console.Color.Yellow, $"○ {failLabel} not reachable, scanning...");
+            return false;
+        }
+    }
+
+    private async Task<List<DeviceInfo>?> ScanAsync(ITransport transport)
+    {
+        try
+        {
+            return await transport.ScanAsync(_connectCts.Token, msg => SetStatus(msg.Type, msg.Text));
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    private async Task TryConnectSerial(string? portName)
+    {
+        ClearDevice();
+        SetStatus(StatusType.Working, $"○ Connecting to serial{(portName is not null ? $" ({portName})" : " (scanning)")}...");
+
+        var transporter = new SerialTransport(portName);
+        if (!string.IsNullOrWhiteSpace(portName))
+        {
+            if (await ConnectAsync(new Beo4Device(transporter), portName))
+                return;
+        }
+
+        var found = await ScanAsync(transporter);
+        if (found == null) return;
+
+        if (found.Count == 0)
+        {
+            SetStatus(StatusType.Error, "✗ No serial devices found");
+            AddLog(Spectre.Console.Color.Red, "No Beo4Remote found on any serial port. ESP32 plugged in?");
+            StateHasChanged();
+            return;
+        }
+        if (found.Count == 1)
+        {
+            await ConnectAsync(new Beo4Device(new SerialTransport(found[0].Id)));
+            return;
+        }
+        ShowDeviceSelection(found);
+    }
+
+    private async Task TryConnectBle(string? deviceId = null)
+    {
+        ClearDevice();
+        SetStatus(StatusType.Working, deviceId is not null ? $"○ Connecting to BLE {deviceId}..." : "○ Scanning for 'Beo4Remote' via BLE...");
+
+
+        var transporter = new BluetoothTransport(deviceId);
+        if (!string.IsNullOrWhiteSpace(deviceId))
+        {
+            if (await ConnectAsync(new Beo4Device(transporter), $"BLE {deviceId}"))
+                return;
+        }
+
+        var found = await ScanAsync(transporter);
+        if (found == null) return;
+
+        if (found.Count == 0)
+        {
+            SetStatus(StatusType.Error, "✗ No BLE devices found");
+            AddLog(Spectre.Console.Color.Red, "BLE scan found no 'Beo4Remote' devices. Firmware flashed? Device powered?");
+            StateHasChanged();
+            return;
+        }
+        if (found.Count == 1)
+        {
+            await ConnectAsync(new Beo4Device(new BluetoothTransport(found[0].Id)));
+            return;
+        }
+        ShowDeviceSelection(found);
+    }
+
+    private void ShowDeviceSelection(List<DeviceInfo> devices)
+    {
+        _scanDevices = devices;
+        _showDeviceSelect = true;
+        SetStatus(StatusType.Idle, "Select device ↑↓ Enter");
+        StateHasChanged();
+    }
+
+    private void OnDeviceSelected(int? index)
+    {
+        var devices = _scanDevices;
+        _scanDevices = null;
+        _showDeviceSelect = false;
+        if (index == null || devices == null)
+        {
+            SetStatus(StatusType.Idle, "○ Selection cancelled");
+            StateHasChanged();
+            return;
+        }
+        var info = devices[index.Value];
+        _ = info.Type == DeviceType.BT
+            ? Task.Run(() => TryConnectBle(info.Id))
+            : Task.Run(() => TryConnectSerial(info.Id));
+        StateHasChanged();
+    }
+
+    private async Task TryConnectPc2()
+    {
+        ClearDevice();
+        SetStatus(StatusType.Working, "○ Connecting to PC2...");
+        var pc2 = new Pc2Device(_settings.ToAudioSetup());
+        pc2.OnStore += setup =>
+        {
+            _settings.UpdateAudioSetup(setup);
+            _settings.Save();
+        };
+        await ConnectAsync(pc2);
+       
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+        => Console.CursorVisible = false;
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.Clear();
+           // _ = RefreshLoop(_refreshCts.Token);
+            _ = Task.Run(AutoConnect);  // background — serial detection can take seconds
+        }
+        return base.OnAfterRenderAsync(firstRender);
+    }
+
+    // private async Task RefreshLoop(CancellationToken ct)
+    // {
+    //     while (!ct.IsCancellationRequested)
+    //     {
+    //         try
+    //         {
+    //             await Task.Delay(150, ct).ConfigureAwait(false);
+    //             await InvokeAsync(StateHasChanged);
+    //         }
+    //         catch (OperationCanceledException) { break; }
+    //         catch (ObjectDisposedException)    { break; }
+    //         catch (NullReferenceException)     { break; }
+    //     }
+    // }
+
+    private void CancelIfConnecting()
+    {
+        if (_statusType != StatusType.Working) return;
+        _device?.CancelAutoDetect();
+        _connectCts.Cancel();
+        _connectCts = new CancellationTokenSource();
+        _scanDevices = null;
+        _showDeviceSelect = false;
+        AddLog(Spectre.Console.Color.Yellow, "○ Detection cancelled by user");
+    }
+
+    private void AutoConnect()
+    {
+        switch (_settings.LastDevice)
+        {
+            case DeviceType.Serial:
+                TryConnectSerial(_settings.LastSerial?.Id).GetAwaiter().GetResult();
+                break;
+            case DeviceType.BT:
+                TryConnectBle(_settings.LastBluetooth?.Id).GetAwaiter().GetResult();
+                break;
+            case DeviceType.PC2:
+               
+                TryConnectPc2().GetAwaiter().GetResult();
+                break;
+        }
+    }
+
+    private async System.Threading.Tasks.Task SendCommand()
+    {
+        var cmd = _input.Trim();
+        _input = string.Empty;
+        if (string.IsNullOrEmpty(cmd)) return;
+
+        // ── slash commands ───────────────────────────────────────────────
+        if (cmd.StartsWith('/'))
+        {
+            if (cmd.Equals("/help", StringComparison.OrdinalIgnoreCase))
+            {
+                _showHelp = !_showHelp;
+                StateHasChanged();
+                return;
+            }
+            if (cmd.Equals("/debug", StringComparison.OrdinalIgnoreCase))
+            {
+                _showDebug = !_showDebug;
+                AddLog(Spectre.Console.Color.Grey, $"Debug messages {(_showDebug ? "shown" : "hidden")}");
+                return;
+            }
+            if (cmd.Equals("/clear", StringComparison.OrdinalIgnoreCase))
+            {
+                _log.Clear();
+                _scrollOffset = 0;
+                StateHasChanged();
+                return;
+            }
+            if (cmd.Equals("/exit", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.Clear();
+                Console.CursorVisible = true;
+                Environment.Exit(0);
+                return;
+            }
+            if (cmd.StartsWith("/port scan", StringComparison.OrdinalIgnoreCase))
+            {
+                CancelIfConnecting();
+                _ = Task.Run(() => TryConnectSerial(null));
+                StateHasChanged();
+                return;
+            }
+            if (cmd.StartsWith("/port", StringComparison.OrdinalIgnoreCase))
+            {
+                var port = cmd.Split(new[] { ' ' }, 2).ElementAtOrDefault(1)?.Trim();
+                if (string.IsNullOrEmpty(port)) port = _settings.LastSerial?.Id;
+                CancelIfConnecting();
+                _ = Task.Run(() => TryConnectSerial(string.IsNullOrEmpty(port) ? null : port));
+                StateHasChanged();
+                return;
+            }
+            if (cmd.StartsWith("/bt-last", StringComparison.OrdinalIgnoreCase))
+            {
+                CancelIfConnecting();
+                _ = Task.Run(() => TryConnectBle(_settings.LastBluetooth?.Id));
+                StateHasChanged();
+                return;
+            }
+            if (cmd.StartsWith("/bt scan", StringComparison.OrdinalIgnoreCase))
+            {
+                CancelIfConnecting();
+                _ = Task.Run(() => TryConnectBle(null));
+                StateHasChanged();
+                return;
+            }
+            if (cmd.StartsWith("/bt", StringComparison.OrdinalIgnoreCase))
+            {
+                CancelIfConnecting();
+                _ = Task.Run(() => TryConnectBle(_settings.LastBluetooth?.Id));
+                StateHasChanged();
+                return;
+            }
+            if (cmd.Equals("/pc2", StringComparison.OrdinalIgnoreCase))
+            {
+                CancelIfConnecting();
+                await TryConnectPc2();
+                StateHasChanged();
+                return;
+            }
+            AddLog(Spectre.Console.Color.Red, $"Unknown command: {cmd}  (try /help)");
+            StateHasChanged();
+            return;
+        }
+
+        // ── device commands ──────────────────────────────────────────────
+        if (_device is null || !_device.IsConnected)
+        {
+            AddLog(Spectre.Console.Color.Yellow, "Not connected — use /port, /bt or /pc2");
+            StateHasChanged();
+            return;
+        }
+
+        var parts   = cmd.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        var mainCmd = parts[0];
+        var param   = parts.Length > 1 ? parts[1] : null;
+
+        // auto-complete partial command name
+        if (!_allNames.Contains(mainCmd))
+        {
+            var hints = _allNames
+                .Where(n => n.StartsWith(mainCmd, StringComparison.OrdinalIgnoreCase))
+                .Order()
+                .ToList();
+
+            if (hints.Count == 1)
+            {
+                AddLog(Spectre.Console.Color.DarkOrange, $"  {mainCmd} → {hints[0]}");
+                mainCmd = hints[0];
+            }
+            else if (hints.Count > 1)
+            {
+                AddLog(Spectre.Console.Color.Yellow, $"? {string.Join("  ", hints)}");
+                StateHasChanged();
+                return;
+            }
+            else
+            {
+                AddLog(Spectre.Console.Color.Red, $"Unknown: {mainCmd}  (try /help)");
+                StateHasChanged();
+                return;
+            }
+        }
+
+        var display = param is not null ? $"{mainCmd} {param}" : mainCmd;
+        AddLog(Spectre.Console.Color.Cyan1, $"-> {display}");
+        _device.SendCommand(mainCmd, param);
+        StateHasChanged();
+        await System.Threading.Tasks.Task.Delay(300);
+    }
+
+    private (string ghost, string param)? GetCompletion(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return null;
+        var result = input.StartsWith('/')
+            ? CompleteFromList(input, AppCommands.SlashCommands, splitOnSpace: true)
+            : CompleteFromList(input, _allCommands,               splitOnSpace: true);
+
+        // Inject dynamic last-used hints when command is fully typed but no param yet
+        // if (result.HasValue && input.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length <= 1)
+        // {
+        //     var trimmed = input.Trim();
+        //     if (trimmed.Equals("/bt",    StringComparison.OrdinalIgnoreCase) && _settings.LastBluetooth?.Id is not null)
+        //         return (result.Value.ghost, _settings.LastBluetooth.Id);
+        //     if (trimmed.Equals("/port",  StringComparison.OrdinalIgnoreCase) && _settings.LastSerial?.Id is not null)
+        //         return (result.Value.ghost, _settings.LastSerial.Id);
+        //     if (trimmed.Equals("/debug", StringComparison.OrdinalIgnoreCase))
+        //         return (result.Value.ghost, _showDebug ? "on → off" : "off → on");
+        // }
+        return result;
+    }
+
+    private static (string ghost, string param)? CompleteFromList(
+        string input, IEnumerable<CommandInfo> candidates, bool splitOnSpace)
+    {
+        if(input == "/")
+            return null;
+        var parts    = splitOnSpace
+            ? input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries)
+            : [input];
+        var cmdPart  = parts[0];
+        var hasParam = parts.Length > 1;
+
+        var matches = candidates
+            .Where(c => c.Name.StartsWith(cmdPart, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(c => c.Name)
+            .ToList();
+
+        if (matches.Count == 0) return null;
+
+        var exact = matches.FirstOrDefault(
+            c => c.Name.Equals(cmdPart, StringComparison.OrdinalIgnoreCase));
+
+        var ghost = exact is not null ? ""
+            : matches.Count == 1     ? matches[0].Name[cmdPart.Length..]
+            : CommonSuffix(matches.Select(c => c.Name).ToList(), cmdPart.Length);
+
+        var info  = exact ?? matches[0];
+        var param = hasParam ? "" : (info.ParamHint ?? "");
+
+        if (ghost.Length == 0 && param.Length == 0) return null;
+        return (ghost, param);
+    }
+
+    private static string CommonSuffix(List<string> names, int from)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (var i = from; ; i++)
+        {
+            if (i >= names[0].Length) break;
+            var ch = names[0][i];
+            if (names.Skip(1).Any(n => i >= n.Length || char.ToLower(n[i]) != char.ToLower(ch)))
+                break;
+            sb.Append(ch);
+        }
+        return sb.ToString();
+    }
+
+    public void Dispose()
+    {
+        _refreshCts.Cancel();
+        _connectCts.Cancel();
+        _device?.Dispose();
+    }
+}

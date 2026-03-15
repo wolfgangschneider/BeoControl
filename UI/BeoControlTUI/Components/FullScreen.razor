@@ -1,0 +1,93 @@
+@using Microsoft.AspNetCore.Components
+@using RazorConsole.Components
+@using Spectre.Console
+@namespace BeoControl.Components
+@inherits ComponentBase
+
+@code {
+    public enum FullScreenMode { Welcome, Normal, Help }
+}
+
+<Rows Expand="true">
+
+    @* ── Body: always present, content switches by mode ─────────────── *@
+    <Panel Height="@BodyHeight" Border="BoxBorder.None" Expand="true">
+        @if (Mode == FullScreenMode.Welcome)
+        {
+            @Header
+        }
+        else
+        {
+            @ChildContent
+        }
+    </Panel>
+
+    @* ── Cmd + Status always visible ────────────────────────────────── *@
+    <Panel Height="5" Border="BoxBorder.None" Expand="true">
+        @Cmd
+    </Panel>
+    <Panel Height="3" Border="BoxBorder.None" Expand="true">
+        @Status
+    </Panel>
+
+   
+</Rows>
+
+@code {
+    // ── parameters ─────────────────────────────────────────────────────
+    [Parameter] public FullScreenMode Mode      { get; set; } = FullScreenMode.Welcome;
+    [Parameter] public int            HelpHeight { get; set; } = 10;
+    [Parameter] public int            WelcomeHeight { get; set; } = 10;
+
+    [Parameter] public RenderFragment? Header       { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Cmd          { get; set; }
+    [Parameter] public RenderFragment? Status       { get; set; }
+
+
+    // ── heights ─────────────────────────────────────────────────────────
+    // Panel Border=None doesn't pad — actual fixed rows: TextInput≈3 + Status≈1 = 4
+    private int BodyHeight    => Math.Max(3, Console.WindowHeight - 3);
+    private int ContentHeight => Mode == FullScreenMode.Help
+        ? Math.Max(3, BodyHeight - HelpHeight)
+        : BodyHeight;
+
+    // Expose ContentHeight so App can size its Scrollable pagesize
+    public int ScrollablePageSize => Math.Max(1, ContentHeight - 2);
+
+    // ── resize monitoring ────────────────────────────────────────────────
+    private bool _monitoring = true;
+    private int  _lastW, _lastH;
+
+
+    // protected override void OnAfterRender(bool firstRender)
+    // {
+    //     _lastH = Console.WindowHeight;
+    //     _lastW = Console.WindowWidth;
+        
+    //     base.OnAfterRender(firstRender);
+    // }
+    protected override void OnInitialized()
+    {
+        _lastH = Console.WindowHeight;
+        _lastW = Console.WindowWidth;
+        Task.Run(async () =>
+        {
+            while (_monitoring)
+            {
+                if (Console.WindowHeight != _lastH || Console.WindowWidth != _lastW)
+                {
+                    _lastH = Console.WindowHeight;
+                    _lastW = Console.WindowWidth;
+                    await InvokeAsync(StateHasChanged);
+                }
+            
+                Console.SetCursorPosition(0,0);
+                Console.CursorVisible = false;
+                await Task.Delay(100);
+            }
+        });
+    }
+
+    public void Dispose() => _monitoring = false;
+}

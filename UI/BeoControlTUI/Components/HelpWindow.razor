@@ -1,0 +1,96 @@
+@namespace BeoControl.Components
+
+@using System.Linq
+@using BeoControl
+@using BeoControl.Interfaces
+@using Microsoft.AspNetCore.Components.Web
+@using RazorConsole.Components
+@using Spectre.Console
+
+<div @onkeyup="HandleKey">
+
+   @*  <Scrollable PageSize="25" Scrollbar="new(thumbFocusedColor: _scrollbarThumbFocusedColor)" Items="_rows" > *@
+        <Rows>
+
+            @foreach (var item in @_rows)
+                {
+                    
+                            @if (item.IsHeader)
+                            {
+                            <Markup Content="@($"  {item.Category}")" Foreground="@Color.Yellow" Decoration="@Decoration.Bold" />
+                            }
+                            else
+                            {
+                            
+                                <Columns>
+                                <Markup Content="@CmdName(item.Cmd!)" Foreground="@Color.Cyan1" />
+                                 <Markup Content="@CmdParam(item.Cmd!)" Foreground="@Color.Grey30" /> 
+                                 <Markup Content="@item.Cmd!.Description" Foreground="@Color.Grey" /> 
+                                </Columns>
+                               
+                       
+                            }
+                           
+                     
+                }
+          <Markup Content="  Press any key to close" Foreground="@Color.Grey" Decoration="@Decoration.Dim" />
+        </Rows>
+  @*   </Scrollable> *@
+  
+</div>   
+          
+
+@code {
+ 
+    [Parameter, EditorRequired] public bool IsOpened { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenedChanged { get; set; }
+
+    private readonly Color _scrollbarThumbFocusedColor = Color.FromHex("#3b78ff");
+    private async Task HandleKey(KeyboardEventArgs e)
+    {
+        
+            IsOpened = false;
+            await IsOpenedChanged.InvokeAsync();
+        
+
+    }
+
+    private record HelpRow(bool IsHeader, string? Category, CommandInfo? Cmd);
+
+    private static readonly IReadOnlyList<HelpRow> _rows = BuildRows();
+
+    private static IReadOnlyList<HelpRow> BuildRows()
+    {
+        var list = new List<HelpRow>();
+
+        // App slash commands first
+        list.Add(new HelpRow(true, "App Commands", null));
+        list.AddRange(AppCommands.SlashCommands.Select(c => new HelpRow(false, null, c)));
+
+        // Beo4 IR commands grouped by category
+        foreach (var group in BeoCommands.All.GroupBy(c => c.Category))
+        {
+            list.Add(new HelpRow(true, group.Key, null));
+            list.AddRange(group.Select(c => new HelpRow(false, null, c)));
+        }
+
+        // PC2-specific commands grouped by category
+        foreach (var group in Pc2Commands.All.GroupBy(c => c.Category))
+        {
+            list.Add(new HelpRow(true, group.Key, null));
+            list.AddRange(group.Select(c => new HelpRow(false, null, c)));
+        }
+
+        return list;
+    }
+
+    private static string CmdName(CommandInfo c)  => $"  {c.Name,-10}";
+    private static string CmdParam(CommandInfo c) => $"{c.ParamHint ?? "",-8}";
+
+    protected override void OnInitialized()
+    {
+
+        base.OnInitialized();
+    }
+    
+}

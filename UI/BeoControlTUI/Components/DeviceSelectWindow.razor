@@ -1,0 +1,53 @@
+@namespace BeoControl.Components
+
+@using BeoControl.Interfaces
+@using Microsoft.AspNetCore.Components.Web
+@using RazorConsole.Components
+@using Spectre.Console
+
+<div @onkeydown="HandleKey" tabindex="0">
+    <Rows>
+        <Markup Content="  Select device  ↑↓ navigate · Enter confirm · Esc cancel" Foreground="@Color.Yellow" Decoration="@Decoration.Bold" />
+        <Markup Content="" />
+        @for (int i = 0; i < Devices.Count; i++)
+        {
+            var idx = i;
+            var selected = idx == _selectedIndex;
+            <Markup Content="@Row(idx)" Foreground="@(selected ? Color.Cyan1 : Color.Default)" />
+        }
+    </Rows>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public List<DeviceInfo> Devices { get; set; } = [];
+    [Parameter] public EventCallback<int?> OnSelected { get; set; }
+
+    private int _selectedIndex = 0;
+
+    private string Row(int i) =>
+        i == _selectedIndex
+            ? $"  ❯ [{i + 1}] {Devices[i].Id,-20}  {Devices[i].Name}"
+            : $"    [{i + 1}] {Devices[i].Id,-20}  {Devices[i].Name}";
+
+    private async Task HandleKey(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowUp":
+            case "UpArrow":
+                _selectedIndex = Math.Max(0, _selectedIndex - 1);
+                break;
+            case "ArrowDown":
+            case "DownArrow":
+                _selectedIndex = Math.Min(Devices.Count - 1, _selectedIndex + 1);
+                break;
+            case "Enter":
+                await OnSelected.InvokeAsync(_selectedIndex);
+                return;
+            case "Escape":
+                await OnSelected.InvokeAsync(null);
+                return;
+        }
+        StateHasChanged();
+    }
+}

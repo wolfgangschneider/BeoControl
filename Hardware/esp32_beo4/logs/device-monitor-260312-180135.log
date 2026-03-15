@@ -1,0 +1,31 @@
+E (188) esp_core_dump_flash: Corf"յ��data check failed:
+Calculated checksum='a3dc2896'
+Image checksum='ffffffff'
+
+
+=== ESP32 Beo4 Emulator ===
+===> start beo4... OK
+
+=== Beo4 Serial Command Interface ===
+Source commands (also set context):
+  tv, radio, cd, phono, dvd, sat, vtape,
+  pc, light, a.aux, v.aux, text, spdemo
+Control commands (use current source):
+  vol+, vol-, mute, standby/off
+  up, down, left, right, go/play, stop
+  menu, exit, return, select, list, record
+  index, store, clear, tune, clock, format
+  speaker, picture, turn, loudness
+  bass, treble, balance, av
+  red, green, blue, yellow
+Numbers: 0-9
+Combined: cd 4  (source + number)
+Raw hex:  0x0192 (send raw beoCode)
+  help   - show this message
+  status - show current source
+
+beo4>   -> TX src=0x1B cmd=0x05
+beo4>   -> TX src=0x1B cmd=0x09
+beo4> Unknown command: löight stop  (type 'help')
+beo4> beo4> beo4>   -> TX src=0x1B cmd=0x06
+beo4> 

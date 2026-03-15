@@ -1,0 +1,133 @@
+@namespace Beo4Remote.Components
+
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Web
+@using RazorConsole.Components
+@using Spectre.Console
+
+<div class="text-input"
+     data-focusable="true"
+     data-focus-key="@_focusKey"
+     data-focus-order="@_focusOrderAttr"
+     data-expand="@(Expand ? "true" : "false")"
+     @onkeydown="HandleKey"
+     @onfocus="OnFocused"
+     @onfocusout="OnBlurred">
+    <Panel BorderColor="@(_focused ? FocusedBorderColor : BorderColor)"
+           Border="@BorderStyle"
+           Padding="@(new Padding(1, 0, 1, 0))"
+           Expand="@Expand">
+        @if (_buffer.Length == 0)
+        {
+            <Markup Content="@Placeholder"
+                    Foreground="@Color.Grey"
+                    Decoration="@(Decoration.Dim | Decoration.Italic)" />
+            
+
+        }
+        else
+        {
+            <Markup Content="@_buffer" Foreground="@Color.White" />
+            <span> "\u001b[41m   \u001b[0m"</span>
+
+            <Markup Content="\u001b[41m" Foreground="@Color.White" />
+
+            <Markup Content="**" Foreground="@Color.Gray" />
+
+        }
+    </Panel>
+</div>
+
+@code {
+    private readonly string _focusKey = Guid.NewGuid().ToString("N");
+    private string _buffer = string.Empty;
+    private string _lastIncoming = string.Empty;
+    private bool _focused;
+
+    private readonly List<string> _history = [];
+    private int _histIndex = -1;
+
+    [Parameter] public string?               Value              { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged       { get; set; }
+    [Parameter] public EventCallback         OnSubmit           { get; set; }
+    [Parameter] public string                Placeholder        { get; set; } = string.Empty;
+    [Parameter] public int?                  FocusOrder         { get; set; }
+    [Parameter] public bool                  Expand             { get; set; }
+    [Parameter] public BoxBorder             BorderStyle        { get; set; } = BoxBorder.Rounded;
+    [Parameter] public Color                 BorderColor        { get; set; } = Color.Grey37;
+    [Parameter] public Color                 FocusedBorderColor { get; set; } = Color.Yellow;
+
+    private string? _focusOrderAttr =>
+        FocusOrder.HasValue ? FocusOrder.Value.ToString(CultureInfo.InvariantCulture) : null;
+
+    protected override void OnParametersSet()
+    {
+        var incoming = Value ?? string.Empty;
+        if (!string.Equals(incoming, _lastIncoming, StringComparison.Ordinal))
+        {
+            _buffer = incoming;
+            _lastIncoming = incoming;
+        }
+    }
+
+    private void OnFocused()  { _focused = true;  StateHasChanged(); }
+    private void OnBlurred()  { _focused = false; StateHasChanged(); }
+
+    private async Task HandleKey(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter":
+                var trimmed = _buffer.Trim();
+                if (trimmed.Length > 0 && (_history.Count == 0 || _history[0] != trimmed))
+                    _history.Insert(0, trimmed);
+                _histIndex = -1;
+                await OnSubmit.InvokeAsync();
+                break;
+
+            case "Backspace":
+                if (_buffer.Length > 0)
+                {
+                    _buffer = _buffer[..^1];
+                    await ValueChanged.InvokeAsync(_buffer);
+                }
+                break;
+
+            case "ArrowUp":
+            case "UpArrow":
+                if (_history.Count > 0 && _histIndex < _history.Count - 1)
+                {
+                    _histIndex++;
+                    _buffer = _history[_histIndex];
+                    await ValueChanged.InvokeAsync(_buffer);
+                }
+                break;
+
+            case "ArrowDown":
+            case "DownArrow":
+                if (_histIndex > 0)
+                {
+                    _histIndex--;
+                    _buffer = _history[_histIndex];
+                }
+                else
+                {
+                    _histIndex = -1;
+                    _buffer = string.Empty;
+                }
+                await ValueChanged.InvokeAsync(_buffer);
+                break;
+
+            default:
+                if (e.Key.Length == 1 && !char.IsControl(e.Key[0]))
+                {
+                    _buffer += e.Key;
+                    await ValueChanged.InvokeAsync(_buffer);
+                }
+                break;
+        }
+
+        StateHasChanged();
+    }
+}
+
