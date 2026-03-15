@@ -146,6 +146,23 @@ Once connected, type any B&O command directly (e.g. `tv`, `radio`, `vol+`, `stan
 
 **Power:** `standby`, `allstandby`
 
+## Simple HW — Direct IR to B&O Receiver
+
+If you place the ESP32 very close to the B&O IR receiver, a single IR LED wired directly to the M5 Atom S3 is all the hardware you need:
+
+```
+          ┌──────────────────┐
+          │   M5 Atom S3     │
+          │                  │
+          │  G38 ────────────┼──── LED anode  (+)
+          │                  │        │ IR LED
+          │  GND ────────────┼──── LED cathode (-)
+          │                  │
+          └──────────────────┘
+```
+
+> **G38** drives the IR LED signal. **GND** is the return path. No resistor is strictly required at very short range, but a 33–100 Ω resistor in series with the LED is recommended to protect the pin.
+
 ## Credits & Acknowledgements
 
 - **[aanban/esp32_beo4](https://github.com/aanban/esp32_beo4)** — ESP32 Beo4 remote firmware. A huge thanks for this project which made ESP32-based control possible.
