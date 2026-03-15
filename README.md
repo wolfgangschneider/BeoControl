@@ -168,13 +168,15 @@ If you place the ESP32 very close to the B&O IR receiver, a single IR LED wired 
 For greater range, a BC847 NPN transistor switches a higher current through three IR LEDs in parallel, each with its own R10 current limiting resistor, powered from V+:
 
 ```
-                           V+      V+      V+
-                           │       │       │
-                          R10     R10     R10   (10 Ω each)
-                           │       │       │
-                         LED1    LED2    LED3   (TSHA 6203)
-                           │       │       │
-                           └───────┴───────┘
+                                  5V
+                                   │
+                     ┌─────────────┼─────────────┐
+                     │             │             │
+                    R10           R10           R10   (10 Ω each)
+                     │             │             │
+                   LED1          LED2          LED3   (TSHA 6203)
+                     │             │             │
+                     └─────────────┴─────────────┘
                                    │
                            ┌───────┴───────┐
                            │    BC847      │
