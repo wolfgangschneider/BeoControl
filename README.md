@@ -9,8 +9,26 @@ BeoControl lets you control B&O Masterlink devices (TV, Radio, CD, DVD, etc.) fr
 - **Unified command interface** across heterogeneous B&O hardware
 - **Audio control** — volume, bass, treble, balance, loudness
 - **Source switching** — TV, Radio, CD, DVD, SAT, PC and more
-- **Terminal UI** (TUI) and **Blazor web UI** frontends
 - **Multi-transport support** — USB (PC2), Serial/USB (ESP32), Bluetooth LE (ESP32)
+- **UI-agnostic design** — the core logic is fully decoupled from the UI layer, making it straightforward to add new frontends
+
+## UI Flexibility
+
+The hardware and adapter layers are completely independent of any user interface. The `IDevice` abstraction is the only contract a UI needs to implement against, so different frontends can be built without touching the core logic:
+
+| Frontend | Status | Description |
+|---|---|---|
+| **Terminal (TUI)** | ✅ included | Full-featured console UI using [RazorConsole](https://github.com/lofcz/razorconsole) — great for headless servers and SSH sessions |
+| **Web (Blazor)** | ✅ included | ASP.NET Core Blazor Server UI, accessible from any browser on the local network |
+| **Mobile** | 🔧 possible | A .NET MAUI app could connect over BLE directly to the ESP32 or talk to a Blazor backend — no core changes needed |
+| **REST / API** | 🔧 possible | Wrap `IDevice` in a minimal ASP.NET Core API to integrate with Home Assistant, shortcuts, scripts, etc. |
+| **Desktop (WPF/WinUI)** | 🔧 possible | A native Windows UI is just another consumer of `IDevice` |
+
+The architecture is designed so that **adding a new UI is simply a matter of referencing the `Interfaces` and `Adapters` packages** and calling `device.SendCommand(...)`.
+
+```
+Any UI  ──→  IDevice  ──→  Adapter  ──→  Transport  ──→  B&O Hardware
+```
 
 ## Architecture
 
