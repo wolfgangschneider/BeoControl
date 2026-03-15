@@ -47,11 +47,14 @@ Any UI  ──→  IDevice  ──→  Adapter  ──→  Transport  ──→ 
                                     │ IDevice
           ┌─────────────────────────┴────────────────────────┐
           │                   Adapter Layer                  │
-          │   Beo4Device (Serial / BLE)                      │
-          │   Pc2Device  (USB PC2)                           │
-          └──────────┬──────────────────────┬────────────────┘
-                     │ ITransport           │
-          ┌──────────┴──────────┐  ┌────────┴───────────────┐
+          │                                                  │
+          │  ┌──────────────────────┐  ┌──────────────────┐  │
+          │  │     Beo4Device       │  │    Pc2Device     │  │
+          │  │   (Serial / BLE)     │  │    (USB PC2)     │  │
+          │  └──────────┬───────────┘  └────────┬─────────┘  │
+          └─────────────┼────────────────────────┼───────────┘
+                        │                        │
+          ┌─────────────┴──────┐  ┌──────────────┴─────────┐
           │  Transport Layer    │  │    Hardware Layer      │
           │  SerialTransport    │  │  Pc2Core (event loop)  │
           │  BluetoothTransport │  │  Pc2Mixer (audio HW)   │
