@@ -155,7 +155,7 @@ If you place the ESP32 very close to the B&O IR receiver, a single IR LED wired 
           │   M5 Atom S3     │
           │                  │
           │  G38 ────────────┼──── LED anode  (+)
-          │                  │        │ IR LED
+          │                  │        │ TSHA 6203 IR LED
           │  GND ────────────┼──── LED cathode (-)
           │                  │
           └──────────────────┘
