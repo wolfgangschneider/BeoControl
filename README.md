@@ -168,26 +168,28 @@ If you place the ESP32 very close to the B&O IR receiver, a single IR LED wired 
 For greater range, a BC847 NPN transistor switches a higher current through three IR LEDs in parallel, each with its own R10 current limiting resistor, powered from V+:
 
 ```
-                                  5V
-                                   │
-                     ┌─────────────┼─────────────┐
-                     │             │             │
-                    R10           R10           R10   (10 Ω each)
-                     │             │             │
-                   LED1          LED2          LED3   (TSHA 6203)
-                     │             │             │
-                     └─────────────┴─────────────┘
-                                   │
-                           ┌───────┴───────┐
-                           │    BC847      │
-  ┌──────────────────┐     │               │
-  │   M5 Atom S3     │     │  C (Collector)│
-  │                  │     │               │
-  │  G38 ────────────┼─R470┤  B (Base)     │
-  │                  │     │               │
-  │  GND ────────────┼─────┤  E (Emitter)  │
-  │                  │     │               │
-  └──────────────────┘     └───────────────┘
+                                   5V
+                                    │
+                      ┌─────────────┼─────────────┐
+                      │             │             │
+                     R10           R10           R10   (10 Ω each)
+                      │             │             │
+                    LED1          LED2          LED3   (TSHA 6203)
+                      │             │             │
+                      └─────────────┴─────────────┘
+                                    │
+                            ┌───────┴───────┐
+                            │    BC847      │
+  ┌──────────────────┐      │               │
+  │   M5 Atom S3     │      │  C (Collector)│
+  │                  │      │               │
+  │  5V  ────────────┼──────┼───────────────┼── 5V
+  │                  │      │               │
+  │  G38 ────────────┼─R470─┤  B (Base)     │
+  │                  │      │               │
+  │  GND ────────────┼──────┤  E (Emitter)  │
+  │                  │      │               │
+  └──────────────────┘      └───────────────┘
 ```
 
 > **G38** → **R470** limits base current into the **BC847**. Each of the 3× **TSHA 6203** IR LEDs has its own **R10** resistor in series to V+. All three LED+R10 branches are in parallel, connected to the **BC847** collector. **GND** connects to the emitter.
