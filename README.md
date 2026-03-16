@@ -11,6 +11,7 @@ BeoControl lets you control B&O Masterlink devices (TV, Radio, CD, DVD, etc.) fr
 - **Source switching** — TV, Radio, CD, DVD, SAT, PC and more
 - **Multi-transport support** — USB (PC2), Serial/USB (ESP32), Bluetooth LE (ESP32)
 - **UI-agnostic design** — the core logic is fully decoupled from the UI layer, making it straightforward to add new frontends
+- **Shared settings** — all UIs share a single settings file (`%APPDATA%\BeoControl\beocontrol.settings.json`) and auto-connect on startup
 
 ## UI Flexibility
 
@@ -19,10 +20,9 @@ The hardware and adapter layers are completely independent of any user interface
 | Frontend | Status | Description |
 |---|---|---|
 | **Terminal (TUI)** | ✅ included | Full-featured console UI using [RazorConsole](https://github.com/lofcz/razorconsole) — great for headless servers and SSH sessions |
-| **Web (Blazor)** | 🧪 POC | ASP.NET Core Blazor Server UI — proof of concept showing the web frontend path |
-| **Mobile** | 🔧 possible | A .NET MAUI app could connect over BLE directly to the ESP32 or talk to a Blazor backend — no core changes needed |
+| **Web (Blazor Server)** | ✅ included | ASP.NET Core Blazor Server UI — browser-based remote control |
+| **Desktop (MAUI)** | ✅ included | Windows tray app — sits in the system tray, pops up above the taskbar on click, xcopy deploy |
 | **REST / API** | 🔧 possible | Wrap `IDevice` in a minimal ASP.NET Core API to integrate with Home Assistant, shortcuts, scripts, etc. |
-| **Desktop (WPF/WinUI)** | 🔧 possible | A native Windows UI is just another consumer of `IDevice` |
 
 The architecture is designed so that **adding a new UI is simply a matter of referencing the `Interfaces` and `Adapters` packages** and calling `device.SendCommand(...)`.
 
@@ -33,17 +33,17 @@ Any UI  ──→  IDevice  ──→  Adapter  ──→  Transport  ──→ 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                            UI Layer                                 │
-│                                                                     │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌─────────┐  │
-│  │ BeoControl   │  │ BeoControl   │  │  Mobile App  │  │   ...   │  │
-│  │     TUI      │  │   Blazor     │  │ (.NET MAUI)  │  │         │  │
-│  │(RazorConsole)│  │(Blazor Server│  │  (possible)  │  │         │  │
-│  │              │  │    POC)      │  │              │  │         │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └────┬────┘  │
-└─────────┼─────────────────┼─────────────────┼───────────────┼───────┘
-          └─────────────────┴───────┬─────────┴───────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   UI Layer                                              │
+│                                                                                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐   ┌──────────────────┐│
+│  │ BeoControl   │  │ BeoControl   │  │     BeoControl MAUI      │   │Beoport / Beolink ││
+│  │     TUI      │  │Blazor Server │  │    Windows tray app      │   │  ControlExample  ││
+│  │              │  │              │  │    IOs / OSX /Android    │   │ (a simple demo)  ││
+│  │              │  │              │  │                          │   │                  ││
+│  └──────┬───────┘  └──────┬───────┘  └──────────┬───────────────┘   └─────────┬────────┘│
+└─────────┼─────────────────┼─────────────────────┼─────────────────────────────┼─────────┘
+          └─────────────────┴───────┬─────────────┴─────────────────────────────┘
                                     │ IDevice
           ┌─────────────────────────┴────────────────────────┐
           │                   Adapter Layer                  │
@@ -81,6 +81,8 @@ Any UI  ──→  IDevice  ──→  Adapter  ──→  Transport  ──→ 
 | `Hardware/esp32_beo4` | ESP32 firmware (PlatformIO) for Beo4 remote emulation |
 | `UI/BeoControlTUI` | Terminal UI using RazorConsole |
 | `UI/BeoControlBlazor` | Web UI using ASP.NET Core Blazor Server |
+| `UI/BeoControlMaui` | Windows tray app using .NET MAUI + Blazor Hybrid |
+| `UI/PC2ControlExample` | Minimal console app demonstrating direct PC2 adapter usage |
 
 ## Hardware Support
 
@@ -113,6 +115,30 @@ dotnet build BeoControl.sln
 
 ```bash
 dotnet run --project UI/BeoControlTUI
+```
+
+### Run Blazor Server
+
+```bash
+dotnet run --project UI/BeoControlBlazor/BeoControlBlazorServer
+# Open http://localhost:5000 in a browser
+```
+
+### Run MAUI (Windows)
+
+Build and run from Visual Studio, or publish for xcopy deployment:
+
+```powershell
+cd UI/BeoControlBlazor/BeoControlMaui
+dotnet publish -f net10.0-windows10.0.19041.0 -c Release -r win-arm64 --self-contained true -p:PublishTrimmed=false
+```
+
+Copy the `publish\` folder to any Windows machine — no installer or runtime install needed.
+
+### Run PC2 Example
+
+```bash
+dotnet run --project UI/PC2ControlExample/PC2ControlExample
 ```
 
 ### Linux
@@ -155,6 +181,30 @@ Once connected, type any B&O command directly (e.g. `tv`, `radio`, `vol+`, `stan
 **Colors:** `red`, `green`, `blue`, `yellow`
 
 **Power:** `standby`, `allstandby`
+
+## MAUI Tray App
+
+The Windows tray app provides a compact always-available remote:
+
+- **Starts hidden** to the system tray on launch
+- **Click tray icon** → window appears just above the taskbar, centered on the icon
+- **X button** hides to tray (does not exit); right-click for Show / Exit
+- **Auto-connects** on startup to the last used device (shared settings with Blazor Server)
+- **Remembers window size** — resize once, persisted across restarts
+- **Connection indicator** — tray icon and in-app bar show green/red connection state
+- **Xcopy deployment** — no installer needed; copy the `publish\` folder to any Windows ARM64 or x64 machine
+
+## Shared Settings
+
+All UIs share a single settings file so the last device is remembered across apps:
+
+| OS | Path |
+|---|---|
+| Windows | `%APPDATA%\BeoControl\beocontrol.settings.json` |
+| Linux | `~/.config/BeoControl/beocontrol.settings.json` |
+| macOS | `~/Library/Application Support/BeoControl/beocontrol.settings.json` |
+
+The TUI uses a separate file (`beocontrol-tui.settings.json`) in the same folder.
 
 ## Simple HW — Direct IR to B&O Receiver
 
