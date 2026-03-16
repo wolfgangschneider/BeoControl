@@ -60,9 +60,13 @@ public class SerialTransport : ITransport
                 ReadTimeout = 500,
                 WriteTimeout = 2000,
                 NewLine = "\n",
+                DtrEnable = false,   // prevent DTR from triggering ESP32 auto-reset on open
+                RtsEnable = false,
             };
             _port.Open();
-            _port.DiscardInBuffer();           // clear any buffered startup / reset banner
+            if (!OperatingSystem.IsWindows())
+                await Task.Delay(1500, ct);    // on Linux, DTR resets the ESP32 on open — wait for boot
+            _port.DiscardInBuffer();           // discard boot banner
 
             var portLabel = _forcedPortName is null ? $"AutoDetect ({portName})" : portName;
 
@@ -84,6 +88,9 @@ public class SerialTransport : ITransport
                     catch (TimeoutException) { break; }
                 }
             }
+
+            // Port opened successfully — use port name as fallback label if firmware didn't respond
+            result ??= new DeviceInfo(DeviceType.Serial, portLabel, portName);
 
             _port.DiscardInBuffer();           // eat "beo4> " prompt + any leftover bytes
             _port.ReadTimeout = 200;
@@ -226,10 +233,19 @@ public class SerialTransport : ITransport
         CancellationToken ct, Action<StatusMessage>? status = null)
     {
         var ports = ListPortsDetailed();
-        var atom   = ports.Where(kv => kv.Value.PnpId.Contains("VID_303A&PID_1001", StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key);
-        var cp210x = ports.Where(kv => kv.Value.Caption.Contains("CP210",   StringComparison.OrdinalIgnoreCase) ||
-                                       kv.Value.Caption.Contains("Silicon", StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key);
-        var candidates = atom.Union(cp210x).Union(ports.Keys).Distinct().ToList();
+        List<string> candidates;
+        if (ports.Count > 0)
+        {
+            var atom   = ports.Where(kv => kv.Value.PnpId.Contains("VID_303A&PID_1001", StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key);
+            var cp210x = ports.Where(kv => kv.Value.Caption.Contains("CP210",   StringComparison.OrdinalIgnoreCase) ||
+                                           kv.Value.Caption.Contains("Silicon", StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key);
+            candidates = atom.Union(cp210x).Union(ports.Keys).Distinct().ToList();
+        }
+        else
+        {
+            // WMI not available (Linux) — fall back to OS port list
+            candidates = SerialPort.GetPortNames().ToList();
+        }
 
         var found = new List<DeviceInfo>();
         foreach (var port in candidates)
@@ -251,15 +267,23 @@ public class SerialTransport : ITransport
     private static (string PortName, string? FirmwareName) AutoDetect(CancellationToken ct, Action<StatusMessage>? status = null)
     {
         var ports = ListPortsDetailed();
-        if (ports.Count == 0)
-            throw new Exception("No COM ports found. Is the ESP32 plugged in?");
 
-        //var btSpp  = ports.Where(kv => kv.Value.PnpId.Contains("BTHENUM",         StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key);
-        var atom = ports.Where(kv => kv.Value.PnpId.Contains("VID_303A&PID_1001", StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key);
-        var cp210x = ports.Where(kv => kv.Value.Caption.Contains("CP210", StringComparison.OrdinalIgnoreCase) ||
-                                       kv.Value.Caption.Contains("Silicon", StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key);
-        //var candidates = btSpp.Union(atom).Union(cp210x).Union(ports.Keys).ToList();
-        var candidates = atom.Union(cp210x).Union(ports.Keys).ToList();
+        List<string> candidates;
+        if (ports.Count > 0)
+        {
+            var atom   = ports.Where(kv => kv.Value.PnpId.Contains("VID_303A&PID_1001", StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key);
+            var cp210x = ports.Where(kv => kv.Value.Caption.Contains("CP210",   StringComparison.OrdinalIgnoreCase) ||
+                                           kv.Value.Caption.Contains("Silicon", StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key);
+            candidates = atom.Union(cp210x).Union(ports.Keys).ToList();
+        }
+        else
+        {
+            // WMI not available (Linux) — fall back to OS port list
+            candidates = SerialPort.GetPortNames().ToList();
+        }
+
+        if (candidates.Count == 0)
+            throw new Exception("No serial ports found. Is the ESP32 plugged in?");
 
         (string Port, string? Name)? confirmed = null;
         foreach (var port in candidates)
@@ -294,8 +318,12 @@ public class SerialTransport : ITransport
                 ReadTimeout = 500,
                 WriteTimeout = 2000,
                 NewLine = "\n",
+                DtrEnable = false,   // prevent DTR from triggering ESP32 auto-reset on open
+                RtsEnable = false,
             };
             probe.Open();
+            if (!OperatingSystem.IsWindows())
+                Thread.Sleep(1500);            // on Linux, DTR resets the ESP32 on open — wait for boot
             probe.DiscardInBuffer();
             probe.WriteLine("name");
             for (int i = 0; i < 2; i++)

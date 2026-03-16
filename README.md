@@ -115,6 +115,16 @@ dotnet build BeoControl.sln
 dotnet run --project UI/BeoControlTUI
 ```
 
+### Linux
+
+```bash
+# Run targeting the non-Windows framework
+dotnet run --project UI/BeoControlTUI --framework net10.0
+
+# Grant serial port access (one-time, requires re-login)
+sudo usermod -aG dialout $USER
+```
+
 ### TUI Commands
 
 | Command | Description |
