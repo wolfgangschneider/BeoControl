@@ -38,6 +38,8 @@
 
 .bl1000-btn:hover { background: #303030; }
 .bl1000-btn:active { background: #000; transform: scale(0.95); }
+.bl1000-btn:disabled {  color: #aaaaaa; cursor: default; }
+.bl1000-btn:disabled:hover { background: #1a1a1a; }
 
 .bl1000-red { color: #e83030; font-size: 12px; }
 
