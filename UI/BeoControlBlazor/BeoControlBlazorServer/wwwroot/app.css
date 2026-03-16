@@ -1,16 +1,18 @@
+:root {
+    --remote-width: 170px; /* actual remote component width (.beo4 / .bl1000) */
+    --body-width: 210px;   /* page body width — also update RemoteWindow.Width in MAUI */
+}
+
 html, body {
     font-family: 'Arial Narrow', Arial, sans-serif;
     margin: 0;
     padding: 0;
     background: #f0f0f0;
     height: 100%;
-   
 }
-html{
-  /*  background-color:red;*/
-}
+
 body {
-    width: 210px;
+    width: var(--body-width);
     margin: 0 auto;
 }
 

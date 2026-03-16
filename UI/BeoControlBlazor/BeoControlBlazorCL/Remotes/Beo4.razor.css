@@ -1,7 +1,7 @@
 .beo4 {
     display: inline-flex;
     flex-direction: column;
-    width: 170px;
+    width: var(--remote-width);
     background: linear-gradient(170deg, #e2e2e2 0%, #c8c8c8 100%);
     border-radius: 6px 6px 6px 6px;
     padding: 0;
