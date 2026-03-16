@@ -1,15 +1,19 @@
 @page "/"
+@using BeoControl.Interfaces
 @using BeoControlBlazor.Services
 @using BeoControlBlazor.Components.Remotes
 @inject DeviceService DeviceService
 @inject NavigationManager Nav
+@implements IDisposable
 @rendermode InteractiveServer
 
 <PageTitle>B&amp;O Remote</PageTitle>
 
 <div class="remote-shell">
 
-    <div class="remote-toolbar">
+    <div style="width:100%" class="remote-top">
+
+        <div class="remote-toolbar">
         <div class="remote-switcher">
             @foreach (var r in Enum.GetValues<RemoteType>())
             {
@@ -21,27 +25,42 @@
                 </label>
             }
         </div>
-        <button class="gear-btn" title="Setup" @onclick='() => Nav.NavigateTo("/setup")'>⚙</button>
+            <button class="gear-btn" title="Setup" @onclick='() => Nav.NavigateTo("/setup")'>⚙</button>
+        </div>
     </div>
 
     @if (Selected == RemoteType.Beolink1000)
     {
-        <Beolink1000 OnCommand="SendCommand" />
+        <Beolink1000 OnCommand="SendCommand" DeviceStatus="@_status.Text" />
     }
     else
     {
-        <Beo4 OnCommand="SendCommand" />
+        <Beo4 OnCommand="SendCommand" DeviceStatus="@_status.Text" />
     }
+        <div class="conn-bar conn-bar--@(_status.Type.ToString().ToLower())">
+            <span class="conn-dot"></span>
+            <span class="conn-text">@ConnectionLabel()</span>
+        </div>
 
 </div>
 
 @code {
     private RemoteType Selected;
+    private StatusMessage _status = new(StatusType.Idle, "");
 
     protected override void OnInitialized()
     {
         Selected = DeviceService.Settings.LastRemote;
+        DeviceService.OnStatusChanged += OnStatusChanged;
     }
+
+    private async void OnStatusChanged(StatusMessage msg)
+    {
+        _status = msg;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => DeviceService.OnStatusChanged -= OnStatusChanged;
 
     private void SelectRemote(RemoteType r)
     {
@@ -52,6 +71,21 @@
 
     private void SendCommand(string command) =>
         DeviceService.SendCommand(command);
+
+    private string ConnectionLabel()
+    {
+        var dev = DeviceService.CurrentDevice;
+        if (dev is null || !DeviceService.IsConnected)
+            return "DISCONNECTED";
+        var detail = dev.Type switch
+        {
+            DeviceType.Serial => dev.Name is not null ? $"{dev.Name}  |  {dev.Id}" : dev.Id ?? "Serial",
+            DeviceType.BT     => dev.Name is not null ? $"{dev.Name}  |  BT" : "BT",
+            DeviceType.PC2    => "PC2",
+            _                 => dev.Id ?? "Unknown"
+        };
+        return $"CONNECTED  {detail}";
+    }
 
     private static string RemoteLabel(RemoteType r) => r switch
     {

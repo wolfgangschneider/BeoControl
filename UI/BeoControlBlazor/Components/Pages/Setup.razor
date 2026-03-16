@@ -17,7 +17,7 @@
 
     <div class="setup-status @StatusClass">
         <span class="setup-dot @DotClass"></span>
-        <span class="setup-status-text">@DeviceService.StatusText</span>
+        <span class="setup-status-text">@_statusText</span>
         @if (DeviceService.IsConnected && DeviceService.CurrentDevice is { } info)
         {
             <strong class="setup-device-name">@(info.Name ?? info.Id)</strong>
@@ -143,7 +143,10 @@
     private List<DeviceInfo> BtDevices = [];
     private CancellationTokenSource? _scanCts;
 
-    private string StatusClass => DeviceService.StatusType switch
+    private StatusType _statusType = StatusType.Idle;
+    private string _statusText = "Not connected";
+
+    private string StatusClass => _statusType switch
     {
         StatusType.Ok      => "status-ok",
         StatusType.Error   => "status-error",
@@ -151,7 +154,7 @@
         _                  => "status-idle",
     };
 
-    private string DotClass => DeviceService.StatusType switch
+    private string DotClass => _statusType switch
     {
         StatusType.Ok      => "dot-ok",
         StatusType.Error   => "dot-error",
@@ -161,14 +164,20 @@
 
     protected override void OnInitialized()
     {
-        DeviceService.StateChanged += OnServiceStateChanged;
+        DeviceService.OnStatusChanged += OnServiceStatusChanged;
         ActiveTab      = DeviceService.Settings.LastDevice;
         SelectedSerial = DeviceService.Settings.LastSerial?.Id;
         SelectedBt     = DeviceService.Settings.LastBluetooth?.Id;
+        _statusType    = DeviceService.LastStatus.Type;
+        _statusText    = DeviceService.LastStatus.Text;
     }
 
-    private async void OnServiceStateChanged() =>
+    private async void OnServiceStatusChanged(StatusMessage msg)
+    {
+        _statusType = msg.Type;
+        _statusText = msg.Text;
         await InvokeAsync(StateHasChanged);
+    }
 
     private void SelectTab(DeviceType tab)
     {
@@ -185,7 +194,9 @@
         IsScanning = true;
         SerialDevices = [];
         ScanStatus = "Scanning…";
+        DeviceService.Disconnect(silent: true);
         StateHasChanged();
+        await Task.Delay(300); // allow OS to release the COM port
         try
         {
             SerialDevices = await DeviceService.ScanSerialAsync(
@@ -261,7 +272,7 @@
 
     public void Dispose()
     {
-        DeviceService.StateChanged -= OnServiceStateChanged;
+        DeviceService.OnStatusChanged -= OnServiceStatusChanged;
         _scanCts?.Cancel();
         _scanCts?.Dispose();
     }

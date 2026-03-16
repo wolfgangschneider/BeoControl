@@ -23,14 +23,17 @@
     border-radius: 3px;
     height: 114px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
-    font-weight: bold;
-    letter-spacing: 4px;
+    gap: 4px;
+    font-family: 'VT323', monospace;
+    letter-spacing: 6px;
     color: #1a2a06;
     box-shadow: inset 0 2px 5px rgba(0,0,0,0.45);
 }
+
+.beo4-display-source { font-size: 28px; text-transform: uppercase; }
 
 /* ── Button sections ──────────────────────────── */
 
@@ -61,8 +64,9 @@
 
 .beo4-btn:hover  { background: #303030; }
 .beo4-btn:active { background: #000; transform: scale(0.95); }
-.beo4-btn:disabled {  color: #aaaaaa; cursor: default; }
+.beo4-btn:disabled { color: #aaaaaa; cursor: default; pointer-events: none; }
 .beo4-btn:disabled:hover { background: #1a1a1a; }
+.beo4-active { background: #555 !important; outline: 1px solid #aaa; }
 
 .beo4-red { color: #e83030; font-size: 12px; }
 
@@ -78,19 +82,6 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 0;
-}
-
-.beo4-nav-btn {
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    height: 22px;
-    font-size: 10px;
-    font-weight: bold;
-    color: #ffffff;
 }
 
 .beo4-nav-btn {

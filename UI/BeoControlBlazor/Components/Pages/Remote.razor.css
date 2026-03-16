@@ -2,9 +2,47 @@
     display: inline-flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 16px;
     padding: 12px;
 }
+
+/* ── Connection bar ───────────────────────────── */
+
+.remote-top {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.conn-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-family: 'Arial Narrow', Arial, sans-serif;
+    font-size: 8px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.conn-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.conn-bar--ok         { background: #1a2e1a; color: #6fcf6f; }
+.conn-bar--ok         .conn-dot { background: #6fcf6f; }
+.conn-bar--idle       { background: #2a2a2a; color: #888; }
+.conn-bar--idle       .conn-dot { background: #666; }
+.conn-bar--error      { background: #2e1a1a; color: #cf6f6f; }
+.conn-bar--error      .conn-dot { background: #cf6f6f; }
+.conn-bar--working    { background: #1a1a2e; color: #8888cf; }
+.conn-bar--working    .conn-dot { background: #8888cf; }
+
+/* ── Toolbar ──────────────────────────────────── */
 
 .remote-toolbar {
     display: flex;
@@ -13,6 +51,7 @@
     border-radius: 4px;
     overflow: hidden;
     gap: 1px;
+    width: 100%;
 }
 
 .remote-switcher {
@@ -57,6 +96,8 @@
     align-items: center;
     justify-content: center;
     line-height: 1;
+    margin-left: auto;
 }
 
     .gear-btn:hover { background: #444; color: #fff; }
+

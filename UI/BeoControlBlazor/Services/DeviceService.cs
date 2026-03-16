@@ -17,10 +17,10 @@ public class DeviceService : IHostedService, IDisposable
 
     public bool IsConnected => _device?.IsConnected ?? false;
     public DeviceInfo? CurrentDevice => _device?.Info;
-    public StatusType StatusType { get; private set; } = StatusType.Idle;
-    public string StatusText { get; private set; } = "Not connected";
 
-    public event Action? StateChanged;
+    public StatusMessage LastStatus { get; private set; } = new(StatusType.Idle, "Not connected");
+
+    public event Action<StatusMessage>? OnStatusChanged;
 
     // ── IHostedService ────────────────────────────────────────────────────────
 
@@ -53,7 +53,7 @@ public class DeviceService : IHostedService, IDisposable
 
     public async Task ConnectSerialAsync(string? portName = null)
     {
-        SetStatus(StatusType.Working, portName is not null ? $"Connecting to {portName}…" : "Connecting to serial…");
+        Notify(StatusType.Working, portName is not null ? $"Connecting to {portName}…" : "Connecting to serial…");
         try
         {
             ReplaceDevice(null);
@@ -61,14 +61,14 @@ public class DeviceService : IHostedService, IDisposable
             await device.Connect();
             ReplaceDevice(device);
             PersistDevice();
-            SetStatus(StatusType.Ok, $"Connected: {device.Info.Name ?? device.Info.Id}");
+            Notify(StatusType.Ok, $"Connected: {device.Info.Name ?? device.Info.Id}");
         }
-        catch (Exception ex) { SetStatus(StatusType.Error, $"Serial failed: {ex.Message}"); }
+        catch (Exception ex) { Notify(StatusType.Error, $"Serial failed: {ex.Message}"); }
     }
 
     public async Task ConnectBluetoothAsync(string? deviceId = null)
     {
-        SetStatus(StatusType.Working, deviceId is not null ? $"Connecting to {deviceId}…" : "Scanning Bluetooth…");
+        Notify(StatusType.Working, deviceId is not null ? $"Connecting to {deviceId}…" : "Scanning Bluetooth…");
         try
         {
             ReplaceDevice(null);
@@ -76,26 +76,24 @@ public class DeviceService : IHostedService, IDisposable
             await device.Connect();
             ReplaceDevice(device);
             PersistDevice();
-            SetStatus(StatusType.Ok, $"Connected: {device.Info.Name ?? device.Info.Id}");
+            Notify(StatusType.Ok, $"Connected: {device.Info.Name ?? device.Info.Id}");
         }
-        catch (Exception ex) { SetStatus(StatusType.Error, $"Bluetooth failed: {ex.Message}"); }
+        catch (Exception ex) { Notify(StatusType.Error, $"Bluetooth failed: {ex.Message}"); }
     }
 
     public async Task ConnectPc2Async()
     {
-        SetStatus(StatusType.Working, "Connecting to PC2…");
+        Notify(StatusType.Working, "Connecting to PC2…");
         try
         {
             ReplaceDevice(null);
             var device = new Pc2Device();
             await device.Connect();
             ReplaceDevice(device);
-            Settings.LastDevice = DeviceType.PC2;
-            Settings.Save();
-            SetStatus(StatusType.Ok, "Connected: PC2");
-            StateChanged?.Invoke();
+            PersistDevice();
+            Notify(StatusType.Ok, "Connected: PC2");
         }
-        catch (Exception ex) { SetStatus(StatusType.Error, $"PC2 failed: {ex.Message}"); }
+        catch (Exception ex) { Notify(StatusType.Error, $"PC2 failed: {ex.Message}"); }
     }
 
     // ── Scan helpers ──────────────────────────────────────────────────────────
@@ -119,7 +117,7 @@ public class DeviceService : IHostedService, IDisposable
     public void Disconnect(bool silent = false)
     {
         ReplaceDevice(null);
-        if (!silent) SetStatus(StatusType.Idle, "Disconnected");
+        if (!silent) Notify(StatusType.Idle, "Disconnected");
     }
 
     public void Dispose() => Disconnect(silent: true);
@@ -128,10 +126,24 @@ public class DeviceService : IHostedService, IDisposable
 
     private void ReplaceDevice(IDevice? next)
     {
-        _device?.Disconnect();
-        _device?.Dispose();
+        if (_device is not null)
+        {
+            _device.OnStatusChanged -= OnDeviceStatusChanged;
+            _device.OnLog           -= OnDeviceLog;
+            _device.Disconnect();
+            _device.Dispose();
+        }
         _device = next;
+        if (_device is not null)
+        {
+            _device.OnStatusChanged += OnDeviceStatusChanged;
+            _device.OnLog           += OnDeviceLog;
+        }
     }
+
+    private void OnDeviceStatusChanged(StatusMessage msg) => OnStatusChanged?.Invoke(msg);
+
+    private void OnDeviceLog(LogMessage msg) { /* future log panel */ }
 
     private void PersistDevice()
     {
@@ -140,13 +152,11 @@ public class DeviceService : IHostedService, IDisposable
         if (_device.Info.Type == DeviceType.Serial) Settings.LastSerial = _device.Info;
         else if (_device.Info.Type == DeviceType.BT) Settings.LastBluetooth = _device.Info;
         Settings.Save();
-        StateChanged?.Invoke();
     }
 
-    private void SetStatus(StatusType type, string text)
+    private void Notify(StatusType type, string text)
     {
-        StatusType = type;
-        StatusText = text;
-        StateChanged?.Invoke();
+        LastStatus = new StatusMessage(type, text);
+        OnStatusChanged?.Invoke(LastStatus);
     }
 }

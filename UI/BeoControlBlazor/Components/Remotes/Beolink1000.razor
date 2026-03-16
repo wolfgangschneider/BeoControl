@@ -3,31 +3,31 @@
 <div class="bl1000">
 
     <div class="bl1000-section">
-        <button class="bl1000-btn" @onclick='() => SendCommand("TV")'>TV</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("LIGHT")'>LIGHT</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("RADIO")' >RADIO</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("tv")'>TV</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("light")'>LIGHT</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("radio")'>RADIO</button>
 
-        <button class="bl1000-btn" @onclick='() => SendCommand("SAT")'>SAT</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("LINK")'>LINK</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("CD")'>CD</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("sat")'>SAT</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("link")'>LINK</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("cd"))'>@Label("cd")</button>
 
-        <button class="bl1000-btn" @onclick='() => SendCommand("V.TAPE")'>V.TAPE</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("RECORD")'>RECORD</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("A.TAPE")'>A.TAPE</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("vtape")'>V.TAPE</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("record")'>RECORD</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("atape"))'>@Label("atape")</button>
 
-        <button class="bl1000-btn" @onclick='() => SendCommand("MENU")'>MENU</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("SHIFT")'>SHIFT</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("PHONO")'>PHONO</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("menu")'>MENU</button>
+        <button class="bl1000-btn @(_shifted ? "bl1000-active" : "")" @onclick="ToggleShift">SHIFT</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("phono"))'>@Label("phono")</button>
     </div>
 
     <div class="bl1000-section">
-        <button class="bl1000-btn" @onclick='() => SendCommand("STOP")'>STOP</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("UP")'>&#9650;</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("PLAY")'>PLAY</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("stop")'>STOP</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("up")'>&#9650;</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("play")'>PLAY</button>
 
-        <button class="bl1000-btn" @onclick='() => SendCommand("REWIND")'>&lt;&lt;</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("DOWN")'>&#9660;</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("FORWARD")'>&gt;&gt;</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("left")' >&lt;&lt;</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("down")'>&#9660;</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("right")' >&gt;&gt;</button>
     </div>
 
     <div class="bl1000-section">
@@ -43,29 +43,29 @@
         <button class="bl1000-btn" @onclick='() => SendCommand("2")'>2</button>
         <button class="bl1000-btn" @onclick='() => SendCommand("3")'>3</button>
 
-        <button class="bl1000-btn" @onclick='() => SendCommand("TEXT")'>TEXT</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("text")'>TEXT</button>
         <button class="bl1000-btn" @onclick='() => SendCommand("0")'>0</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("GOTO")'>GO TO</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("goto")' disabled>GO TO</button>
     </div>
 
     <div class="bl1000-section">
-        <button class="bl1000-btn" @onclick='() => SendCommand("PICTURE")'>PICTURE</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("picture")'>PICTURE</button>
         <span></span>
-        <button class="bl1000-btn" @onclick='() => SendCommand("PICTURE_UP")'>&#9650;</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("vol+")' >&#9650;</button>
 
-        <button class="bl1000-btn" @onclick='() => SendCommand("STORE")'>STORE</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("store")'>STORE</button>
         <span></span>
         <span></span>
 
-        <button class="bl1000-btn" @onclick='() => SendCommand("SOUND")'>SOUND</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("sound")' disabled>SOUND</button>
         <span></span>
-        <button class="bl1000-btn" @onclick='() => SendCommand("SOUND_DOWN")'>&#9660;</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("vol-")' >&#9660;</button>
     </div>
 
     <div class="bl1000-section">
-        <button class="bl1000-btn" @onclick='() => SendCommand("AV")'>AV</button>
-        <button class="bl1000-btn bl1000-red" @onclick='() => SendCommand("STANDBY")'>&#9679;</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("MUTE")'>MUTE</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("av")'>AV</button>
+        <button class="bl1000-btn bl1000-red" @onclick='() => SendCommand(Cmd("standby"))'>&#9679;</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("mute"))'>@Label("mute")</button>
     </div>
 
     <div class="bl1000-footer">
@@ -76,6 +76,27 @@
 
 @code {
     [Parameter, EditorRequired] public EventCallback<string> OnCommand { get; set; }
+    [Parameter] public string? DeviceStatus { get; set; }
+
+    private static readonly Dictionary<string, string> AltMap = new()
+    {
+        ["atape"]   = "atape2",
+        ["cd"]      = "cd2",
+        ["standby"] = "allstandby",
+        ["mute"]    = "loudness",
+        ["phono"]   = "pc",
+    };
+
+    private bool _shifted;
+
+    private string Cmd(string primary) =>
+        _shifted && AltMap.TryGetValue(primary, out var alt) ? alt : primary;
+
+    private string Label(string primary) =>
+        (_shifted && AltMap.TryGetValue(primary, out var alt) ? alt : primary).ToUpper()
+        .Replace("ATAPE2", "A.TAPE2");
+
+    private void ToggleShift() => _shifted = !_shifted;
 
     private void SendCommand(string command) => OnCommand.InvokeAsync(command);
 }
