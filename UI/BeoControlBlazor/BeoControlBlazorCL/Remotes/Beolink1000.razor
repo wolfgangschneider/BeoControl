@@ -1,73 +1,78 @@
 @* Pure layout component — no service knowledge *@
 
-<div class="bl1000">
+<div style="height:100% ;margin-left: auto;  margin-right: auto;" class="bl1000">
+    <div class="bl1000-header">
 
-    <div class="bl1000-section">
-        <button class="bl1000-btn" @onclick='() => SendCommand("tv")'>TV</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("light")'>LIGHT</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("radio")'>RADIO</button>
-
-        <button class="bl1000-btn" @onclick='() => SendCommand("sat")'>SAT</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("link")'>LINK</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("cd"))'>@Label("cd")</button>
-
-        <button class="bl1000-btn" @onclick='() => SendCommand("vtape")'>V.TAPE</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("record")'>RECORD</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("atape"))'>@Label("atape")</button>
-
-        <button class="bl1000-btn" @onclick='() => SendCommand("menu")'>MENU</button>
-        <button class="bl1000-btn @(_shifted ? "bl1000-active" : "")" @onclick="ToggleShift">SHIFT</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("phono"))'>@Label("phono")</button>
     </div>
+    <div>
 
-    <div class="bl1000-section">
-        <button class="bl1000-btn" @onclick='() => SendCommand("stop")'>STOP</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("up")'>&#9650;</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("play")'>PLAY</button>
+        <div class="bl1000-section">
+            <button class="bl1000-btn" @onclick='() => SendCommand("tv")'>TV</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("light")'>LIGHT</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("radio")'>RADIO</button>
 
-        <button class="bl1000-btn" @onclick='() => SendCommand("left")' >&lt;&lt;</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("down")'>&#9660;</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("right")' >&gt;&gt;</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("sat")'>SAT</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("link")'>LINK</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("cd"))'>@Label("cd")</button>
+
+            <button class="bl1000-btn" @onclick='() => SendCommand("vtape")'>V.TAPE</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("record")'>RECORD</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("atape"))'>@Label("atape")</button>
+
+            <button class="bl1000-btn" @onclick='() => SendCommand("menu")'>MENU</button>
+            <button class="bl1000-btn @(_shifted ? "bl1000-active" : "")" @onclick="ToggleShift">SHIFT</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("phono"))'>@Label("phono")</button>
+        </div>
+
+        <div class="bl1000-section">
+            <button class="bl1000-btn" @onclick='() => SendCommand("stop")'>STOP</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("up")'>&#9650;</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("play")'>PLAY</button>
+
+            <button class="bl1000-btn" @onclick='() => SendCommand("left")' >&lt;&lt;</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("down")'>&#9660;</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("right")' >&gt;&gt;</button>
+        </div>
+
+        <div class="bl1000-section">
+            <button class="bl1000-btn" @onclick='() => SendCommand("7")'>7</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("8")'>8</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("9")'>9</button>
+
+            <button class="bl1000-btn" @onclick='() => SendCommand("4")'>4</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("5")'>5</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("6")'>6</button>
+
+            <button class="bl1000-btn" @onclick='() => SendCommand("1")'>1</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("2")'>2</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("3")'>3</button>
+
+            <button class="bl1000-btn" @onclick='() => SendCommand("text")'>TEXT</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("0")'>0</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("goto")' disabled>GO TO</button>
+        </div>
+
+        <div class="bl1000-section">
+            <button class="bl1000-btn" @onclick='() => SendCommand("picture")'>PICTURE</button>
+            <span></span>
+            <button class="bl1000-btn" @onclick='() => SendCommand("vol+")' >&#9650;</button>
+
+            <button class="bl1000-btn" @onclick='() => SendCommand("store")'>STORE</button>
+            <span></span>
+            <span></span>
+
+            <button class="bl1000-btn" @onclick='() => SendCommand("sound")' disabled>SOUND</button>
+            <span></span>
+            <button class="bl1000-btn" @onclick='() => SendCommand("vol-")' >&#9660;</button>
+        </div>
+
+        <div class="bl1000-section">
+            <button class="bl1000-btn" @onclick='() => SendCommand("av")'>AV</button>
+            <button class="bl1000-btn bl1000-red" @onclick='() => SendCommand(Cmd("standby"))'>&#9679;</button>
+            <button class="bl1000-btn" @onclick='() => SendCommand("mute")'>MUTE</button>
+        </div>
+
     </div>
-
-    <div class="bl1000-section">
-        <button class="bl1000-btn" @onclick='() => SendCommand("7")'>7</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("8")'>8</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("9")'>9</button>
-
-        <button class="bl1000-btn" @onclick='() => SendCommand("4")'>4</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("5")'>5</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("6")'>6</button>
-
-        <button class="bl1000-btn" @onclick='() => SendCommand("1")'>1</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("2")'>2</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("3")'>3</button>
-
-        <button class="bl1000-btn" @onclick='() => SendCommand("text")'>TEXT</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("0")'>0</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("goto")' disabled>GO TO</button>
-    </div>
-
-    <div class="bl1000-section">
-        <button class="bl1000-btn" @onclick='() => SendCommand("picture")'>PICTURE</button>
-        <span></span>
-        <button class="bl1000-btn" @onclick='() => SendCommand("vol+")' >&#9650;</button>
-
-        <button class="bl1000-btn" @onclick='() => SendCommand("store")'>STORE</button>
-        <span></span>
-        <span></span>
-
-        <button class="bl1000-btn" @onclick='() => SendCommand("sound")' disabled>SOUND</button>
-        <span></span>
-        <button class="bl1000-btn" @onclick='() => SendCommand("vol-")' >&#9660;</button>
-    </div>
-
-    <div class="bl1000-section">
-        <button class="bl1000-btn" @onclick='() => SendCommand("av")'>AV</button>
-        <button class="bl1000-btn bl1000-red" @onclick='() => SendCommand(Cmd("standby"))'>&#9679;</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand("mute")'>MUTE</button>
-    </div>
-
     <div class="bl1000-footer">
         <span class="bl1000-brand">BANG &amp; OLUFSEN</span>
     </div>

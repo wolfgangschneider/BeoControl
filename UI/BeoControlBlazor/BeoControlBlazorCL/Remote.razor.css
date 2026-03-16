@@ -1,6 +1,11 @@
+html, body
+{
+    height:100%;
+}
 .remote-shell {
-    display: inline-flex;
-    flex-direction: column;
+    height:100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
     align-items: center;
     gap: 16px;
     padding: 12px;

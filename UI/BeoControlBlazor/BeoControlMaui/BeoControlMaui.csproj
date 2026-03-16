@@ -74,6 +74,11 @@
 
     <ItemGroup>
       <ProjectReference Include="..\BeoControlBlazorCL\BeoControlBlazorCL.csproj" />
+      <ProjectReference Include="..\BeoControlBlazorServices\BeoControlBlazorServices.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Components\Pages\" />
     </ItemGroup>
 
 </Project>
