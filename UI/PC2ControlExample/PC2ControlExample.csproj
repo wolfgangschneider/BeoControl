@@ -1,8 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Adapters\Pc2Adapter\Pc2Adapter.csproj" />
-    <ProjectReference Include="..\..\..\Interfaces\BeoControlInterfaces.csproj" />
+  
+    <ProjectReference Include="..\..\Adapters\Pc2Adapter\Pc2Adapter.csproj" />
+    <ProjectReference Include="..\..\Interfaces\BeoControlInterfaces.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
