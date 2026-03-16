@@ -65,7 +65,7 @@
     <div class="bl1000-section">
         <button class="bl1000-btn" @onclick='() => SendCommand("av")'>AV</button>
         <button class="bl1000-btn bl1000-red" @onclick='() => SendCommand(Cmd("standby"))'>&#9679;</button>
-        <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("mute"))'>@Label("mute")</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("mute")'>MUTE</button>
     </div>
 
     <div class="bl1000-footer">
@@ -85,6 +85,7 @@
         ["standby"] = "allstandby",
         ["mute"]    = "loudness",
         ["phono"]   = "pc",
+       
     };
 
     private bool _shifted;
@@ -94,7 +95,7 @@
 
     private string Label(string primary) =>
         (_shifted && AltMap.TryGetValue(primary, out var alt) ? alt : primary).ToUpper()
-        .Replace("ATAPE2", "A.TAPE2");
+    .Replace("ATAPE", "A.TAPE");
 
     private void ToggleShift() => _shifted = !_shifted;
 

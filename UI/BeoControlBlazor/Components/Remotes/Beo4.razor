@@ -4,7 +4,7 @@
 
     <div class="beo4-display-frame">
         <div class="beo4-display">
-            <span class="beo4-display-source">@ExtractSource(DeviceStatus)</span>
+            <span class="beo4-display-source">@DisplayText</span>
         </div>
     </div>
 
@@ -15,11 +15,11 @@
 
         <button class="beo4-btn" @onclick='() => SendCommand("sat")'>SAT</button>
         <button class="beo4-btn" @onclick='() => SendCommand("dvd")'>DVD</button>
-        <button class="beo4-btn" @onclick='() => SendCommand(Cmd("cd"))'>@Label("cd")</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("cd")'>CD</button>
 
         <button class="beo4-btn" @onclick='() => SendCommand("vtape")'>V.TAPE</button>
         <button class="beo4-btn" @onclick='() => SendCommand("record")'>RECORD</button>
-        <button class="beo4-btn" @onclick='() => SendCommand(Cmd("atape"))'>@Label("atape")</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("atape")'>A.TAPE</button>
     </div>
 
     <div class="beo4-section">
@@ -49,7 +49,7 @@
             <button style="z-index:10; transform: scaleY(2) " class="beo4-nav-btn beo4-nav-left" @onclick='() => SendCommand("left")'>◄</button>
 
             <div style="z-index:10; background:#1a1a1a;transform: scale(1.1);transform-origin: center center;">
-                <button style="width:100%;" class="beo4-nav-btn beo4-nav-go" @onclick='() => SendCommand("go")'>GO</button>
+                <button style="width:100%;" class="beo4-nav-btn beo4-nav-go" @onclick="OnGoPressed">GO</button>
            </div>
 
             <button class="beo4-nav-btn beo4-nav-right" style="z-index:10;transform: scaleY(2) " @onclick='() => SendCommand("right")'>►</button>
@@ -61,13 +61,13 @@
     </div>
 
     <div class="beo4-section">
-        <button class="beo4-btn @(_shifted ? "beo4-active" : "")" @onclick="ToggleShift">@Label("list")</button>
+        <button class="beo4-btn" @onclick="OnListPressed">LIST</button>
         <button class="beo4-btn" @onclick='() => SendCommand("vol+")'>▲</button>
-        <button class="beo4-btn" @onclick='() => SendCommand(Cmd("exit"))'>@Label("exit")</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("exit")'>EXIT</button>
 
         <button class="beo4-btn" @onclick='() => SendCommand("stop")'>STOP</button>
         <button class="beo4-btn" @onclick='() => SendCommand("vol-")'>▼</button>
-        <button class="beo4-btn beo4-red" @onclick='() => SendCommand(Cmd("standby"))'>&#9679;</button>
+        <button class="beo4-btn beo4-red" @onclick='() => SendCommand("standby")'>&#9679;</button>
     </div>
 
     <div class="beo4-footer">
@@ -92,28 +92,39 @@
         return status;
     }
 
-   private void Source(string source) => OnCommand.InvokeAsync(source);
-    private void SendCommand(string command) => OnCommand.InvokeAsync(command);
+   private void SendCommand(string command) => OnCommand.InvokeAsync(command);
 
-    private static readonly Dictionary<string, string> AltMap = new()
+    // Commands not on physical keys — cycled via LIST
+    private static readonly List<(string Cmd, string Display)> AltList =
+    [
+        ("atape2",     "A.TAPE 2"),
+        ("cd2",        "CD 2"),
+        ("allstandby", "ALL STBY"),
+        ("phono",      "PHONO"),
+    ];
+
+    private int _listIndex = -1;
+    private bool InListMode => _listIndex >= 0;
+
+    private string DisplayText =>
+        InListMode ? AltList[_listIndex].Display : ExtractSource(DeviceStatus);
+
+    private void OnListPressed()
     {
-        ["atape"]   = "atape2",
-        ["cd"]      = "cd2",
-        ["standby"] = "allstandby",
-        ["exit"]    = "return",
-        ["???"] = "phono",
+        _listIndex = InListMode ? (_listIndex + 1) % AltList.Count : 0;
+    }
 
-        // ["list"]    = "index",
-    };
+    private void OnGoPressed()
+    {
+        if (InListMode)
+        {
+            SendCommand(AltList[_listIndex].Cmd);
+            _listIndex = -1;
+        }
+        else SendCommand("go");
+    }
 
-    private bool _shifted;
+    private void OnExitPressed() { } // unused
 
-    private string Cmd(string primary) =>
-        _shifted && AltMap.TryGetValue(primary, out var alt) ? alt : primary;
-
-    private string Label(string primary) =>
-        (_shifted && AltMap.TryGetValue(primary, out var alt) ? alt : primary).ToUpper()
-        .Replace("ATAPE2", "A.TAPE2");
-
-    private void ToggleShift() => _shifted = !_shifted;
+    private void ToggleShift() { } // unused, kept to avoid rename cascades
 }

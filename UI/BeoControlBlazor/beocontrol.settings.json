@@ -1,6 +1,6 @@
 {
-  "lastDevice": "Serial",
-  "lastRemote": "Beo4",
+  "lastDevice": "BT",
+  "lastRemote": "Beolink1000",
   "lastSerial": {
     "type": "Serial",
     "name": "Beo4Remote_ESP32",
