@@ -1,14 +1,11 @@
-html, body
-{
-    height:100%;
-}
 .remote-shell {
     height:100%;
     display: grid;
     grid-template-rows: auto 1fr auto;
-    align-items: center;
+    justify-items: center;
     gap: 16px;
-    padding: 12px;
+
+
 }
 
 /* ── Connection bar ───────────────────────────── */

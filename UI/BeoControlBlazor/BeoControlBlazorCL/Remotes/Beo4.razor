@@ -8,7 +8,8 @@
         </div>
     </div>
 
-    <div class="beo4-section">
+    <div>
+        <div class="beo4-section">
         <button class="beo4-btn" @onclick='() => SendCommand("tv")'>TV</button>
         <button class="beo4-btn" @onclick='() => SendCommand("light")'>LIGHT</button>
         <button class="beo4-btn" @onclick='() => SendCommand("radio")'>RADIO</button>
@@ -37,14 +38,14 @@
 
         <button class="beo4-btn" @onclick='() => SendCommand("text")'>TEXT</button>
         <button class="beo4-btn" @onclick='() => SendCommand("0")'>0</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("menu")'>MENUE</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("menu")'>MENU</button>
     </div>
 
     <div class="beo4-nav-area">
         <div class="beo4-nav">
-            <button class="beo4-nav-btn" style="background:Green;width:20px;transform:rotate(-45deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand("green")'></button>
+            <button class="beo4-nav-btn" style="background:Green;width:30px;transform:rotate(-45deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand("green")'></button>
             <button style="z-index:10;transform: scaleX(2) " class="beo4-nav-btn beo4-nav-up" @onclick='() => SendCommand("up")'>▲</button>
-            <button class="beo4-nav-btn" style="background:yellow;width:20px;transform:rotate(45deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand("yellow")'></button>
+            <button class="beo4-nav-btn" style="background:yellow;width:30px;transform:rotate(45deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand("yellow")'></button>
 
             <button style="z-index:10; transform: scaleY(2) " class="beo4-nav-btn beo4-nav-left" @onclick='() => SendCommand("left")'>◄</button>
 
@@ -54,9 +55,9 @@
 
             <button class="beo4-nav-btn beo4-nav-right" style="z-index:10;transform: scaleY(2) " @onclick='() => SendCommand("right")'>►</button>
 
-            <button class="beo4-nav-btn" style="background:Red;width:20px;transform:rotate(-135deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand("red")'></button>
+            <button class="beo4-nav-btn" style="background:Red;width:30px;transform:rotate(-135deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand("red")'></button>
             <button class="beo4-nav-btn beo4-nav-down" style="z-index:10;transform: scaleX(2) "  @onclick='() => SendCommand("down")'>▼</button>
-            <button class="beo4-nav-btn" style="background:Blue;width:20px;transform:rotate(135deg) scaleY(1.5);margin:auto;"  @onclick='() => SendCommand("blue")'></button>
+            <button class="beo4-nav-btn" style="background:Blue;width:30px;transform:rotate(135deg) scaleY(1.5);margin:auto;"  @onclick='() => SendCommand("blue")'></button>
         </div>
     </div>
 
@@ -68,6 +69,7 @@
         <button class="beo4-btn" @onclick='() => SendCommand("stop")'>STOP</button>
         <button class="beo4-btn" @onclick='() => SendCommand("vol-")'>▼</button>
         <button class="beo4-btn beo4-red" @onclick='() => SendCommand("standby")'>&#9679;</button>
+    </div>
     </div>
 
     <div class="beo4-footer">

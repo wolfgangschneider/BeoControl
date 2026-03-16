@@ -1,14 +1,16 @@
 .beo4 {
-    display: inline-flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: 1fr auto 1fr;
+    height: 100%;
     width: var(--remote-width);
     background: linear-gradient(170deg, #e2e2e2 0%, #c8c8c8 100%);
     border-radius: 6px 6px 6px 6px;
-    padding: 0;
     box-shadow: 2px 4px 16px rgba(0,0,0,0.45);
     font-family: 'Arial Narrow', Arial, sans-serif;
     user-select: none;
     overflow: hidden;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* ── Display ──────────────────────────────────── */
@@ -21,7 +23,7 @@
 .beo4-display {
     background: #d8debb;
     border-radius: 3px;
-    height: 114px;
+    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -41,7 +43,7 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 3px;
-    margin: 8px 10px;
+    margin: 8px 2px;
 }
 
 .beo4-btn {
@@ -73,9 +75,13 @@
 /* ── Navigation diamond ───────────────────────── */
 
 .beo4-nav-area {
-    margin: 8px 10px;
-   /* background: #c8c8c8;*/
-    overflow:clip;
+    /*margin: 8px 10px;
+    margin: 14px 14px;*/
+    margin: 14px auto ;
+    width: 135px;
+    
+    /* background: #c8c8c8;*/
+    overflow: clip;
 }
 
 .beo4-nav {
@@ -91,7 +97,7 @@
     align-items: center;
     justify-content: center;
     padding: 0;
-    height: 50px;
+    height: 45px;
     font-size: 10px;
     font-weight: bold;
     color: #ffffff;
@@ -114,9 +120,7 @@
 /* ── Footer ───────────────────────────────────── */
 
 .beo4-footer {
-   /* background: #111111;*/
-    padding: 0 10px 16px;
-    min-height: 72px;
+    height: 100%;
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -128,4 +132,5 @@
     letter-spacing: 2.5px;
     font-family: Arial, sans-serif;
     font-weight: normal;
+    padding: 0 0 2em 0;
 }

@@ -10,10 +10,9 @@
 
 <PageTitle>B&amp;O Remote</PageTitle>
 
-<div style="height:100% ;display:grid ;grid-template-rows: auto 1fr auto;  gap:16px; ">
+<div class="remote-shell">
 
-
-    <div style="width:170px; margin-left:auto;margin-right:auto ; " class="remote-top">
+    <div style="width:var(--remote-width); margin:0 auto;" class="remote-top">
 
         <div class="remote-toolbar">
         <div class="remote-switcher">
@@ -40,8 +39,8 @@
         <Beo4 OnCommand="SendCommand" DeviceStatus="@_status.Text" />
     }
     
-    <div style="width:170px;margin-left:auto;margin-right:auto;padding:0" >
-        <div style="padding:4px ;height:3em;" class="conn-bar conn-bar--@(_status.Type.ToString().ToLower())">
+    <div style="width:var(--remote-width); margin:0 auto;">
+        <div style="padding:4px; height:3em;" class="conn-bar conn-bar--@(_status.Type.ToString().ToLower())">
             <span class="conn-dot"></span>
             <span class="conn-text">@ConnectionLabel()</span>
 
