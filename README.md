@@ -203,7 +203,7 @@ For greater range, a BC847 NPN transistor switches a higher current through thre
 
 - **[aanban/esp32_beo4](https://github.com/aanban/esp32_beo4)** — ESP32 Beo4 remote firmware. A huge thanks for this project which made ESP32-based control possible.
 - **[toresbe/beoported](https://github.com/toresbe/beoported/releases)** — The base and inspiration for the PC2/Masterlink protocol implementation.
-- **Herwin Jan Steehouwer** — For the KPC2 project and invaluable work on reverse-engineering the PC2 hardware and Masterlink protocol.
+- **[Herwin Jan Steehouwer](https://sourceforge.net/p/kpc2/code/)** — For the KPC2 project and invaluable work on reverse-engineering the PC2 hardware and Masterlink protocol.
 
 ## License
 

@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Interfaces\Interfaces.csproj" />
+  
     <ProjectReference Include="..\..\Adapters\Beo4Adapter\Beo4Adapter.csproj" />
     <ProjectReference Include="..\..\Adapters\Pc2Adapter\Pc2Adapter.csproj" />
     <ProjectReference Include="..\..\Hardware\dotnet_pc2\dotnet_pc2.csproj" />

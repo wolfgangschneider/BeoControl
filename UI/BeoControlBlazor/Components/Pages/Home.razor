@@ -1,59 +1,8 @@
-﻿@page "/"
-@using Beo4Adapter
-@using Beo4Adapter.Transport
-@using Beo4Remote.Interfaces
-
+@page "/Home"
 
 <PageTitle>Home</PageTitle>
 
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
-
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
-
-@code {
-    private int currentCount = 0;
-
-    private void IncrementCount()
-    {
-        _device.SendCommand("CD 5");
-    }
-    IDevice _device;
-    
-
-    protected override void OnInitialized()
-    {
-        if(RendererInfo.IsInteractive)
-        {
-            TryConnectSerial("COM7");
-        }
-        base.OnInitialized();
-    }
-    private void TryConnectSerial(string? portName)
-    {
-        var transport = new SerialTransport(portName);
-        SetDevice(new Beo4Device(transport));
-        try
-        {
-            _device!.Connect();
-            // _settings.LastDevice = "Serial";
-            // _settings.LastPort = portName;
-            // _settings.Save();
-        }
-         catch (AmbiguousPortException ex)
-        {
-        //     var ports = string.Join("  ", ex.Ports.Select(p => p.Key));
-        //     AddLog(Spectre.Console.Color.Yellow, $"Multiple ports found: {ports}  — use /port COMx");
-         }
-    }
-
-    private void SetDevice(IDevice newDevice)
-    {
-        _device?.Disconnect();
-        _device?.Dispose();
-        _device = newDevice;
-       // SubscribeDevice(_device);
-    }
-}
 

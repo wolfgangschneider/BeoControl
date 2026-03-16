@@ -1,0 +1,62 @@
+@page "/"
+@using BeoControlBlazor.Services
+@using BeoControlBlazor.Components.Remotes
+@inject DeviceService DeviceService
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>B&amp;O Remote</PageTitle>
+
+<div class="remote-shell">
+
+    <div class="remote-toolbar">
+        <div class="remote-switcher">
+            @foreach (var r in Enum.GetValues<RemoteType>())
+            {
+                <label class="switcher-option @(Selected == r ? "active" : "")">
+                    <input type="radio" name="remote" value="@r"
+                           checked="@(Selected == r)"
+                           @onchange="() => SelectRemote(r)" />
+                    @RemoteLabel(r)
+                </label>
+            }
+        </div>
+        <button class="gear-btn" title="Setup" @onclick='() => Nav.NavigateTo("/setup")'>⚙</button>
+    </div>
+
+    @if (Selected == RemoteType.Beolink1000)
+    {
+        <Beolink1000 OnCommand="SendCommand" />
+    }
+    else
+    {
+        <Beo4 OnCommand="SendCommand" />
+    }
+
+</div>
+
+@code {
+    private RemoteType Selected;
+
+    protected override void OnInitialized()
+    {
+        Selected = DeviceService.Settings.LastRemote;
+    }
+
+    private void SelectRemote(RemoteType r)
+    {
+        Selected = r;
+        DeviceService.Settings.LastRemote = r;
+        DeviceService.Settings.Save();
+    }
+
+    private void SendCommand(string command) =>
+        DeviceService.SendCommand(command);
+
+    private static string RemoteLabel(RemoteType r) => r switch
+    {
+        RemoteType.Beolink1000 => "BL1000",
+        RemoteType.Beo4        => "Beo4",
+        _                      => r.ToString(),
+    };
+}

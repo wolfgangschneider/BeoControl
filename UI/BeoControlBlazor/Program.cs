@@ -1,10 +1,14 @@
 using BeoControlBlazor.Components;
+using BeoControlBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Register DeviceService as singleton and as a hosted service for auto-connect on startup.
+builder.Services.AddSingleton<DeviceService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<DeviceService>());
 
 var app = builder.Build();
 

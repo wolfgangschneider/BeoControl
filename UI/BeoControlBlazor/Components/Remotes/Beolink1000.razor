@@ -1,0 +1,81 @@
+@* Pure layout component — no service knowledge *@
+
+<div class="bl1000">
+
+    <div class="bl1000-section">
+        <button class="bl1000-btn" @onclick='() => SendCommand("TV")'>TV</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("LIGHT")'>LIGHT</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("RADIO")'>RADIO</button>
+
+        <button class="bl1000-btn" @onclick='() => SendCommand("SAT")'>SAT</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("LINK")'>LINK</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("CD")'>CD</button>
+
+        <button class="bl1000-btn" @onclick='() => SendCommand("V.TAPE")'>V.TAPE</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("RECORD")'>RECORD</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("A.TAPE")'>A.TAPE</button>
+
+        <button class="bl1000-btn" @onclick='() => SendCommand("MENU")'>MENU</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("SHIFT")'>SHIFT</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("PHONO")'>PHONO</button>
+    </div>
+
+    <div class="bl1000-section">
+        <button class="bl1000-btn" @onclick='() => SendCommand("STOP")'>STOP</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("UP")'>&#9650;</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("PLAY")'>PLAY</button>
+
+        <button class="bl1000-btn" @onclick='() => SendCommand("REWIND")'>&lt;&lt;</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("DOWN")'>&#9660;</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("FORWARD")'>&gt;&gt;</button>
+    </div>
+
+    <div class="bl1000-section">
+        <button class="bl1000-btn" @onclick='() => SendCommand("7")'>7</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("8")'>8</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("9")'>9</button>
+
+        <button class="bl1000-btn" @onclick='() => SendCommand("4")'>4</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("5")'>5</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("6")'>6</button>
+
+        <button class="bl1000-btn" @onclick='() => SendCommand("1")'>1</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("2")'>2</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("3")'>3</button>
+
+        <button class="bl1000-btn" @onclick='() => SendCommand("TEXT")'>TEXT</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("0")'>0</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("GOTO")'>GO TO</button>
+    </div>
+
+    <div class="bl1000-section">
+        <button class="bl1000-btn" @onclick='() => SendCommand("PICTURE")'>PICTURE</button>
+        <span></span>
+        <button class="bl1000-btn" @onclick='() => SendCommand("PICTURE_UP")'>&#9650;</button>
+
+        <button class="bl1000-btn" @onclick='() => SendCommand("STORE")'>STORE</button>
+        <span></span>
+        <span></span>
+
+        <button class="bl1000-btn" @onclick='() => SendCommand("SOUND")'>SOUND</button>
+        <span></span>
+        <button class="bl1000-btn" @onclick='() => SendCommand("SOUND_DOWN")'>&#9660;</button>
+    </div>
+
+    <div class="bl1000-section">
+        <button class="bl1000-btn" @onclick='() => SendCommand("AV")'>AV</button>
+        <button class="bl1000-btn bl1000-red" @onclick='() => SendCommand("STANDBY")'>&#9679;</button>
+        <button class="bl1000-btn" @onclick='() => SendCommand("MUTE")'>MUTE</button>
+    </div>
+
+    <div class="bl1000-footer">
+        <span class="bl1000-brand">BANG &amp; OLUFSEN</span>
+    </div>
+
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EventCallback<string> OnCommand { get; set; }
+
+    private void SendCommand(string command) => OnCommand.InvokeAsync(command);
+}

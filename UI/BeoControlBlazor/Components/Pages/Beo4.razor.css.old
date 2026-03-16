@@ -1,0 +1,133 @@
+.beo4 {
+    display: inline-flex;
+    flex-direction: column;
+    width: 170px;
+    background: linear-gradient(170deg, #e2e2e2 0%, #c8c8c8 100%);
+    border-radius: 6px 6px 0 0;
+    padding: 0;
+    box-shadow: 2px 4px 16px rgba(0,0,0,0.45);
+    font-family: 'Arial Narrow', Arial, sans-serif;
+    user-select: none;
+    overflow: hidden;
+}
+
+/* ── Display ──────────────────────────────────── */
+
+.beo4-display-frame {
+    background: #111111;
+    padding: 10px 14px 12px;
+}
+
+.beo4-display {
+    background: #d8debb;
+    border-radius: 3px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 4px;
+    color: #1a2a06;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.45);
+}
+
+/* ── Button sections ──────────────────────────── */
+
+.beo4-section {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+    margin: 8px 10px;
+}
+
+.beo4-btn {
+    background: #1a1a1a;
+    color: #ffffff;
+    border: none;
+    border-radius: 2px;
+    height: 22px;
+    padding: 0;
+    font-size: 8px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.1;
+}
+
+.beo4-btn:hover  { background: #303030; }
+.beo4-btn:active { background: #000; transform: scale(0.95); }
+
+.beo4-red { color: #e83030; font-size: 12px; }
+
+/* ── Navigation diamond ───────────────────────── */
+
+.beo4-nav-area {
+    background: #111111;
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.beo4-nav {
+    display: grid;
+    grid-template-columns: repeat(3, 32px);
+    grid-template-rows: repeat(3, 32px);
+    gap: 2px;
+    transform: rotate(45deg);
+}
+
+.beo4-nav-btn {
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.beo4-nav-btn:hover  { filter: brightness(1.3); }
+.beo4-nav-btn:active { filter: brightness(0.75); }
+
+.beo4-nav-lbl {
+    transform: rotate(-45deg);
+    display: block;
+    font-size: 10px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.beo4-nav-up    { background: #1a8c3a; }
+.beo4-nav-right { background: #cc2222; }
+.beo4-nav-down  { background: #c4900a; }
+.beo4-nav-left  { background: #1a3acc; }
+
+.beo4-nav-go {
+    background: #3a3a3a;
+    border-radius: 50%;
+}
+
+.beo4-nav-go .beo4-nav-lbl {
+    font-size: 7px;
+}
+
+/* ── Footer ───────────────────────────────────── */
+
+.beo4-footer {
+    background: #111111;
+    padding: 20px 10px 16px;
+    text-align: center;
+}
+
+.beo4-brand {
+    color: #888888;
+    font-size: 7px;
+    letter-spacing: 2.5px;
+    font-family: Arial, sans-serif;
+    font-weight: normal;
+}

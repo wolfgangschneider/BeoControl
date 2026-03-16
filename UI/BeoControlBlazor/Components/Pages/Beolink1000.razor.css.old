@@ -1,0 +1,58 @@
+.bl1000 {
+    display: inline-flex;
+    flex-direction: column;
+    width: 170px;
+    background: linear-gradient(170deg, #e2e2e2 0%, #c8c8c8 100%);
+    border-radius: 6px 6px 0 0;
+    padding: 14px 10px 0;
+    box-shadow: 2px 4px 16px rgba(0,0,0,0.45);
+    font-family: 'Arial Narrow', Arial, sans-serif;
+    user-select: none;
+}
+
+.bl1000-section {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+    margin-bottom: 8px;
+}
+
+.bl1000-btn {
+    background: #1a1a1a;
+    color: #ffffff;
+    border: none;
+    border-radius: 2px;
+    height: 22px;
+    padding: 0;
+    font-size: 8px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    text-transform: uppercase;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.1;
+}
+
+.bl1000-btn:hover { background: #303030; }
+.bl1000-btn:active { background: #000; transform: scale(0.95); }
+
+.bl1000-red { color: #e83030; font-size: 12px; }
+
+.bl1000-footer {
+    background: #111111;
+    margin: 4px -10px 0;
+    padding: 20px 10px 16px;
+    border-radius: 0 0 6px 6px;
+    text-align: center;
+}
+
+.bl1000-brand {
+    color: #888888;
+    font-size: 7px;
+    letter-spacing: 2.5px;
+    font-family: Arial, sans-serif;
+    font-weight: normal;
+}

@@ -1,0 +1,14 @@
+{
+  "lastDevice": "Serial",
+  "lastRemote": "Beo4",
+  "lastSerial": {
+    "type": "Serial",
+    "name": "Beo4Remote_ESP32",
+    "id": "COM7"
+  },
+  "lastBluetooth": {
+    "type": "BT",
+    "name": "Beo4Remote_StampS3",
+    "id": "48CA43B76EC9"
+  }
+}

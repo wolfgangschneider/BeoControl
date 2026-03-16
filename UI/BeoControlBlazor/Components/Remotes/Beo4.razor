@@ -1,0 +1,95 @@
+@* Pure layout component — no service knowledge *@
+
+<div class="beo4">
+
+    <div class="beo4-display-frame">
+        <div class="beo4-display">@DisplayText</div>
+    </div>
+
+    <div class="beo4-section">
+        <button class="beo4-btn" @onclick='() => Source("TV")'>TV</button>
+        <button class="beo4-btn" @onclick='() => Source("LIGHT")'>LIGHT</button>
+        <button class="beo4-btn" @onclick='() => Source("RADIO")'>RADIO</button>
+
+        <button class="beo4-btn" @onclick='() => Source("SAT")'>SAT</button>
+        <button class="beo4-btn" @onclick='() => Source("DVD")'>DVD</button>
+        <button class="beo4-btn" @onclick='() => Source("CD")'>CD</button>
+
+        <button class="beo4-btn" @onclick='() => Source("V.TAPE")'>V.TAPE</button>
+        <button class="beo4-btn" @onclick='() => Source("RECORD")'>RECORD</button>
+        <button class="beo4-btn" @onclick='() => Source("A.TAPE")'>A.TAPE</button>
+    </div>
+
+    <div class="beo4-section">
+        <button class="beo4-btn" @onclick='() => SendCommand("7")'>7</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("8")'>8</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("9")'>9</button>
+
+        <button class="beo4-btn" @onclick='() => SendCommand("4")'>4</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("5")'>5</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("6")'>6</button>
+
+        <button class="beo4-btn" @onclick='() => SendCommand("1")'>1</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("2")'>2</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("3")'>3</button>
+
+        <button class="beo4-btn" @onclick='() => SendCommand("TEXT")'>TEXT</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("0")'>0</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("MENU")'>MENU</button>
+    </div>
+
+    <div class="beo4-nav-area">
+        <div class="beo4-nav">
+            <span></span>
+            <button class="beo4-nav-btn beo4-nav-up" @onclick='() => SendCommand("UP")'>
+                <span class="beo4-nav-lbl">▲</span>
+            </button>
+            <span></span>
+
+            <button class="beo4-nav-btn beo4-nav-left" @onclick='() => SendCommand("LEFT")'>
+                <span class="beo4-nav-lbl">◄</span>
+            </button>
+            <button class="beo4-nav-btn beo4-nav-go" @onclick='() => SendCommand("GO")'>
+                <span class="beo4-nav-lbl">GO</span>
+            </button>
+            <button class="beo4-nav-btn beo4-nav-right" @onclick='() => SendCommand("RIGHT")'>
+                <span class="beo4-nav-lbl">►</span>
+            </button>
+
+            <span></span>
+            <button class="beo4-nav-btn beo4-nav-down" @onclick='() => SendCommand("DOWN")'>
+                <span class="beo4-nav-lbl">▼</span>
+            </button>
+            <span></span>
+        </div>
+    </div>
+
+    <div class="beo4-section">
+        <button class="beo4-btn" @onclick='() => SendCommand("LIST")'>LIST</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("VOL+")'>▲</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("EXIT")'>EXIT</button>
+
+        <button class="beo4-btn" @onclick='() => SendCommand("STOP")'>STOP</button>
+        <button class="beo4-btn" @onclick='() => SendCommand("VOL-")'>▼</button>
+        <button class="beo4-btn beo4-red" @onclick='() => SendCommand("STANDBY")'>&#9679;</button>
+    </div>
+
+    <div class="beo4-footer">
+        <span class="beo4-brand">BANG &amp; OLUFSEN</span>
+    </div>
+
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EventCallback<string> OnCommand { get; set; }
+
+    private string DisplayText { get; set; } = "TV";
+
+    private void Source(string source)
+    {
+        DisplayText = source;
+        OnCommand.InvokeAsync(source);
+    }
+
+    private void SendCommand(string command) => OnCommand.InvokeAsync(command);
+}

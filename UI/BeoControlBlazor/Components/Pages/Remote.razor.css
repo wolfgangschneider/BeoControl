@@ -1,0 +1,62 @@
+.remote-shell {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+}
+
+.remote-toolbar {
+    display: flex;
+    align-items: stretch;
+    background: #222;
+    border-radius: 4px;
+    overflow: hidden;
+    gap: 1px;
+}
+
+.remote-switcher {
+    display: contents;
+}
+
+.switcher-option {
+    padding: 5px 12px;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #aaa;
+    background: #2a2a2a;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+}
+
+    .switcher-option input { display: none; }
+
+    .switcher-option.active {
+        background: #444;
+        color: #fff;
+    }
+
+    .switcher-option:hover:not(.active) {
+        background: #333;
+        color: #ddd;
+    }
+
+.gear-btn {
+    background: #2a2a2a;
+    color: #aaa;
+    border: none;
+    padding: 5px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+    .gear-btn:hover { background: #444; color: #fff; }

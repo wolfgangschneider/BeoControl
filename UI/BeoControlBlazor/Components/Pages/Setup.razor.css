@@ -1,0 +1,221 @@
+/* ── Shell ────────────────────────────────────── */
+
+.setup {
+    display: inline-flex;
+    flex-direction: column;
+    width: 260px;
+    background: linear-gradient(170deg, #e2e2e2 0%, #c8c8c8 100%);
+    border-radius: 6px 6px 0 0;
+    box-shadow: 2px 4px 16px rgba(0,0,0,0.45);
+    font-family: ''Arial Narrow'', Arial, sans-serif;
+    overflow: hidden;
+    margin: 12px;
+}
+
+/* ── Header ───────────────────────────────────── */
+
+.setup-header {
+    background: #111;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+}
+
+.setup-back {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.setup-back:hover { color: #fff; }
+
+.setup-title {
+    color: #ccc;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 3px;
+}
+
+/* ── Status bar ───────────────────────────────── */
+
+.setup-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(0,0,0,0.15);
+    flex-wrap: wrap;
+}
+
+.setup-status.status-ok      { background: #1e3a1e; color: #7eca7e; }
+.setup-status.status-error   { background: #3a1e1e; color: #e07070; }
+.setup-status.status-working { background: #1e2a3a; color: #70aae0; }
+.setup-status.status-idle    { background: #2a2a2a; color: #888; }
+
+.setup-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.dot-ok      { background: #7eca7e; }
+.dot-error   { background: #e07070; }
+.dot-idle    { background: #666; }
+.dot-working { background: #70aae0; animation: pulse 1s ease-in-out infinite; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+}
+
+.setup-status-text { flex: 1; }
+.setup-device-name { opacity: 0.85; }
+
+/* ── Tabs ─────────────────────────────────────── */
+
+.setup-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    background: #1a1a1a;
+    padding: 6px 8px;
+}
+
+.setup-tab {
+    background: #2a2a2a;
+    color: #888;
+    border: none;
+    border-radius: 2px;
+    padding: 6px 4px;
+    font-size: 8px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.setup-tab:hover       { background: #333; color: #ccc; }
+.setup-tab.active      { background: #444; color: #fff; }
+.setup-saved { color: #7eca7e; font-size: 10px; }
+
+/* ── Panel ────────────────────────────────────── */
+
+.setup-panel {
+    padding: 10px 10px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ── Action buttons ───────────────────────────── */
+
+.setup-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.setup-btn {
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    border-radius: 2px;
+    padding: 6px 10px;
+    font-size: 8px;
+    font-weight: bold;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.setup-btn:hover:not(:disabled)   { background: #333; }
+.setup-btn:active:not(:disabled)  { background: #000; }
+.setup-btn:disabled               { opacity: 0.4; cursor: default; }
+.setup-btn-primary                { background: #2a4a2a; color: #aaddaa; }
+.setup-btn-primary:hover:not(:disabled) { background: #3a6a3a; }
+.setup-btn-outline  { background: transparent; border: 1px solid #555; color: #aaa; margin-left: auto; }
+.setup-btn-outline:hover:not(:disabled) { border-color: #aaa; color: #fff; }
+
+/* ── Device list ──────────────────────────────── */
+
+.setup-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.setup-list-item {
+    background: #1a1a1a;
+    color: #ccc;
+    border: none;
+    border-radius: 2px;
+    padding: 7px 10px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-family: ''Arial Narrow'', Arial, sans-serif;
+}
+
+.setup-list-item:hover  { background: #2a2a2a; }
+.setup-list-item.active { background: #2a4a2a; color: #aaddaa; }
+.setup-list-id   { font-size: 9px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; }
+.setup-list-name { font-size: 8px; opacity: 0.6; }
+
+/* ── Hint / scan status ───────────────────────── */
+
+.setup-hint, .setup-scan-status {
+    font-size: 8px;
+    color: #777;
+    letter-spacing: 0.3px;
+    margin: 0;
+    font-style: italic;
+}
+
+/* ── Spinner ──────────────────────────────────── */
+
+.setup-spinner {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border: 1px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Footer ───────────────────────────────────── */
+
+.setup-footer {
+    background: #111111;
+    padding: 20px 10px 16px;
+    text-align: center;
+    margin-top: 6px;
+}
+
+.setup-brand {
+    color: #888;
+    font-size: 7px;
+    letter-spacing: 2.5px;
+    font-family: Arial, sans-serif;
+    font-weight: normal;
+}
