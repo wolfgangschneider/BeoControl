@@ -1,0 +1,280 @@
+@page "/setup"
+@using BeoControlBlazor.Services
+@using BeoControl.Interfaces
+@using BeoControlBlazorServices
+@inject DeviceService DeviceService
+@inject NavigationManager Nav
+@implements IDisposable
+@rendermode InteractiveServer
+
+<PageTitle>Setup</PageTitle>
+
+<div class="setup">
+
+    <div class="setup-header">
+        <button class="setup-back" @onclick='() => Nav.NavigateTo("/")'>&#8592;</button>
+        <span class="setup-title">DEVICE SETUP</span>
+    </div>
+
+    <div class="setup-status @StatusClass">
+        <span class="setup-dot @DotClass"></span>
+        <span class="setup-status-text">@_statusText</span>
+        @if (DeviceService.IsConnected && DeviceService.CurrentDevice is { } info)
+        {
+            <strong class="setup-device-name">@(info.Name ?? info.Id)</strong>
+            <button class="setup-btn setup-btn-outline" @onclick="Disconnect">DISCONNECT</button>
+        }
+    </div>
+
+    <div class="setup-tabs">
+        @foreach (var tab in Tabs)
+        {
+            <button class="setup-tab @(ActiveTab == tab ? "active" : "")" @onclick="() => SelectTab(tab)">
+                @TabLabel(tab)
+                @if (DeviceService.Settings.LastDevice == tab)
+                {
+                    <span class="setup-saved">✓</span>
+                }
+            </button>
+        }
+    </div>
+
+    <div class="setup-panel">
+
+        @if (ActiveTab == DeviceType.Serial)
+        {
+            <div class="setup-actions">
+                <button class="setup-btn" @onclick="ScanSerial" disabled="@IsScanning">
+                    @if (IsScanning) { <span class="setup-spinner"></span> }
+                    SCAN
+                </button>
+                @if (SerialDevices.Count > 0)
+                {
+                    <button class="setup-btn setup-btn-primary" @onclick="ConnectSerial" disabled="@(SelectedSerial is null || IsBusy)">
+                        @if (IsBusy) { <span class="setup-spinner"></span> }
+                        CONNECT
+                    </button>
+                }
+            </div>
+            @if (SerialDevices.Count > 0)
+            {
+                <div class="setup-list">
+                    @foreach (var d in SerialDevices)
+                    {
+                        <button class="setup-list-item @(SelectedSerial == d.Id ? "active" : "")"
+                                @onclick='() => SelectedSerial = d.Id'>
+                            <span class="setup-list-id">@d.Id</span>
+                            @if (d.Name is not null) { <span class="setup-list-name">@d.Name</span> }
+                        </button>
+                    }
+                </div>
+            }
+            else if (!IsScanning)
+            {
+                <p class="setup-hint">Press SCAN to discover serial / USB devices.</p>
+            }
+        }
+
+        @if (ActiveTab == DeviceType.BT)
+        {
+            <div class="setup-actions">
+                <button class="setup-btn" @onclick="ScanBluetooth" disabled="@IsScanning">
+                    @if (IsScanning) { <span class="setup-spinner"></span> }
+                    SCAN
+                </button>
+                @if (BtDevices.Count > 0)
+                {
+                    <button class="setup-btn setup-btn-primary" @onclick="ConnectBluetooth" disabled="@(SelectedBt is null || IsBusy)">
+                        @if (IsBusy) { <span class="setup-spinner"></span> }
+                        CONNECT
+                    </button>
+                }
+            </div>
+            @if (BtDevices.Count > 0)
+            {
+                <div class="setup-list">
+                    @foreach (var d in BtDevices)
+                    {
+                        <button class="setup-list-item @(SelectedBt == d.Id ? "active" : "")"
+                                @onclick='() => SelectedBt = d.Id'>
+                            <span class="setup-list-id">@(d.Name ?? "Unknown")</span>
+                            @if (d.Id is not null) { <span class="setup-list-name">@d.Id</span> }
+                        </button>
+                    }
+                </div>
+            }
+            else if (!IsScanning)
+            {
+                <p class="setup-hint">Press SCAN to discover Bluetooth (BLE) devices.</p>
+            }
+        }
+
+        @if (ActiveTab == DeviceType.PC2)
+        {
+            <p class="setup-hint">Connect directly via USB / Masterlink (PC2 controller).</p>
+            <button class="setup-btn setup-btn-primary" @onclick="ConnectPc2" disabled="@IsBusy">
+                @if (IsBusy) { <span class="setup-spinner"></span> }
+                CONNECT PC2
+            </button>
+        }
+
+        @if (!string.IsNullOrEmpty(ScanStatus))
+        {
+            <p class="setup-scan-status">@ScanStatus</p>
+        }
+
+    </div>
+
+    <div class="setup-footer">
+        <span class="setup-brand">BANG &amp; OLUFSEN</span>
+    </div>
+
+</div>
+
+@code {
+    private static readonly DeviceType[] Tabs = [DeviceType.Serial, DeviceType.BT, DeviceType.PC2];
+
+    private DeviceType ActiveTab;
+    private bool IsScanning;
+    private bool IsBusy;
+    private string? SelectedSerial;
+    private string? SelectedBt;
+    private string ScanStatus = "";
+    private List<DeviceInfo> SerialDevices = [];
+    private List<DeviceInfo> BtDevices = [];
+    private CancellationTokenSource? _scanCts;
+
+    private StatusType _statusType = StatusType.Idle;
+    private string _statusText = "Not connected";
+
+    private string StatusClass => _statusType switch
+    {
+        StatusType.Ok      => "status-ok",
+        StatusType.Error   => "status-error",
+        StatusType.Working => "status-working",
+        _                  => "status-idle",
+    };
+
+    private string DotClass => _statusType switch
+    {
+        StatusType.Ok      => "dot-ok",
+        StatusType.Error   => "dot-error",
+        StatusType.Working => "dot-working",
+        _                  => "dot-idle",
+    };
+
+    protected override void OnInitialized()
+    {
+        DeviceService.OnStatusChanged += OnServiceStatusChanged;
+        ActiveTab      = DeviceService.Settings.LastDevice;
+        SelectedSerial = DeviceService.Settings.LastSerial?.Id;
+        SelectedBt     = DeviceService.Settings.LastBluetooth?.Id;
+        _statusType    = DeviceService.LastStatus.Type;
+        _statusText    = DeviceService.LastStatus.Text;
+    }
+
+    private async void OnServiceStatusChanged(StatusMessage msg)
+    {
+        _statusType = msg.Type;
+        _statusText = msg.Text;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void SelectTab(DeviceType tab)
+    {
+        ActiveTab = tab;
+        _scanCts?.Cancel();
+        IsScanning = false;
+        ScanStatus = "";
+    }
+
+    private async Task ScanSerial()
+    {
+        _scanCts?.Cancel();
+        _scanCts = new CancellationTokenSource();
+        IsScanning = true;
+        SerialDevices = [];
+        ScanStatus = "Scanning…";
+        DeviceService.Disconnect(silent: true);
+        StateHasChanged();
+        await Task.Delay(300); // allow OS to release the COM port
+        try
+        {
+            SerialDevices = await DeviceService.ScanSerialAsync(
+                s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
+                _scanCts.Token);
+            if (SerialDevices.Count > 0 && SelectedSerial is null)
+                SelectedSerial = SerialDevices[0].Id;
+            ScanStatus = $"Found {SerialDevices.Count} device(s).";
+        }
+        catch (OperationCanceledException) { ScanStatus = "Scan cancelled."; }
+        catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
+        finally { IsScanning = false; StateHasChanged(); }
+    }
+
+    private async Task ScanBluetooth()
+    {
+        _scanCts?.Cancel();
+        _scanCts = new CancellationTokenSource();
+        IsScanning = true;
+        BtDevices = [];
+        ScanStatus = "Scanning…";
+        StateHasChanged();
+        try
+        {
+            BtDevices = await DeviceService.ScanBluetoothAsync(
+                s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
+                _scanCts.Token);
+            if (BtDevices.Count > 0 && SelectedBt is null)
+                SelectedBt = BtDevices[0].Id;
+            ScanStatus = $"Found {BtDevices.Count} device(s).";
+        }
+        catch (OperationCanceledException) { ScanStatus = "Scan cancelled."; }
+        catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
+        finally { IsScanning = false; StateHasChanged(); }
+    }
+
+    private async Task ConnectSerial()
+    {
+        IsBusy = true;
+        StateHasChanged();
+        await DeviceService.ConnectSerialAsync(SelectedSerial);
+        IsBusy = false;
+        if (DeviceService.IsConnected) Nav.NavigateTo("/");
+    }
+
+    private async Task ConnectBluetooth()
+    {
+        IsBusy = true;
+        StateHasChanged();
+        await DeviceService.ConnectBluetoothAsync(SelectedBt);
+        IsBusy = false;
+        if (DeviceService.IsConnected) Nav.NavigateTo("/");
+    }
+
+    private async Task ConnectPc2()
+    {
+        IsBusy = true;
+        StateHasChanged();
+        await DeviceService.ConnectPc2Async();
+        IsBusy = false;
+        if (DeviceService.IsConnected) Nav.NavigateTo("/");
+    }
+
+    private void Disconnect() => DeviceService.Disconnect();
+
+    private static string TabLabel(DeviceType t) => t switch
+    {
+        DeviceType.Serial => "Serial / USB",
+        DeviceType.BT     => "Bluetooth",
+        DeviceType.PC2    => "PC2",
+        _                 => t.ToString(),
+    };
+
+    public void Dispose()
+    {
+        DeviceService.OnStatusChanged -= OnServiceStatusChanged;
+        _scanCts?.Cancel();
+        _scanCts?.Dispose();
+    }
+}

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+	<PropertyGroup>
+		<GenerateRazorComponentClass>true</GenerateRazorComponentClass>
+	</PropertyGroup>
+
+	<ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+	  <ProjectReference Include="..\..\..\Adapters\Beo4Adapter\Beo4Adapter.csproj" />
+	  <ProjectReference Include="..\..\..\Adapters\Pc2Adapter\Pc2Adapter.csproj" />
+	  <ProjectReference Include="..\..\..\Interfaces\BeoControlInterfaces.csproj" />
+	  <ProjectReference Include="..\BeoControlBlazorServices\BeoControlBlazorServices.csproj" />
+
+  </ItemGroup>
+
+</Project>
