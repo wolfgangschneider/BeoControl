@@ -9,7 +9,9 @@ namespace BeoControl;
 /// <summary>Persisted application settings (last device, last port, audio setup).</summary>
 public class AppSettings
 {
-    private static readonly string SettingsFile = "appsettings.json";
+    private static readonly string SettingsFile = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "BeoControl", "beocontrol-tui.settings.json");
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -19,7 +21,7 @@ public class AppSettings
         Converters = { new JsonStringEnumConverter() },
     };
 
-    public DeviceType LastDevice { get; set; } = DeviceType.Serial;
+    public DeviceType LastDevice { get; set; } = DeviceType.USB;
 
     /// <summary>Last connected serial device (port + name). Null = auto-detect.</summary>
     public DeviceInfo? LastSerial { get; set; }
@@ -46,7 +48,11 @@ public class AppSettings
 
     public void Save()
     {
-        try { File.WriteAllText(SettingsFile, JsonSerializer.Serialize(this, JsonOpts)); }
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(SettingsFile)!);
+            File.WriteAllText(SettingsFile, JsonSerializer.Serialize(this, JsonOpts));
+        }
         catch { }
     }
 

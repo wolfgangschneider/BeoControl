@@ -81,7 +81,7 @@ public class SerialTransport : ITransport
                         var reply = _port.ReadLine().TrimEnd('\r', '\n');
                         if (reply.StartsWith("Name:", StringComparison.OrdinalIgnoreCase))
                         {
-                            result = new DeviceInfo(DeviceType.Serial, reply.Substring(5).Trim(), portName);
+                            result = new DeviceInfo(DeviceType.USB, reply.Substring(5).Trim(), portName);
                             break;
                         }
                     }
@@ -90,7 +90,7 @@ public class SerialTransport : ITransport
             }
 
             // Port opened successfully — use port name as fallback label if firmware didn't respond
-            result ??= new DeviceInfo(DeviceType.Serial, portLabel, portName);
+            result ??= new DeviceInfo(DeviceType.USB, portLabel, portName);
 
             _port.DiscardInBuffer();           // eat "beo4> " prompt + any leftover bytes
             _port.ReadTimeout = 200;
@@ -254,7 +254,7 @@ public class SerialTransport : ITransport
             status?.Invoke(new StatusMessage(StatusType.Working, $"○ Probing {port}..."));
             var result = ProbePort(port);
             if (result is not null)
-                found.Add(new DeviceInfo(DeviceType.Serial, result.Value.Name ?? port, result.Value.Port));
+                found.Add(new DeviceInfo(DeviceType.USB, result.Value.Name ?? port, result.Value.Port));
         }
         return found;
     }

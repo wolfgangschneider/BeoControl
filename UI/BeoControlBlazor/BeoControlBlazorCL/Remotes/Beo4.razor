@@ -94,7 +94,11 @@
         return status;
     }
 
-   private void SendCommand(string command) => OnCommand.InvokeAsync(command);
+    private void SendCommand(string command) 
+    {
+        OnCommand.InvokeAsync(command);
+        _listIndex = -1;
+    }
 
     // Commands not on physical keys — cycled via LIST
     private static readonly List<(string Cmd, string Display)> AltList =

@@ -9,7 +9,7 @@
 
 <PageTitle>Setup</PageTitle>
 
-<div class="setup">
+<div style="width:var(--body-width); margin:0 auto;" class="setup">
 
     <div class="setup-header">
         <button class="setup-back" @onclick='() => Nav.NavigateTo("/")'>&#8592;</button>
@@ -41,7 +41,7 @@
 
     <div class="setup-panel">
 
-        @if (ActiveTab == DeviceType.Serial)
+        @if (ActiveTab == DeviceType.USB)
         {
             <div class="setup-actions">
                 <button class="setup-btn" @onclick="ScanSerial" disabled="@IsScanning">
@@ -71,7 +71,7 @@
             }
             else if (!IsScanning)
             {
-                <p class="setup-hint">Press SCAN to discover serial / USB devices.</p>
+                <p class="setup-hint">Press SCAN to discover USB devices.</p>
             }
         }
 
@@ -132,7 +132,7 @@
 </div>
 
 @code {
-    private static readonly DeviceType[] Tabs = [DeviceType.Serial, DeviceType.BT, DeviceType.PC2];
+    private static readonly DeviceType[] Tabs = [DeviceType.USB, DeviceType.BT, DeviceType.PC2];
 
     private DeviceType ActiveTab;
     private bool IsScanning;
@@ -265,7 +265,7 @@
 
     private static string TabLabel(DeviceType t) => t switch
     {
-        DeviceType.Serial => "Serial / USB",
+        DeviceType.USB => "USB",
         DeviceType.BT     => "Bluetooth",
         DeviceType.PC2    => "PC2",
         _                 => t.ToString(),

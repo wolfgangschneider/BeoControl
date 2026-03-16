@@ -3,11 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:BeoControlMaui"
              xmlns:components="clr-namespace:BeoControlMaui.Components"
-             x:Class="BeoControlMaui.MainPage">
+             x:Class="BeoControlMaui.MainPage"
+             BackgroundColor="Red"
+             >
 
-    <BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html">
+    <BlazorWebView  x:Name="blazorWebView" HostPage="wwwroot/index.html">
         <BlazorWebView.RootComponents>
-            <RootComponent Selector="#app" ComponentType="{x:Type components:Routes}" />
+            <RootComponent  Selector="#app" ComponentType="{x:Type components:Routes}" />
         </BlazorWebView.RootComponents>
     </BlazorWebView>
 

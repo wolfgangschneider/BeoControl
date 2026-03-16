@@ -19,7 +19,6 @@ namespace BeoControlMaui
             builder.Services.AddMauiBlazorWebView();
 
             builder.Services.AddSingleton<DeviceService>();
-            builder.Services.AddHostedService(sp => sp.GetRequiredService<DeviceService>());
 
 #if DEBUG
     		builder.Services.AddBlazorWebViewDeveloperTools();

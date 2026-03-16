@@ -1,15 +1,16 @@
 /* ── Shell ────────────────────────────────────── */
 
 .setup {
-    display: inline-flex;
-    flex-direction: column;
-    width: 260px;
+    display: grid;
+    grid-template-rows: auto auto auto 1fr auto;
+    height: 100%;
     background: linear-gradient(170deg, #e2e2e2 0%, #c8c8c8 100%);
     border-radius: 6px 6px 0 0;
     box-shadow: 2px 4px 16px rgba(0,0,0,0.45);
     font-family: ''Arial Narrow'', Arial, sans-serif;
     overflow: hidden;
-    margin: 12px;
+    /* margin-left:auto;
+    margin-right:auto;*/
 }
 
 /* ── Header ───────────────────────────────────── */

@@ -70,7 +70,7 @@ else
 
                 <Align Horizontal="@Spectre.Console.HorizontalAlignment.Right">
                     @{
-                        var last = _settings.LastDevice == DeviceType.Serial ? _settings.LastSerial : _settings.LastBluetooth;
+                        var last = _settings.LastDevice == DeviceType.USB ? _settings.LastSerial : _settings.LastBluetooth;
                     }
                     <Markup Content="@($"{_settings.LastDevice}  {last?.Name}  {last?.Id}")" Foreground="@StatusColor" />
                 </Align>
@@ -179,7 +179,7 @@ else
         _settings.LastDevice = _device!.Info.Type;
         switch (_device.Info.Type)
         {
-            case DeviceType.Serial:    _settings.LastSerial    = _device.Info; break;
+            case DeviceType.USB:    _settings.LastSerial    = _device.Info; break;
             case DeviceType.BT: _settings.LastBluetooth = _device.Info; break;
         }
         _settings.Save();
@@ -361,7 +361,7 @@ else
     {
         switch (_settings.LastDevice)
         {
-            case DeviceType.Serial:
+            case DeviceType.USB:
                 TryConnectSerial(_settings.LastSerial?.Id).GetAwaiter().GetResult();
                 break;
             case DeviceType.BT:

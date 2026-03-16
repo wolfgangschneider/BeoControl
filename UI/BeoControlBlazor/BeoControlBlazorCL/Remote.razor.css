@@ -41,6 +41,10 @@
 .conn-bar--idle       .conn-dot { background: #666; }
 .conn-bar--error      { background: #2e1a1a; color: #cf6f6f; }
 .conn-bar--error      .conn-dot { background: #cf6f6f; }
+.conn-bar--disconnected { background: #2e1a1a; color: #e04444; }
+.conn-bar--disconnected .conn-dot { background: #e04444; }
+.conn-bar--connected    { background: #1a2e1a; color: #6fcf6f; }
+.conn-bar--connected    .conn-dot { background: #6fcf6f; }
 .conn-bar--working    { background: #1a1a2e; color: #8888cf; }
 .conn-bar--working    .conn-dot { background: #8888cf; }
 

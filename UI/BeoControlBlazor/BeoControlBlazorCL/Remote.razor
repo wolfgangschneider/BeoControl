@@ -77,6 +77,9 @@
     private void SendCommand(string command) =>
         DeviceService.SendCommand(command);
 
+    private string ConnBarClass() =>
+        DeviceService.IsConnected ? "conn-bar--connected" : "conn-bar--disconnected";
+
     private string ConnectionLabel()
     {
         var dev = DeviceService.CurrentDevice;
@@ -84,7 +87,7 @@
             return "DISCONNECTED";
         var detail = dev.Type switch
         {
-            DeviceType.Serial => dev.Name is not null ? $"{dev.Name}  |  {dev.Id}" : dev.Id ?? "Serial",
+            DeviceType.USB => dev.Name is not null ? $"{dev.Name}  |  {dev.Id}" : dev.Id ?? "Serial",
             DeviceType.BT     => dev.Name is not null ? $"{dev.Name}  |  BT" : "BT",
             DeviceType.PC2    => "PC2",
             _                 => dev.Id ?? "Unknown"

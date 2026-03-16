@@ -11,7 +11,7 @@ public sealed class Beo4Device : IDevice
     private readonly ITransport _transport;
 
     public bool IsConnected => _transport.IsConnected;
-    public DeviceInfo Info { get; private set; } = new(DeviceType.Serial, null, null);
+    public DeviceInfo Info { get; private set; } = new(DeviceType.USB, null, null);
 
     public event Action<StatusMessage>? OnStatusChanged;
     public event Action<LogMessage>? OnLog;

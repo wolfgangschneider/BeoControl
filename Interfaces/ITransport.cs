@@ -13,7 +13,7 @@ public enum LogLevel { Debug, Info, Warning, Error }
 /// <summary>Appended log entry with severity level.</summary>
 public record LogMessage(LogLevel Level, string Text);
 
-public enum DeviceType { Serial, BT, PC2 }
+public enum DeviceType { USB, BT, PC2 }
 
 /// <summary>Identity info for a connected device (type, friendly name, reconnect id).</summary>
 public record DeviceInfo(DeviceType Type, string? Name, string? Id);

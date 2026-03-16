@@ -45,7 +45,7 @@ public class DeviceService : IHostedService, IDisposable
     {
         switch (Settings.LastDevice)
         {
-            case DeviceType.Serial when Settings.LastSerial?.Id is { } port:
+            case DeviceType.USB when Settings.LastSerial?.Id is { } port:
                 await ConnectSerialAsync(port);
                 break;
             case DeviceType.BT when Settings.LastBluetooth?.Id is { } id:
@@ -155,7 +155,7 @@ public class DeviceService : IHostedService, IDisposable
     {
         if (_device is null) return;
         Settings.LastDevice = _device.Info.Type;
-        if (_device.Info.Type == DeviceType.Serial) Settings.LastSerial = _device.Info;
+        if (_device.Info.Type == DeviceType.USB) Settings.LastSerial = _device.Info;
         else if (_device.Info.Type == DeviceType.BT) Settings.LastBluetooth = _device.Info;
         Settings.Save();
     }

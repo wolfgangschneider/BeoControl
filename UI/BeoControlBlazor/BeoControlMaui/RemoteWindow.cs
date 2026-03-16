@@ -7,9 +7,9 @@ namespace BeoControlMaui;
 /// </summary>
 internal static class RemoteWindow
 {
-    /// <summary>Total window width in physical pixels (matches --body-width: 210px in app.css).</summary>
-    public const int Width = 210;
+    /// <summary>Total window width in physical pixels (matches --body-width: 230px in app.css).</summary>
+    public const int Width = 300;
 
     /// <summary>Total window height in physical pixels.</summary>
-    public const int Height = 750;
+    public const int Height = 950;
 }
