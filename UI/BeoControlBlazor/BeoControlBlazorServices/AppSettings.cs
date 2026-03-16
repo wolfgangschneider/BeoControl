@@ -35,6 +35,10 @@ public class AppSettings
     /// <summary>Last saved PC2 audio mixer settings.</summary>
     public AudioSetupDto AudioSetup { get; set; } = new();
 
+    /// <summary>Last window size (Windows only). Zero values = use defaults.</summary>
+    public int WindowWidth  { get; set; } = 0;
+    public int WindowHeight { get; set; } = 0;
+
     public static AppSettings Load()
     {
         try

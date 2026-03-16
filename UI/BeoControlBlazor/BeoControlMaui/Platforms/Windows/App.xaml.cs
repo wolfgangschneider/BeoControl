@@ -1,10 +1,12 @@
 ﻿using BeoControlBlazorServices;
+using BeoControlBlazor.Services;
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Windowing;
 
 using Windows.Graphics;
 
+using System.Runtime.InteropServices;
 using WinForms = System.Windows.Forms;
 
 namespace BeoControlMaui.WinUI
@@ -18,12 +20,27 @@ namespace BeoControlMaui.WinUI
         private Microsoft.UI.Dispatching.DispatcherQueue? _dispatcher;
         private bool _exitRequested;
 
+        [DllImport("user32.dll")] static extern bool GetCursorPos(out System.Drawing.Point pt);
+        [DllImport("user32.dll")] static extern IntPtr MonitorFromPoint(System.Drawing.Point pt, uint flags);
+        [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr hMon, ref MonitorInfo mi);
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct MonitorInfo
+        {
+            public int cbSize;
+            public System.Drawing.Rectangle rcMonitor;
+            public System.Drawing.Rectangle rcWork;
+            public uint dwFlags;
+        }
+
         public App()
         {
             this.InitializeComponent();
         }
 
         protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
+
+        private AppSettings? _settings;
 
         protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
@@ -37,7 +54,11 @@ namespace BeoControlMaui.WinUI
                     Microsoft.UI.Win32Interop.GetWindowIdFromWindow(
                         WinRT.Interop.WindowNative.GetWindowHandle(win)));
 
-                _appWindow.Resize(new SizeInt32(RemoteWindow.Width, RemoteWindow.Height));
+                _settings = AppSettings.Load();
+                int w = _settings.WindowWidth  > 0 ? _settings.WindowWidth  : RemoteWindow.Width;
+                int h = _settings.WindowHeight > 0 ? _settings.WindowHeight : RemoteWindow.Height;
+                _appWindow.Resize(new SizeInt32(w, h));
+                _appWindow.Changed += OnAppWindowChanged;
                 _appWindow.Closing += OnWindowClosing;
 
                 StartTrayThread();
@@ -64,13 +85,21 @@ namespace BeoControlMaui.WinUI
 
                 var menu = new WinForms.ContextMenuStrip();
                 menu.Items.Add("Show", null, (_, _) =>
-                    _dispatcher?.TryEnqueue(ShowWindow));
+                {
+                    GetCursorPos(out var pt);
+                    _dispatcher?.TryEnqueue(() => ShowWindowAboveTray(pt));
+                });
                 menu.Items.Add(new WinForms.ToolStripSeparator());
                 menu.Items.Add("Exit", null, (_, _) =>
                     _dispatcher?.TryEnqueue(ExitApp));
 
                 _trayIcon.ContextMenuStrip = menu;
-                _trayIcon.Click += (_, _) => _dispatcher?.TryEnqueue(ShowWindow);
+                _trayIcon.MouseClick += (_, e) =>
+                {
+                    if (e.Button != WinForms.MouseButtons.Left) return;
+                    GetCursorPos(out var pt);
+                    _dispatcher?.TryEnqueue(() => ShowWindowAboveTray(pt));
+                };
 
                 if (deviceService is not null)
                     deviceService.OnStatusChanged += _ => UpdateTrayIcon(deviceService.IsConnected);
@@ -100,10 +129,33 @@ namespace BeoControlMaui.WinUI
             return File.Exists(path) ? new System.Drawing.Icon(path) : null;
         }
 
-        private void ShowWindow()
+        private void ShowWindowAboveTray(System.Drawing.Point cursor)
         {
-            _appWindow?.Show();
+            if (_appWindow is null) return;
+
+            var hMon = MonitorFromPoint(cursor, 2 /*MONITOR_DEFAULTTONEAREST*/);
+            var mi = new MonitorInfo { cbSize = Marshal.SizeOf<MonitorInfo>() };
+            GetMonitorInfo(hMon, ref mi);
+            var work = mi.rcWork;
+
+            int winW = RemoteWindow.Width;
+            int winH = RemoteWindow.Height;
+
+            // Center on cursor horizontally, sit just above the taskbar
+            int x = Math.Clamp(cursor.X - winW / 2, work.Left, work.Right - winW);
+            int y = work.Bottom - winH;
+
+            _appWindow.Move(new PointInt32(x, y));
+            _appWindow.Show();
             _win?.Activate();
+        }
+
+        private void OnAppWindowChanged(AppWindow sender, AppWindowChangedEventArgs e)
+        {
+            if (!e.DidSizeChange || _settings is null) return;
+            _settings.WindowWidth  = sender.Size.Width;
+            _settings.WindowHeight = sender.Size.Height;
+            _settings.Save();
         }
 
         private void OnWindowClosing(AppWindow sender, AppWindowClosingEventArgs e)
