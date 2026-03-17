@@ -1,19 +1,56 @@
-﻿<h3>PC2Setup WIP</h3>
-<div  style="display:grid; grid-template-columns: 1fr auto auto;grid-template-rows: auto auto auto">
-    <span >BASS</span>
-    <button class="bl1000-btn" @onclick='() => SendCommand("bas-")'>&lt;&lt;</button>
-    <button class="bl1000-btn" @onclick='() => SendCommand("bas+")'>&gt;&gt;</button>
+﻿@using Microsoft.AspNetCore.Components.Forms
+<div style="display:grid; grid-template-columns: 1fr auto auto;grid-template-rows: auto auto auto">
+    <h3 style="grid-column: 1 /span 3">Sound WIP</h3>
+    <span>VOLUME</span>
+    <button class="" @onclick='() => SendCommand("bas-")'>&lt;&lt;</button>
+    <button class="" @onclick='() => SendCommand("bas+")'>&gt;&gt;</button>
 
-    <span >TREBLE</span>
-    <button class="bl1000-btn" @onclick='() => SendCommand("bas-")'>&lt;&lt;</button>
-    <button class="bl1000-btn" @onclick='() => SendCommand("bas+")'>&gt;&gt;</button>
-    <span >LOUDNESS</span>
-    <button class="bl1000-btn" @onclick='() => SendCommand("bas-")'>&lt;&lt;</button>
-    <button class="bl1000-btn" @onclick='() => SendCommand("bas+")'>&gt;&gt;</button>
+    <span>BASS</span>
+    <button class="" @onclick='() => SendCommand("bas-")'>&lt;&lt;</button>
+    <button class="" @onclick='() => SendCommand("bas+")'>&gt;&gt;</button>
+
+    <span>TREBLE</span>
+    <button class="" @onclick='() => SendCommand("tre-")'>&lt;&lt;</button>
+    <button class="" @onclick='() => SendCommand("tre+")'>&gt;&gt;</button>
+    <span>LOUDNESS</span>
+    <button class="" @onclick='() => SendCommand("lou-")'>&lt;&lt;</button>
+    <button class="" @onclick='() => SendCommand("lou+")'>&gt;&gt;</button>
+    <button style="grid-column: 2 /span 2" class="" @onclick='() => SendCommand("store")'>Store</button>
+
+
+    <h3 style="grid-column: 1 /span 3">Option</h3>
+    <div style="display:flex; grid-column: 1 ">
+
+        <InputRadioGroup @bind-Value="Option">
+            0<InputRadio Value="0" />
+      
+            2<InputRadio Value="2" />
+     
+            4<InputRadio Value="4" />
+    
+            6<InputRadio Value="6" />
+        </InputRadioGroup>
+    </div>
+    <button style="grid-column: 2 /span 2" class="" @onclick='() => SendCommand("store")'>Store</button>
+
+    <h3 style="grid-column: 1 /span 3">Default Source</h3>
+    <div style="grid-column: 1 ">
+
+        <InputRadioGroup @bind-Value="DefaultSource">
+    
+            PC <InputRadio Value="0" />
+            None <InputRadio Value="1" />
+    
+        </InputRadioGroup>
+    </div>
+        <button style="grid-column: 2 /span 2" class="" @onclick='() => SendCommand("store")'>Store</button>
 </div>
 
-@code {
 
+
+@code {
+    public int Option { get; set; }
+    public int DefaultSource { get; set; }
     [Parameter] public EventCallback<string> OnCommand { get; set; }
     [Parameter] public string? DeviceStatus { get; set; }
     private void SendCommand(string command) => OnCommand.InvokeAsync(command);
