@@ -24,6 +24,10 @@ body {
     margin: 0 auto;
 }
 
+#app {
+    height: 100%;
+}
+
 #blazor-error-ui {
     display: none;
     position: fixed;

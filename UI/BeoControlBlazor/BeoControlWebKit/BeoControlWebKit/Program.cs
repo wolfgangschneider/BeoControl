@@ -1,4 +1,4 @@
-﻿using BeoControlBlazorServices;
+using BeoControlBlazorServices;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,7 +18,6 @@ internal class Program : IHostedService
     private static async Task Main(string[] args)
     {
         var builder = Host.CreateApplicationBuilder(args);
-        //appBuilder.Logging.AddDebug();
         builder.Logging.AddSimpleConsole(
             options =>
             {
@@ -28,6 +27,9 @@ internal class Program : IHostedService
                 options.TimestampFormat = "hh:mm:ss ";
             })
         .SetMinimumLevel(LogLevel.Information);
+
+        builder.Services.Configure<HostOptions>(opts =>
+            opts.ShutdownTimeout = TimeSpan.FromSeconds(5));
 
         builder.Services.AddBlazorWebViewOptions(
             new BlazorWebViewOptions()
@@ -71,6 +73,7 @@ internal class Program : IHostedService
 
         _app.OnShutdown += (sender, args) =>
         {
+            _gtkExited = true;
             lifetime.StopApplication();
         };
 
@@ -84,20 +87,16 @@ internal class Program : IHostedService
 
         lifetime.ApplicationStopping.Register(() =>
         {
-            _app.Quit();
+            // Only call Quit if GTK hasn't already exited (e.g. external stop request)
+            if (!_gtkExited)
+                _app.Quit();
         });
     }
 
+    bool _gtkExited;
     readonly IServiceProvider _serviceProvider;
     readonly Adw.Application _app;
 
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
+    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
