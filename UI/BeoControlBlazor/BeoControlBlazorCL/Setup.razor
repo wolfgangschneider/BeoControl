@@ -16,9 +16,9 @@
         <span class="setup-title">DEVICE SETUP</span>
     </div>
 
-    <div class="setup-status @StatusClass">
-        <span class="setup-dot @DotClass"></span>
-        <span class="setup-status-text">@_statusText</span>
+    <div class="setup-status @DisplayStatusClass">
+        <span class="setup-dot @DisplayDotClass"></span>
+        <span class="setup-status-text">@DisplayStatusText</span>
         @if (DeviceService.IsConnected && DeviceService.CurrentDevice is { } info)
         {
             <strong class="setup-device-name">@(info.Name ?? info.Id)</strong>
@@ -31,10 +31,6 @@
         {
             <button class="setup-tab @(ActiveTab == tab ? "active" : "")" @onclick="() => SelectTab(tab)">
                 @TabLabel(tab)
-                @if (DeviceService.Settings.LastDevice == tab)
-                {
-                    <span class="setup-saved">✓</span>
-                }
             </button>
         }
     </div>
@@ -48,13 +44,6 @@
                     @if (IsScanning) { <span class="setup-spinner"></span> }
                     SCAN
                 </button>
-                @if (SerialDevices.Count > 0)
-                {
-                    <button class="setup-btn setup-btn-primary" @onclick="ConnectSerial" disabled="@(SelectedSerial is null || IsBusy)">
-                        @if (IsBusy) { <span class="setup-spinner"></span> }
-                        CONNECT
-                    </button>
-                }
             </div>
             @if (SerialDevices.Count > 0)
             {
@@ -62,7 +51,8 @@
                     @foreach (var d in SerialDevices)
                     {
                         <button class="setup-list-item @(SelectedSerial == d.Id ? "active" : "")"
-                                @onclick='() => SelectedSerial = d.Id'>
+                                @onclick='() => ConnectSerial(d.Id)'
+                                disabled="@IsBusy">
                             <span class="setup-list-id">@d.Id</span>
                             @if (d.Name is not null) { <span class="setup-list-name">@d.Name</span> }
                         </button>
@@ -82,13 +72,6 @@
                     @if (IsScanning) { <span class="setup-spinner"></span> }
                     SCAN
                 </button>
-                @if (BtDevices.Count > 0)
-                {
-                    <button class="setup-btn setup-btn-primary" @onclick="ConnectBluetooth" disabled="@(SelectedBt is null || IsBusy)">
-                        @if (IsBusy) { <span class="setup-spinner"></span> }
-                        CONNECT
-                    </button>
-                }
             </div>
             @if (BtDevices.Count > 0)
             {
@@ -96,9 +79,9 @@
                     @foreach (var d in BtDevices)
                     {
                         <button class="setup-list-item @(SelectedBt == d.Id ? "active" : "")"
-                                @onclick='() => SelectedBt = d.Id'>
+                                @onclick='() => ConnectBluetooth(d.Id)'
+                                disabled="@IsBusy">
                             <span class="setup-list-id">@(d.Name ?? "Unknown")</span>
-                            @if (d.Id is not null) { <span class="setup-list-name">@d.Id</span> }
                         </button>
                     }
                 </div>
@@ -112,12 +95,26 @@
         @if (ActiveTab == DeviceType.PC2)
         {
             <p class="setup-hint">Connect directly via USB / Masterlink (PC2 controller).</p>
-            <button class="setup-btn setup-btn-primary" @onclick="ConnectPc2" disabled="@IsBusy">
-                @if (IsBusy) { <span class="setup-spinner"></span> }
-                CONNECT PC2
-            </button>
-
-            <PC2Setup />
+            @if (!IsPc2Connected)
+            {
+                <div class="setup-actions">
+                    <button class="setup-btn" @onclick="ScanPc2" disabled="@IsScanning">
+                        @if (IsScanning) { <span class="setup-spinner"></span> }
+                        SCAN
+                    </button>
+                    @if (Pc2Available)
+                    {
+                        <button class="setup-btn setup-btn-primary" @onclick="ConnectPc2" disabled="@IsBusy">
+                            @if (IsBusy) { <span class="setup-spinner"></span> }
+                            CONNECT PC2
+                        </button>
+                    }
+                </div>
+            }
+            else
+            {
+                <PC2Setup />
+            }
         }
 
         @if (!string.IsNullOrEmpty(ScanStatus))
@@ -148,6 +145,19 @@
 
     private StatusType _statusType = StatusType.Idle;
     private string _statusText = "Not connected";
+    private bool Pc2Available;
+
+    private bool IsPc2Connected =>
+        DeviceService.IsConnected && DeviceService.CurrentDevice?.Type == DeviceType.PC2;
+
+    private string DisplayStatusText =>
+        DeviceService.IsConnected ? "Connected" : "Disconnected";
+
+    private string DisplayStatusClass =>
+        DeviceService.IsConnected ? StatusClass : "status-disconnected";
+
+    private string DisplayDotClass =>
+        DeviceService.IsConnected ? DotClass : "dot-disconnected";
 
     private string StatusClass => _statusType switch
     {
@@ -188,6 +198,8 @@
         _scanCts?.Cancel();
         IsScanning = false;
         ScanStatus = "";
+        if (tab != DeviceType.PC2)
+            Pc2Available = false;
     }
 
     private async Task ScanSerial()
@@ -197,9 +209,7 @@
         IsScanning = true;
         SerialDevices = [];
         ScanStatus = "Scanning…";
-        DeviceService.Disconnect(silent: true);
         StateHasChanged();
-        await Task.Delay(300); // allow OS to release the COM port
         try
         {
             SerialDevices = await DeviceService.ScanSerialAsync(
@@ -236,20 +246,43 @@
         finally { IsScanning = false; StateHasChanged(); }
     }
 
-    private async Task ConnectSerial()
+    private async Task ScanPc2()
     {
+        _scanCts?.Cancel();
+        _scanCts = new CancellationTokenSource();
+        IsScanning = true;
+        Pc2Available = false;
+        ScanStatus = "Scanning…";
+        StateHasChanged();
+        try
+        {
+            var found = await DeviceService.ScanPc2Async(
+                s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
+                _scanCts.Token);
+            Pc2Available = found;
+            ScanStatus = found ? "Found PC2 device." : "No PC2 device found.";
+        }
+        catch (OperationCanceledException) { ScanStatus = "Scan cancelled."; }
+        catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
+        finally { IsScanning = false; StateHasChanged(); }
+    }
+
+    private async Task ConnectSerial(string? portName = null)
+    {
+        SelectedSerial = portName;
         IsBusy = true;
         StateHasChanged();
-        await DeviceService.ConnectSerialAsync(SelectedSerial);
+        await DeviceService.ConnectSerialAsync(portName);
         IsBusy = false;
         if (DeviceService.IsConnected) Nav.NavigateTo("/");
     }
 
-    private async Task ConnectBluetooth()
+    private async Task ConnectBluetooth(string? deviceId = null)
     {
+        SelectedBt = deviceId;
         IsBusy = true;
         StateHasChanged();
-        await DeviceService.ConnectBluetoothAsync(SelectedBt);
+        await DeviceService.ConnectBluetoothAsync(deviceId);
         IsBusy = false;
         if (DeviceService.IsConnected) Nav.NavigateTo("/");
     }
@@ -260,6 +293,7 @@
         StateHasChanged();
         await DeviceService.ConnectPc2Async();
         IsBusy = false;
+        Pc2Available = DeviceService.IsConnected && DeviceService.CurrentDevice?.Type == DeviceType.PC2;
         if (DeviceService.IsConnected) Nav.NavigateTo("/");
     }
 

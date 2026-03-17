@@ -60,6 +60,7 @@
 .setup-status.status-error   { background: #3a1e1e; color: #e07070; }
 .setup-status.status-working { background: #1e2a3a; color: #70aae0; }
 .setup-status.status-idle    { background: #2a2a2a; color: #888; }
+.setup-status.status-disconnected { background: #3a1e1e; color: #e07070; }
 
 .setup-dot {
     width: 8px;
@@ -71,6 +72,7 @@
 .dot-ok      { background: #7eca7e; }
 .dot-error   { background: #e07070; }
 .dot-idle    { background: #666; }
+.dot-disconnected { background: #e07070; }
 .dot-working { background: #70aae0; animation: pulse 1s ease-in-out infinite; }
 
 @keyframes pulse {
@@ -171,6 +173,8 @@
     display: flex;
     align-items: baseline;
     gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
     font-family: ''Arial Narrow'', Arial, sans-serif;
 }
 

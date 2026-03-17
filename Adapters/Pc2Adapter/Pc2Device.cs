@@ -23,6 +23,9 @@ public sealed class Pc2Device : IDevice
     /// <summary>Raised when the user issues a "store" command so the caller can persist audio settings.</summary>
     public event Action<AudioSetup>? OnStore;
 
+    /// <summary>Raised when the current PC2 audio setup changes.</summary>
+    public event Action<AudioSetup>? OnAudioSetupChanged;
+
     /// <summary>Current audio parameters (vol/bass/treble/balance/loudness).</summary>
     public AudioSetup CurrentAudioSetup => _core.AudioSetup;
 
@@ -33,11 +36,10 @@ public sealed class Pc2Device : IDevice
             _core.SetAudioSetup(initialAudioSetup);
 
         _core.OnDebugMessage = msg => OnLog?.Invoke(new LogMessage(LogLevel.Debug, msg));
-        // _core.OnAudioSetupChanged = setup => OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, FormatAudioStatus(setup)));
+        _core.OnAudioSetupChanged = setup => OnAudioSetupChanged?.Invoke(setup);
         _core.OnStore = setup =>
         {
             OnStore?.Invoke(setup);
-            //OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, FormatAudioStatus(setup)));
         };
         _core.OnStatusChanged = StatusChanged;
 
@@ -83,8 +85,8 @@ public sealed class Pc2Device : IDevice
         var n = arg is not null && int.TryParse(arg, out var parsed) ? parsed : 0;
         if (!_core.RunCommand(cmd, n))
             OnLog?.Invoke(new LogMessage(LogLevel.Warning, $"PC2: unknown command '{cmd}'"));
-        //else
-        //    OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, FormatAudioStatus(_core.AudioSetup)));
+        else
+            OnAudioSetupChanged?.Invoke(_core.AudioSetup);
     }
 
     //private static string FormatAudioStatus(AudioSetup s) =>

@@ -194,6 +194,16 @@ public sealed class Pc2Core : IDisposable
             AudioSetup.Loudness = !AudioSetup.Loudness;
             Mixer.SetParameters(AudioSetup);
         }
+        else if (cmd is "loudness+" or "lou+" or "l+")
+        {
+            AudioSetup.Loudness = true;
+            Mixer.SetParameters(AudioSetup);
+        }
+        else if (cmd is "loudness-" or "lou-" or "l-")
+        {
+            AudioSetup.Loudness = false;
+            Mixer.SetParameters(AudioSetup);
+        }
         else if (cmd == "mute")
         {
             bool muted = !Mixer.SpeakersMuted;

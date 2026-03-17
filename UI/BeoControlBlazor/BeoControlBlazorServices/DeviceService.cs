@@ -23,6 +23,7 @@ public class DeviceService : IHostedService, IDisposable
 
     public bool IsConnected => _device?.IsConnected ?? false;
     public DeviceInfo? CurrentDevice => _device?.Info;
+    public AudioSetupDto CurrentPc2AudioSetup => Settings.AudioSetup;
 
     public StatusMessage LastStatus { get; private set; } = new(StatusType.Idle, "Not connected");
 
@@ -93,13 +94,43 @@ public class DeviceService : IHostedService, IDisposable
         try
         {
             ReplaceDevice(null);
-            var device = new Pc2Device();
+            var device = new Pc2Device(Settings.ToAudioSetup());
             await device.Connect();
             ReplaceDevice(device);
             PersistDevice();
             Notify(StatusType.Ok, "Connected: PC2");
         }
-        catch (Exception ex) { Notify(StatusType.Error, $"PC2 failed: {ex.Message}"); }
+        catch
+        {
+            ReplaceDevice(null);
+            Notify(StatusType.Idle, "Disconnected");
+        }
+    }
+
+    public async Task<bool> ScanPc2Async(Action<string>? progress = null, CancellationToken ct = default)
+    {
+        if (_device is Pc2Device { IsConnected: true })
+        {
+            progress?.Invoke("PC2 already connected.");
+            return true;
+        }
+
+        ct.ThrowIfCancellationRequested();
+        progress?.Invoke("Scanning PC2…");
+
+        var probe = new Pc2Device(Settings.ToAudioSetup());
+        try
+        {
+            await probe.Connect();
+            var found = probe.IsConnected;
+            progress?.Invoke(found ? "Found PC2 device." : "No PC2 device found.");
+            return found;
+        }
+        finally
+        {
+            probe.Disconnect();
+            probe.Dispose();
+        }
     }
 
     // ── Scan helpers ──────────────────────────────────────────────────────────
@@ -136,6 +167,11 @@ public class DeviceService : IHostedService, IDisposable
         {
             _device.OnStatusChanged -= OnDeviceStatusChanged;
             _device.OnLog -= OnDeviceLog;
+            if (_device is Pc2Device currentPc2)
+            {
+                currentPc2.OnAudioSetupChanged -= OnPc2AudioSetupChangedInternal;
+                currentPc2.OnStore -= OnPc2Store;
+            }
             _device.Disconnect();
             _device.Dispose();
         }
@@ -144,12 +180,34 @@ public class DeviceService : IHostedService, IDisposable
         {
             _device.OnStatusChanged += OnDeviceStatusChanged;
             _device.OnLog += OnDeviceLog;
+            if (_device is Pc2Device nextPc2)
+            {
+                nextPc2.OnAudioSetupChanged += OnPc2AudioSetupChangedInternal;
+                nextPc2.OnStore += OnPc2Store;
+                SyncPc2AudioSetup(nextPc2.CurrentAudioSetup, save: false);
+            }
         }
     }
 
-    private void OnDeviceStatusChanged(StatusMessage msg) => OnStatusChanged?.Invoke(msg);
+    private void OnDeviceStatusChanged(StatusMessage msg)
+    {
+        if (_device is Pc2Device && msg.Type == StatusType.Ok)
+        {
+            OnStatusChanged?.Invoke(LastStatus);
+            return;
+        }
+
+        LastStatus = msg;
+        OnStatusChanged?.Invoke(msg);
+    }
 
     private void OnDeviceLog(LogMessage msg) { /* future log panel */ }
+
+    private void OnPc2AudioSetupChangedInternal(Beoported.Pc2.AudioSetup setup) =>
+        SyncPc2AudioSetup(setup, save: true);
+
+    private void OnPc2Store(Beoported.Pc2.AudioSetup setup) =>
+        SyncPc2AudioSetup(setup, save: true);
 
     private void PersistDevice()
     {
@@ -158,6 +216,14 @@ public class DeviceService : IHostedService, IDisposable
         if (_device.Info.Type == DeviceType.USB) Settings.LastSerial = _device.Info;
         else if (_device.Info.Type == DeviceType.BT) Settings.LastBluetooth = _device.Info;
         Settings.Save();
+    }
+
+    private void SyncPc2AudioSetup(Beoported.Pc2.AudioSetup setup, bool save)
+    {
+        Settings.UpdateAudioSetup(setup);
+        if (save)
+            Settings.Save();
+        OnStatusChanged?.Invoke(LastStatus);
     }
 
     private void Notify(StatusType type, string text)

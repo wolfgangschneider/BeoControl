@@ -85,7 +85,8 @@ public sealed class Pc2Device : IDisposable
 
         lock (_writeLock)
         {
-            _writer!.Write(frame, 5000, out _);
+            var writer = _writer ?? throw new InvalidOperationException("PC2 USB writer not initialized.");
+            writer.Write(frame, 5000, out _);
         }
     }
 

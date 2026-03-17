@@ -1,4 +1,6 @@
 @using Microsoft.AspNetCore.Components.Forms
+@inject BeoControlBlazorServices.DeviceService DeviceService
+@implements IDisposable
 
 <div class="pc2-setup">
     <section class="pc2-card">
@@ -11,18 +13,22 @@
 
         <div class="pc2-sound-grid">
             <span class="pc2-setting-label">Volume</span>
+            <input class="pc2-value-box" value="@CurrentVolume" readonly />
             <button class="pc2-rocker-btn" aria-label="Decrease volume" @onclick='() => SendCommand("vol-")'>-</button>
             <button class="pc2-rocker-btn" aria-label="Increase volume" @onclick='() => SendCommand("vol+")'>+</button>
 
             <span class="pc2-setting-label">Bass</span>
+            <input class="pc2-value-box" value="@CurrentBass" readonly />
             <button class="pc2-rocker-btn" aria-label="Decrease bass" @onclick='() => SendCommand("bas-")'>-</button>
             <button class="pc2-rocker-btn" aria-label="Increase bass" @onclick='() => SendCommand("bas+")'>+</button>
 
             <span class="pc2-setting-label">Treble</span>
+            <input class="pc2-value-box" value="@CurrentTreble" readonly />
             <button class="pc2-rocker-btn" aria-label="Decrease treble" @onclick='() => SendCommand("tre-")'>-</button>
             <button class="pc2-rocker-btn" aria-label="Increase treble" @onclick='() => SendCommand("tre+")'>+</button>
 
             <span class="pc2-setting-label">Loudness</span>
+            <input class="pc2-value-box" value="@CurrentLoudness" readonly />
             <button class="pc2-rocker-btn" aria-label="Decrease loudness" @onclick='() => SendCommand("lou-")'>-</button>
             <button class="pc2-rocker-btn" aria-label="Increase loudness" @onclick='() => SendCommand("lou+")'>+</button>
         </div>
@@ -83,8 +89,28 @@
     public int Option { get; set; }
     public int DefaultSource { get; set; }
 
-    [Parameter] public EventCallback<string> OnCommand { get; set; }
-    [Parameter] public string? DeviceStatus { get; set; }
+    private string CurrentVolume => DeviceService.CurrentPc2AudioSetup.Volume.ToString();
+    private string CurrentBass => FormatSigned(DeviceService.CurrentPc2AudioSetup.Bass);
+    private string CurrentTreble => FormatSigned(DeviceService.CurrentPc2AudioSetup.Treble);
+    private string CurrentLoudness => DeviceService.CurrentPc2AudioSetup.Loudness ? "On" : "Off";
 
-    private void SendCommand(string command) => OnCommand.InvokeAsync(command);
+    private static string FormatSigned(sbyte? value) =>
+        value is null ? "--" : value.Value.ToString("+0;-0;0");
+
+    protected override void OnInitialized()
+    {
+        DeviceService.OnStatusChanged += OnStatusChanged;
+    }
+
+    private void SendCommand(string command) => DeviceService.SendCommand(command);
+
+    private async void OnStatusChanged(BeoControl.Interfaces.StatusMessage _)
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        DeviceService.OnStatusChanged -= OnStatusChanged;
+    }
 }
