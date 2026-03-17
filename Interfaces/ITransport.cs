@@ -4,9 +4,10 @@ namespace BeoControl.Interfaces;
 public record CommandInfo(string Name, string Description, string Category, string? ParamHint = null);
 
 public enum StatusType { Idle, Working, Ok, Error }
+public enum StatusKind { Connection, Discovery, Source, AudioSetup, Transport, Info }
 
 /// <summary>One-line status bar message with semantic type for color rendering.</summary>
-public record StatusMessage(StatusType Type, string Text);
+public record StatusMessage(StatusType Type, string Text, StatusKind Kind = StatusKind.Info);
 
 public enum LogLevel { Debug, Info, Warning, Error }
 

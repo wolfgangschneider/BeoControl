@@ -145,7 +145,7 @@ static void processCommand(char* line, Channel& reply) {
         return;
     }
     if (strcmp(lower, "status") == 0) {
-        reply.printf("Current source: %s\n", currentSrcName);
+        reply.printf("SRC:%s\n", currentSrcName);
         return;
     }
     if (lower[0] == '0' && lower[1] == 'x') {

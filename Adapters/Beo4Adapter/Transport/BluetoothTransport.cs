@@ -61,7 +61,7 @@ public class BluetoothTransport : ITransport
         _device?.Gatt.Disconnect();
         _device = null;
         IsConnected = false;
-        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Idle, "BLE disconnected"));
+        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Idle, "BLE disconnected", StatusKind.Connection));
     }
 
     public void SendLine(string line)
@@ -96,7 +96,7 @@ public class BluetoothTransport : ITransport
             if (_forcedDeviceId is not null)
             {
                 // Direct connect — skip scan entirely (mirrors /port COMx in SerialTransport)
-                OnStatusChanged?.Invoke(new StatusMessage(StatusType.Working, $"○ Connecting to BLE {_forcedDeviceId}..."));
+                OnStatusChanged?.Invoke(new StatusMessage(StatusType.Working, $"○ Connecting to BLE {_forcedDeviceId}...", StatusKind.Connection));
                 var d = await BluetoothDevice.FromIdAsync(_forcedDeviceId);
                 if (d is null) throw new Exception($"BLE device '{_forcedDeviceId}' not found");
                 ct.ThrowIfCancellationRequested();
@@ -121,7 +121,7 @@ public class BluetoothTransport : ITransport
         catch (Exception ex)
         {
             var msg = $"BLE connect error: [{ex.GetType().Name}] {ex.Message}  HResult=0x{ex.HResult:X8}";
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Error, $"✗ {ex.GetType().Name}: {ex.Message}"));
+            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Error, $"✗ {ex.GetType().Name}: {ex.Message}", StatusKind.Connection));
             OnLog?.Invoke(new LogMessage(LogLevel.Error, msg));
             return null;
         }
@@ -130,7 +130,7 @@ public class BluetoothTransport : ITransport
 
     public async Task<List<DeviceInfo>> ScanAsync(CancellationToken ct, Action<StatusMessage>? status = null)
     {
-        status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{_deviceNamePrefix}'..."));
+        status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{_deviceNamePrefix}'...", StatusKind.Discovery));
         //unfortunately is null without device
         ////OnStatusChanged?.Invoke(new StatusMessage(StatusType.Working, $"○BBB Scanning for BLE '{_deviceNamePrefix}'..."));
         var filter = new BluetoothLEScanFilter { NamePrefix = _deviceNamePrefix };
@@ -155,7 +155,7 @@ public class BluetoothTransport : ITransport
     public static async Task<List<DeviceInfo>> ScanDevices(
         string namePrefix, CancellationToken ct, Action<StatusMessage>? status = null)
     {
-        status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{namePrefix}'..."));
+        status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{namePrefix}'...", StatusKind.Discovery));
 
         var filter = new BluetoothLEScanFilter { NamePrefix = namePrefix };
         var options = new RequestDeviceOptions();
@@ -178,7 +178,7 @@ public class BluetoothTransport : ITransport
     private static async Task<(BluetoothDevice Device, string Id)> AutoDetect(
         string namePrefix, CancellationToken ct, Action<StatusMessage>? status = null)
     {
-        status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{namePrefix}'..."));
+        status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{namePrefix}'...", StatusKind.Discovery));
 
         var filter = new BluetoothLEScanFilter { NamePrefix = namePrefix };
         var options = new RequestDeviceOptions();
@@ -242,11 +242,11 @@ public class BluetoothTransport : ITransport
         device.GattServerDisconnected += (_, _) =>
         {
             IsConnected = false;
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Idle, "BLE disconnected"));
+            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Idle, "BLE disconnected", StatusKind.Connection));
         };
 
         IsConnected = true;
-        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, $"Beo4Remote BLE ({device.Name})"));
+        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, $"Beo4Remote BLE ({device.Name})", StatusKind.Connection));
         await WriteAsync("name\n");
     }
 
@@ -263,9 +263,9 @@ public class BluetoothTransport : ITransport
         if (string.IsNullOrEmpty(text)) return;
 
         if (text.StartsWith("Name:", StringComparison.OrdinalIgnoreCase))
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, $"Connected"));
-        else if (text.Contains("Current", StringComparison.OrdinalIgnoreCase))
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, text));
+            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, $"Connected", StatusKind.Connection));
+        else if (ProtocolStatusParser.TryParseSourceStatus(text, out var sourceStatus))
+            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, sourceStatus, StatusKind.Source));
         else
             OnLog?.Invoke(new LogMessage(LogLevel.Debug, text));
     }

@@ -187,6 +187,12 @@
 
     private async void OnServiceStatusChanged(StatusMessage msg)
     {
+        if (msg.Kind is StatusKind.Source or StatusKind.AudioSetup)
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
         _statusType = msg.Type;
         _statusText = msg.Text;
         await InvokeAsync(StateHasChanged);

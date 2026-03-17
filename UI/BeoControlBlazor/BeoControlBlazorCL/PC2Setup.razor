@@ -32,6 +32,11 @@
             <button class="pc2-rocker-btn" aria-label="Decrease loudness" @onclick='() => SendCommand("lou-")'>-</button>
             <button class="pc2-rocker-btn" aria-label="Increase loudness" @onclick='() => SendCommand("lou+")'>+</button>
         </div>
+
+        @if (!string.IsNullOrWhiteSpace(DeviceService.LastPc2AudioStatusText))
+        {
+            <p>@DeviceService.LastPc2AudioStatusText</p>
+        }
     </section>
 
     <section class="pc2-card">
@@ -104,8 +109,11 @@
 
     private void SendCommand(string command) => DeviceService.SendCommand(command);
 
-    private async void OnStatusChanged(BeoControl.Interfaces.StatusMessage _)
+    private async void OnStatusChanged(BeoControl.Interfaces.StatusMessage msg)
     {
+        if (msg.Kind is not BeoControl.Interfaces.StatusKind.AudioSetup and not BeoControl.Interfaces.StatusKind.Connection)
+            return;
+
         await InvokeAsync(StateHasChanged);
     }
 

@@ -110,6 +110,21 @@ else
         StateHasChanged();
     }
 
+    private void HandleStatus(StatusMessage msg)
+    {
+        switch (msg.Kind)
+        {
+            case StatusKind.Connection:
+            case StatusKind.Discovery:
+            case StatusKind.Source:
+            case StatusKind.AudioSetup:
+            case StatusKind.Transport:
+            case StatusKind.Info:
+                SetStatus(msg.Type, msg.Text);
+                break;
+        }
+    }
+
     private readonly List<LogEntry> _log = [];
     private IReadOnlyList<LogEntry> _logView => _log;
     private int _scrollOffset = 0;
@@ -148,8 +163,7 @@ else
     {
         device.OnStatusChanged += msg =>
         {
-            SetStatus(msg.Type, msg.Text);
-
+            HandleStatus(msg);
         };
         device.OnLog += msg =>
         {
@@ -208,7 +222,7 @@ else
     {
         try
         {
-            return await transport.ScanAsync(_connectCts.Token, msg => SetStatus(msg.Type, msg.Text));
+            return await transport.ScanAsync(_connectCts.Token, msg => HandleStatus(msg));
         }
         catch (OperationCanceledException)
         {

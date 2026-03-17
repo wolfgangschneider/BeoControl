@@ -24,8 +24,9 @@ public class DeviceService : IHostedService, IDisposable
     public bool IsConnected => _device?.IsConnected ?? false;
     public DeviceInfo? CurrentDevice => _device?.Info;
     public AudioSetupDto CurrentPc2AudioSetup => Settings.AudioSetup;
+    public string? LastPc2AudioStatusText { get; private set; }
 
-    public StatusMessage LastStatus { get; private set; } = new(StatusType.Idle, "Not connected");
+    public StatusMessage LastStatus { get; private set; } = new(StatusType.Idle, "Not connected", StatusKind.Connection);
 
     public event Action<StatusMessage>? OnStatusChanged;
 
@@ -169,20 +170,19 @@ public class DeviceService : IHostedService, IDisposable
             _device.OnLog -= OnDeviceLog;
             if (_device is Pc2Device currentPc2)
             {
-                currentPc2.OnAudioSetupChanged -= OnPc2AudioSetupChangedInternal;
                 currentPc2.OnStore -= OnPc2Store;
             }
             _device.Disconnect();
             _device.Dispose();
         }
         _device = next;
+        LastPc2AudioStatusText = next is Pc2Device ? LastPc2AudioStatusText : null;
         if (_device is not null)
         {
             _device.OnStatusChanged += OnDeviceStatusChanged;
             _device.OnLog += OnDeviceLog;
             if (_device is Pc2Device nextPc2)
             {
-                nextPc2.OnAudioSetupChanged += OnPc2AudioSetupChangedInternal;
                 nextPc2.OnStore += OnPc2Store;
                 SyncPc2AudioSetup(nextPc2.CurrentAudioSetup, save: false);
             }
@@ -191,20 +191,23 @@ public class DeviceService : IHostedService, IDisposable
 
     private void OnDeviceStatusChanged(StatusMessage msg)
     {
-        if (_device is Pc2Device && msg.Type == StatusType.Ok)
+        if (msg.Kind == StatusKind.AudioSetup)
         {
-            OnStatusChanged?.Invoke(LastStatus);
-            return;
+            LastPc2AudioStatusText = msg.Text;
+            if (Pc2AudioStatusParser.TryParse(msg.Text, out var parsedSetup))
+                SyncPc2AudioSetup(parsedSetup, save: true);
+        }
+        else if (_device is not Pc2Device)
+        {
+            LastPc2AudioStatusText = null;
         }
 
-        LastStatus = msg;
+        if (msg.Kind is not StatusKind.Source and not StatusKind.AudioSetup)
+            LastStatus = msg;
         OnStatusChanged?.Invoke(msg);
     }
 
     private void OnDeviceLog(LogMessage msg) { /* future log panel */ }
-
-    private void OnPc2AudioSetupChangedInternal(Beoported.Pc2.AudioSetup setup) =>
-        SyncPc2AudioSetup(setup, save: true);
 
     private void OnPc2Store(Beoported.Pc2.AudioSetup setup) =>
         SyncPc2AudioSetup(setup, save: true);
@@ -223,12 +226,11 @@ public class DeviceService : IHostedService, IDisposable
         Settings.UpdateAudioSetup(setup);
         if (save)
             Settings.Save();
-        OnStatusChanged?.Invoke(LastStatus);
     }
 
-    private void Notify(StatusType type, string text)
+    private void Notify(StatusType type, string text, StatusKind kind = StatusKind.Connection)
     {
-        LastStatus = new StatusMessage(type, text);
+        LastStatus = new StatusMessage(type, text, kind);
         OnStatusChanged?.Invoke(LastStatus);
     }
 }

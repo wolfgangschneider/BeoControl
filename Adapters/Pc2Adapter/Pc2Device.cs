@@ -36,18 +36,17 @@ public sealed class Pc2Device : IDevice
             _core.SetAudioSetup(initialAudioSetup);
 
         _core.OnDebugMessage = msg => OnLog?.Invoke(new LogMessage(LogLevel.Debug, msg));
-        _core.OnAudioSetupChanged = setup => OnAudioSetupChanged?.Invoke(setup);
+        _core.OnAudioSetupChanged = setup =>
+        {
+            OnAudioSetupChanged?.Invoke(setup);
+            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, FormatAudioStatus(setup), StatusKind.AudioSetup));
+        };
         _core.OnStore = setup =>
         {
             OnStore?.Invoke(setup);
         };
-        _core.OnStatusChanged = StatusChanged;
+        _core.OnStatusChanged = status => OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, status, StatusKind.Source));
 
-    }
-
-    private void StatusChanged(string status)
-    {
-        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, status));
     }
 
     public async Task Connect()
@@ -77,20 +76,24 @@ public sealed class Pc2Device : IDevice
         _cts = null;
         try { _core.Shutdown(); } catch { }
         IsConnected = false;
-        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Idle, "○ PC2 disconnected"));
+        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Idle, "○ PC2 disconnected", StatusKind.Connection));
     }
 
     public void SendCommand(string cmd, string? arg = null)
     {
         var n = arg is not null && int.TryParse(arg, out var parsed) ? parsed : 0;
         if (!_core.RunCommand(cmd, n))
+        {
             OnLog?.Invoke(new LogMessage(LogLevel.Warning, $"PC2: unknown command '{cmd}'"));
-        else
-            OnAudioSetupChanged?.Invoke(_core.AudioSetup);
+            return;
+        }
+
+        if (!string.Equals(cmd, "store", StringComparison.OrdinalIgnoreCase) && !_core.RunCommand("store", 0))
+            OnLog?.Invoke(new LogMessage(LogLevel.Warning, "PC2: automatic store command failed"));
     }
 
-    //private static string FormatAudioStatus(AudioSetup s) =>
-    //    $"vol={s.Volume}  bass={s.Bass:+0;-0;0}  treble={s.Treble:+0;-0;0}  balance={s.Balance:+0;-0;0}  loudness={(s.Loudness ? "on" : "off")}";
+    private static string FormatAudioStatus(AudioSetup s) =>
+        $"vol={s.Volume}  bass={s.Bass:+0;-0;0}  treble={s.Treble:+0;-0;0}  balance={s.Balance:+0;-0;0}  loudness={(s.Loudness ? "on" : "off")}";
 
     public void Dispose()
     {
