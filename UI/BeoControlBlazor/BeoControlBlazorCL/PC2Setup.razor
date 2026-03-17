@@ -17,6 +17,11 @@
             <button class="pc2-rocker-btn" aria-label="Decrease volume" @onclick='() => SendCommand("vol-")'>-</button>
             <button class="pc2-rocker-btn" aria-label="Increase volume" @onclick='() => SendCommand("vol+")'>+</button>
 
+            <span class="pc2-setting-label">Balance</span>
+            <input class="pc2-value-box" value="@CurrentBalance" readonly />
+            <button class="pc2-rocker-btn" aria-label="Balance left" @onclick='() => SendCommand("bal-")'>-</button>
+            <button class="pc2-rocker-btn" aria-label="Balance right" @onclick='() => SendCommand("bal+")'>+</button>
+
             <span class="pc2-setting-label">Bass</span>
             <input class="pc2-value-box" value="@CurrentBass" readonly />
             <button class="pc2-rocker-btn" aria-label="Decrease bass" @onclick='() => SendCommand("bas-")'>-</button>
@@ -95,6 +100,7 @@
     public int DefaultSource { get; set; }
 
     private string CurrentVolume => DeviceService.CurrentPc2AudioSetup.Volume.ToString();
+    private string CurrentBalance => FormatSigned(DeviceService.CurrentPc2AudioSetup.Balance);
     private string CurrentBass => FormatSigned(DeviceService.CurrentPc2AudioSetup.Bass);
     private string CurrentTreble => FormatSigned(DeviceService.CurrentPc2AudioSetup.Treble);
     private string CurrentLoudness => DeviceService.CurrentPc2AudioSetup.Loudness ? "On" : "Off";
