@@ -265,11 +265,13 @@ public sealed class Pc2Core : IDisposable
                     mlt = MasterlinkTelegram.Parse(tgram);
                     if (mlt.Type == MasterlinkTelegram.TelegramType.Status)
                     {
-                        string source = SourceNames.GetName(mlt.Payload[1]);
-                        string track = mlt.Payload.Length > 2 ? $" ({mlt.Payload[2]})" : null;
-                        if (!string.IsNullOrEmpty(track))
-                            source = $"{source} {track}";
-                        OnStatusChanged?.Invoke(source);
+                        if (mlt.Payload.Length > 1)
+                        {
+                            string source = SourceNames.GetName(mlt.Payload[1]);
+                            if (mlt.Payload.Length > 2)
+                                source = $"{source} {mlt.Payload[2]}";
+                            OnStatusChanged?.Invoke(source);
+                        }
                     }
                 }
                 catch (Exception e) { }
