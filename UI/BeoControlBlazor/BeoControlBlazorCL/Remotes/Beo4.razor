@@ -64,7 +64,7 @@
     <div class="beo4-section">
         <button class="beo4-btn" @onclick="OnListPressed">LIST</button>
         <button class="beo4-btn" @onclick='() => SendCommand("vol+")'>▲</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("exit")'>EXIT</button>
+            <button class="beo4-btn" @onclick=' OnGoExit'>EXIT</button>
 
         <button class="beo4-btn" @onclick='() => SendCommand("stop")'>STOP</button>
         <button class="beo4-btn" @onclick='() => SendCommand("vol-")'>▼</button>
@@ -103,10 +103,14 @@
     // Commands not on physical keys — cycled via LIST
     private static readonly List<(string Cmd, string Display)> AltList =
     [
+        ("mute",     "MUTE"),
+        ("pc",     "PC"),
         ("atape2",     "A.TAPE 2"),
         ("cd2",        "CD 2"),
         ("allstandby", "ALL STBY"),
         ("phono",      "PHONO"),
+        ("speaker",      "SOUND"),
+
     ];
 
     private int _listIndex = -1;
@@ -124,10 +128,22 @@
     {
         if (InListMode)
         {
-            SendCommand(AltList[_listIndex].Cmd);
-            _listIndex = -1;
+           // do not reset list mode
+            // SendCommand(AltList[_listIndex].Cmd);
+            OnCommand.InvokeAsync(AltList[_listIndex].Cmd);
+          
         }
         else SendCommand("go");
+    }
+
+    private void OnGoExit()
+    {
+        if (InListMode)
+        {
+            //SendCommand(AltList[_listIndex].Cmd);
+            _listIndex = -1;
+        }
+        else SendCommand("exit");
     }
 
     private void OnExitPressed() { } // unused

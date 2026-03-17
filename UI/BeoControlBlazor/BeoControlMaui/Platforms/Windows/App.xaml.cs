@@ -1,18 +1,25 @@
-﻿using BeoControlBlazorServices;
-using BeoControlBlazor.Services;
+﻿using BeoControlBlazor.Services;
 
-using Microsoft.UI.Xaml;
+using BeoControlBlazorServices;
+
 using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+
+using System.Runtime.InteropServices;
 
 using Windows.Graphics;
 
-using System.Runtime.InteropServices;
 using WinForms = System.Windows.Forms;
 
 namespace BeoControlMaui.WinUI
 {
     public partial class App : MauiWinUIApplication
     {
+        private const string MutexName = "BeoControl_SingleInstance_Mutex";
+        private const string EventName = "BeoControl_SingleInstance_Event";
+        private static Mutex? _instanceMutex;
+        private EventWaitHandle? _showEvent;
+
         private WinForms.NotifyIcon? _trayIcon;
         private WinForms.ApplicationContext? _trayContext;
         private AppWindow? _appWindow;
@@ -35,13 +42,23 @@ namespace BeoControlMaui.WinUI
 
         public App()
         {
+            _instanceMutex = new Mutex(true, MutexName, out bool isNewInstance);
+            if (!isNewInstance)
+            {
+                // Signal the running instance to come to the foreground, then exit
+                try { EventWaitHandle.OpenExisting(EventName).Set(); } catch { }
+                Environment.Exit(0);
+                return;
+            }
+
+            _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, EventName);
             this.InitializeComponent();
         }
 
         protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
 
         private AppSettings? _settings;
-
+        private DeviceService? _deviceService;
         protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
             base.OnLaunched(args);
@@ -55,17 +72,38 @@ namespace BeoControlMaui.WinUI
                         WinRT.Interop.WindowNative.GetWindowHandle(win)));
 
                 _settings = AppSettings.Load();
-                int w = _settings.WindowWidth  > 0 ? _settings.WindowWidth  : RemoteWindow.Width;
+                int w = _settings.WindowWidth > 0 ? _settings.WindowWidth : RemoteWindow.Width;
                 int h = _settings.WindowHeight > 0 ? _settings.WindowHeight : RemoteWindow.Height;
                 _appWindow.Resize(new SizeInt32(w, h));
                 _appWindow.Changed += OnAppWindowChanged;
                 _appWindow.Closing += OnWindowClosing;
 
+                _deviceService = MauiProgram.Services!.GetRequiredService<DeviceService>();
+
                 StartTrayThread();
+                StartSingleInstanceListener();
 
                 // Start minimized to tray
                 _appWindow.Hide();
             }
+        }
+
+        private void StartSingleInstanceListener()
+        {
+            var thread = new Thread(() =>
+            {
+                while (_showEvent?.WaitOne() == true)
+                {
+                    _dispatcher?.TryEnqueue(() =>
+                    {
+                        GetCursorPos(out var pt);
+                        ShowWindowAboveTray(pt);
+                    });
+                }
+            });
+            thread.IsBackground = true;
+            thread.Name = "SingleInstanceListener";
+            thread.Start();
         }
 
         private void StartTrayThread()
@@ -89,6 +127,25 @@ namespace BeoControlMaui.WinUI
                     GetCursorPos(out var pt);
                     _dispatcher?.TryEnqueue(() => ShowWindowAboveTray(pt));
                 });
+                menu.Items.Add(new WinForms.ToolStripSeparator());
+
+                menu.Items.Add("MUTE", null, (_, _) =>
+                {
+                    _deviceService?.SendCommand("mute");
+                });
+                menu.Items.Add("A.TAPE", null, (_, _) =>
+                {
+                    _deviceService?.SendCommand("mute");
+                });
+                menu.Items.Add("RADIO", null, (_, _) =>
+                {
+                    _deviceService?.SendCommand("mute");
+                });
+                menu.Items.Add("PHONO", null, (_, _) =>
+                {
+                    _deviceService?.SendCommand("mute");
+                });
+
                 menu.Items.Add(new WinForms.ToolStripSeparator());
                 menu.Items.Add("Exit", null, (_, _) =>
                     _dispatcher?.TryEnqueue(ExitApp));
@@ -153,7 +210,7 @@ namespace BeoControlMaui.WinUI
         private void OnAppWindowChanged(AppWindow sender, AppWindowChangedEventArgs e)
         {
             if (!e.DidSizeChange || _settings is null) return;
-            _settings.WindowWidth  = sender.Size.Width;
+            _settings.WindowWidth = sender.Size.Width;
             _settings.WindowHeight = sender.Size.Height;
             _settings.Save();
         }
@@ -170,6 +227,7 @@ namespace BeoControlMaui.WinUI
             _exitRequested = true;
             _trayIcon?.Dispose();
             _trayContext?.ExitThread();
+            _showEvent?.Dispose();
             Microsoft.UI.Xaml.Application.Current.Exit();
         }
     }
