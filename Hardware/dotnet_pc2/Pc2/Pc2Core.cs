@@ -267,7 +267,8 @@ public sealed class Pc2Core : IDisposable
                     {
                         string source = SourceNames.GetName(mlt.Payload[1]);
                         string track = mlt.Payload.Length > 2 ? $" ({mlt.Payload[2]})" : null;
-
+                        if (!string.IsNullOrEmpty(track))
+                            source = $"{source} {track}";
                         OnStatusChanged?.Invoke(source);
                     }
                 }
