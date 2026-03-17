@@ -91,7 +91,7 @@
             if (idx >= 0)
                 return status[(idx + prefix.Length)..].Trim();
         }
-        return status;
+        return status.Substring(0, Math.Min(8, status.Length));
     }
 
     private void SendCommand(string command) 

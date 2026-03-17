@@ -1,5 +1,6 @@
 using BeoControl.Interfaces;
 
+using Beoported.Masterlink;
 using Beoported.Pc2;
 
 namespace Pc2Adapter;
@@ -33,12 +34,20 @@ public sealed class Pc2Device : IDevice
             _core.SetAudioSetup(initialAudioSetup);
 
         _core.OnDebugMessage = msg => OnLog?.Invoke(new LogMessage(LogLevel.Debug, msg));
-        _core.OnAudioSetupChanged = setup => OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, FormatStatus(setup)));
+        // _core.OnAudioSetupChanged = setup => OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, FormatAudioStatus(setup)));
         _core.OnStore = setup =>
         {
             OnStore?.Invoke(setup);
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, FormatStatus(setup)));
+            //OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, FormatAudioStatus(setup)));
         };
+        _core.OnTelegram = TelegramRecife;
+
+    }
+
+    private void TelegramRecife(MasterlinkTelegram telegram)
+    {
+        string msg = "todo";
+        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, msg));
     }
 
     public async Task Connect()
@@ -49,7 +58,7 @@ public sealed class Pc2Device : IDevice
             _cts = new CancellationTokenSource();
             _core.Start(_cts.Token);
             IsConnected = true;
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, $"● PC2 connected  {FormatStatus(_core.AudioSetup)}"));
+            // OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, $"● PC2 connected  {FormatAudioStatus(_core.AudioSetup)}"));
 
         }
         catch (Exception ex)
@@ -76,12 +85,12 @@ public sealed class Pc2Device : IDevice
         var n = arg is not null && int.TryParse(arg, out var parsed) ? parsed : 0;
         if (!_core.RunCommand(cmd, n))
             OnLog?.Invoke(new LogMessage(LogLevel.Warning, $"PC2: unknown command '{cmd}'"));
-        else
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, FormatStatus(_core.AudioSetup)));
+        //else
+        //    OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, FormatAudioStatus(_core.AudioSetup)));
     }
 
-    private static string FormatStatus(AudioSetup s) =>
-        $"vol={s.Volume}  bass={s.Bass:+0;-0;0}  treble={s.Treble:+0;-0;0}  balance={s.Balance:+0;-0;0}  loudness={(s.Loudness ? "on" : "off")}";
+    //private static string FormatAudioStatus(AudioSetup s) =>
+    //    $"vol={s.Volume}  bass={s.Bass:+0;-0;0}  treble={s.Treble:+0;-0;0}  balance={s.Balance:+0;-0;0}  loudness={(s.Loudness ? "on" : "off")}";
 
     public void Dispose()
     {
