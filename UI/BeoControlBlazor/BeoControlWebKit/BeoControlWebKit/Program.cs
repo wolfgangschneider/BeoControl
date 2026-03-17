@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using WebKitGtk;
-using WebKitGtk.Test.Data;
 
 [UnsupportedOSPlatform("OSX")]
 [UnsupportedOSPlatform("Windows")]
@@ -37,10 +36,10 @@ internal class Program : IHostedService
                 HostPath = "wwwroot/index.html"
             }
         )
-        .AddSingleton<WeatherForecastService>()
         .AddHostedService<Program>();
 
         builder.Services.AddSingleton<DeviceService>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<DeviceService>());
 
         using var host = builder.Build();
 
