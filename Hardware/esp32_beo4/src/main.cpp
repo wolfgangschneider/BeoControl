@@ -8,7 +8,7 @@
 #ifdef BOARD_M5ATOMS3
   constexpr uint8_t IR_TX_PIN = 38;   // M5 Atom S3
 #elif defined(BOARD_M5STAMPS3)
-  constexpr uint8_t IR_TX_PIN = 0;    // M5 Stamp S3 — G0
+  constexpr uint8_t IR_TX_PIN = 9;    // M5 Stamp S3 — G0
 #else
   constexpr uint8_t IR_TX_PIN = 32;   // esp32dev
 #endif

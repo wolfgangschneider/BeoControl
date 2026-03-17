@@ -229,6 +229,10 @@ public sealed class Pc2Core : IDisposable
             SetAudioSetup(AudioSetup);// ??
 
         }
+        else if (KeyFromCommand(cmd) is Beo4Key key)
+        {
+            Beolink.SendTelegram(DecodedTelegrams.SendBeo4Key(0x00, key));
+        }
         else
         {
             return false;
@@ -245,6 +249,31 @@ public sealed class Pc2Core : IDisposable
 
     /// <summary>Map a lowercase source command name to its Masterlink source ID. Returns null if unknown.</summary>
     public static byte? SourceIdFromName(string name) => SourceNames.FromCommand(name);
+
+    /// <summary>Map a lowercase command name to its Beo4Key. Returns null if unknown.</summary>
+    public static Beo4Key? KeyFromCommand(string cmd) => cmd switch
+    {
+        "up" => Beo4Key.ArrowUp,
+        "down" => Beo4Key.ArrowDown,
+        "left" => Beo4Key.ArrowLeft,
+        "right" => Beo4Key.ArrowRight,
+        "go" => Beo4Key.Go,
+        "play" => Beo4Key.Play,
+        "stop" => Beo4Key.Stop,
+        "record" => Beo4Key.Record,
+        "menu" => Beo4Key.Menu,
+        "exit" => Beo4Key.ArrowLeft,  // map exit → left (back)
+        "return" => Beo4Key.ArrowLeft,
+        "select" => Beo4Key.Go,
+        "red" => Beo4Key.Red,
+        "green" => Beo4Key.Green,
+        "blue" => Beo4Key.Blue,
+        "yellow" => Beo4Key.Yellow,
+        "standby" => Beo4Key.Standby,
+        "off" => Beo4Key.Standby,
+        _ => null,
+    };
+
 
     public void ProcessMessage(byte[] tgram)
     {
@@ -268,7 +297,7 @@ public sealed class Pc2Core : IDisposable
                         if (mlt.Payload.Length > 1)
                         {
                             string source = SourceNames.GetName(mlt.Payload[1]);
-                            if (mlt.Payload.Length > 2)
+                            if (mlt.Payload.Length > 2 && mlt.Payload[2] > 0 && mlt.Payload[2] != 255)
                                 source = $"Current source:{source} {mlt.Payload[2]}";
                             OnStatusChanged?.Invoke(source);
                         }

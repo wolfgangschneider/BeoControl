@@ -84,6 +84,22 @@ public static class DecodedTelegrams
         };
     }
 
+    /// <summary>Build a BEO4_KEY command telegram to forward a key on the Masterlink bus.</summary>
+    public static MasterlinkTelegram SendBeo4Key(byte sourceId, Beo4Key key)
+    {
+        return new MasterlinkTelegram
+        {
+            DestNode       = Nodes.AMaster,
+            SrcNode        = Nodes.Node01,
+            DestSrc        = 0x00,
+            SrcSrc         = 0x00,
+            Type           = MasterlinkTelegram.TelegramType.Command,
+            PldType        = MasterlinkTelegram.PayloadType.Beo4Key,
+            PayloadVersion = 1,
+            Payload        = [sourceId, (byte)key],
+        };
+    }
+
     /// <summary>Build a RELEASE broadcast to all nodes (triggers standby on all Masterlink devices).</summary>
     public static MasterlinkTelegram AllStandby()
     {
