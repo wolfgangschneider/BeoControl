@@ -68,6 +68,7 @@ public class AppSettings
         Treble   = AudioSetup.Treble,
         Balance  = AudioSetup.Balance,
         Loudness = AudioSetup.Loudness,
+        DefaultSource = AudioSetup.DefaultSource,
     };
 
     /// <summary>Update stored audio setup from a live <see cref="AudioSetup"/>.</summary>
@@ -78,6 +79,7 @@ public class AppSettings
         AudioSetup.Treble   = src.Treble;
         AudioSetup.Balance  = src.Balance;
         AudioSetup.Loudness = src.Loudness;
+        AudioSetup.DefaultSource = src.DefaultSource;
     }
 }
 
@@ -89,4 +91,5 @@ public class AudioSetupDto
     public sbyte Treble   { get; set; } = 0;
     public sbyte Balance  { get; set; } = 0;
     public bool  Loudness { get; set; } = false;
+    public Beoported.Pc2.Pc2DefaultSource DefaultSource { get; set; } = Beoported.Pc2.Pc2DefaultSource.None;
 }

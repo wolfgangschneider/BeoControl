@@ -152,6 +152,15 @@ public class DeviceService : IHostedService, IDisposable
 
     public void SendCommand(string cmd, string? arg = null) => _device?.SendCommand(cmd, arg);
 
+    public void UpdatePc2DefaultSource(Beoported.Pc2.Pc2DefaultSource defaultSource)
+    {
+        Settings.AudioSetup.DefaultSource = defaultSource;
+        if (_device is Pc2Device pc2)
+            pc2.CurrentAudioSetup.DefaultSource = defaultSource;
+        Settings.Save();
+        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, LastStatus.Text, StatusKind.Info));
+    }
+
     public void Disconnect(bool silent = false)
     {
         ReplaceDevice(null);
@@ -195,7 +204,10 @@ public class DeviceService : IHostedService, IDisposable
         {
             LastPc2AudioStatusText = msg.Text;
             if (Pc2AudioStatusParser.TryParse(msg.Text, out var parsedSetup))
+            {
+                parsedSetup.DefaultSource = Settings.AudioSetup.DefaultSource;
                 SyncPc2AudioSetup(parsedSetup, save: true);
+            }
         }
         else if (_device is not Pc2Device)
         {

@@ -10,6 +10,7 @@ public static class Pc2Commands
     [
         // ── PC2-only sources (no known Beo4 IR equivalent yet) ────────────
         new("dvd2",     "DVD 2",          "PC2 Source"),
+        new("on",       "Masterlink on",  "PC2 Source"),
 
         // ── Incremental tone controls (PC2 hardware mixer only) ───────────
         new("bass+",    "Bass up",        "PC2 Tone", "[steps]"),

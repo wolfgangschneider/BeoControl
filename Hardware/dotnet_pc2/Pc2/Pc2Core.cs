@@ -50,7 +50,18 @@ public sealed class Pc2Core : IDisposable
         Device.DebugLog = s => OnDebugMessage?.Invoke(s);
         Beolink.DebugLog = s => OnDebugMessage?.Invoke(s);
         Beolink.TelegramReceived = t => OnTelegram?.Invoke(t);
-        Beolink.StartupSourceDetect = s => RunCommand(s, 0);
+        Beolink.StartupSourceDetect = _ =>
+        {
+            switch (AudioSetup.DefaultSource)
+            {
+                case Pc2DefaultSource.PC:
+                    RunCommand("pc", 0);
+                    break;
+                case Pc2DefaultSource.ML:
+                    RunCommand("on", 0);
+                    break;
+            }
+        };
         Beolink.RequestAudioBus = RequestAudioBus;
 
         // Wire Beo4 IR remote keys to the internal handler.
@@ -129,6 +140,13 @@ public sealed class Pc2Core : IDisposable
             Mixer.TransmitLocally(true);
             Mixer.TransmitFromMl(false);
             Mixer.SpeakerPower(true);
+        }
+        else if (cmd == "on")
+        {
+            Mixer.TransmitLocally(false);
+            Mixer.TransmitFromMl(true);
+            Mixer.SpeakerPower(true);
+            Mixer.SpeakerMute(false);
         }
         // ── Any other named Masterlink source ─────────────────────────────
         else if (SourceIdFromName(cmd) is byte mlSourceId)
@@ -329,6 +347,7 @@ public sealed class Pc2Core : IDisposable
                 if (r != null)
                 {
                     OnDebugMessage?.Invoke($"Mixer state {BitConverter.ToString(tgram)}");
+                    r.DefaultSource = AudioSetup.DefaultSource;
                     AudioSetup = r;
                     OnAudioSetupChanged?.Invoke(r);
                     OnDebugMessage?.Invoke($"Mixer state (hw): volume={r.Volume}, bass={r.Bass}, treble={r.Treble}, balance={r.Balance}, loudness={r.Loudness}");
