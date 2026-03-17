@@ -59,7 +59,7 @@ internal class Program : IHostedService
         {
             var window = Gtk.ApplicationWindow.New((Adw.Application)sender);
             window.Title = "BeoControl";
-            window.SetDefaultSize(250, 950);
+            window.SetDefaultSize(220, 950);
 
             var webView = new BlazorWebView(_serviceProvider);
             webView.Hexpand = true;
