@@ -1,57 +1,90 @@
-﻿@using Microsoft.AspNetCore.Components.Forms
-<div style="display:grid; grid-template-columns: 1fr auto auto;grid-template-rows: auto auto auto">
-    <h3 style="grid-column: 1 /span 3">Sound WIP</h3>
-    <span>VOLUME</span>
-    <button class="" @onclick='() => SendCommand("bas-")'>&lt;&lt;</button>
-    <button class="" @onclick='() => SendCommand("bas+")'>&gt;&gt;</button>
+@using Microsoft.AspNetCore.Components.Forms
 
-    <span>BASS</span>
-    <button class="" @onclick='() => SendCommand("bas-")'>&lt;&lt;</button>
-    <button class="" @onclick='() => SendCommand("bas+")'>&gt;&gt;</button>
+<div class="pc2-setup">
+    <section class="pc2-card">
+        <div class="pc2-card-header">
+            <div>
+                <h3 class="pc2-card-title">Sound</h3>
+                <p class="pc2-card-subtitle">Fine tune the PC2 audio profile.</p>
+            </div>
+        </div>
 
-    <span>TREBLE</span>
-    <button class="" @onclick='() => SendCommand("tre-")'>&lt;&lt;</button>
-    <button class="" @onclick='() => SendCommand("tre+")'>&gt;&gt;</button>
-    <span>LOUDNESS</span>
-    <button class="" @onclick='() => SendCommand("lou-")'>&lt;&lt;</button>
-    <button class="" @onclick='() => SendCommand("lou+")'>&gt;&gt;</button>
-    <button style="grid-column: 2 /span 2" class="" @onclick='() => SendCommand("store")'>Store</button>
+        <div class="pc2-sound-grid">
+            <span class="pc2-setting-label">Volume</span>
+            <button class="pc2-rocker-btn" aria-label="Decrease volume" @onclick='() => SendCommand("vol-")'>-</button>
+            <button class="pc2-rocker-btn" aria-label="Increase volume" @onclick='() => SendCommand("vol+")'>+</button>
 
+            <span class="pc2-setting-label">Bass</span>
+            <button class="pc2-rocker-btn" aria-label="Decrease bass" @onclick='() => SendCommand("bas-")'>-</button>
+            <button class="pc2-rocker-btn" aria-label="Increase bass" @onclick='() => SendCommand("bas+")'>+</button>
 
-    <h3 style="grid-column: 1 /span 3">Option</h3>
-    <div style="display:flex; grid-column: 1 ">
+            <span class="pc2-setting-label">Treble</span>
+            <button class="pc2-rocker-btn" aria-label="Decrease treble" @onclick='() => SendCommand("tre-")'>-</button>
+            <button class="pc2-rocker-btn" aria-label="Increase treble" @onclick='() => SendCommand("tre+")'>+</button>
 
-        <InputRadioGroup @bind-Value="Option">
-            0<InputRadio Value="0" />
-      
-            2<InputRadio Value="2" />
-     
-            4<InputRadio Value="4" />
-    
-            6<InputRadio Value="6" />
+            <span class="pc2-setting-label">Loudness</span>
+            <button class="pc2-rocker-btn" aria-label="Decrease loudness" @onclick='() => SendCommand("lou-")'>-</button>
+            <button class="pc2-rocker-btn" aria-label="Increase loudness" @onclick='() => SendCommand("lou+")'>+</button>
+        </div>
+    </section>
+
+    <section class="pc2-card">
+        <div class="pc2-card-header">
+            <div>
+                <h3 class="pc2-card-title">Option</h3>
+                <p class="pc2-card-subtitle">Select the PC2 option profile.</p>
+            </div>
+        </div>
+
+        <InputRadioGroup @bind-Value="Option" Name="pc2-option">
+            <div class="pc2-choice-grid">
+                @foreach (var option in OptionValues)
+                {
+                    <label class="pc2-choice @(Option == option ? "active" : "")">
+                        <InputRadio class="pc2-radio" Value="option" />
+                        <span>@option</span>
+                    </label>
+                }
+            </div>
         </InputRadioGroup>
-    </div>
-    <button style="grid-column: 2 /span 2" class="" @onclick='() => SendCommand("store")'>Store</button>
+    </section>
 
-    <h3 style="grid-column: 1 /span 3">Default Source</h3>
-    <div style="grid-column: 1 ">
+    <section class="pc2-card">
+        <div class="pc2-card-header">
+            <div>
+                <h3 class="pc2-card-title">Default source</h3>
+                <p class="pc2-card-subtitle">Choose which source the system powers up with.</p>
+            </div>
+        </div>
 
-        <InputRadioGroup @bind-Value="DefaultSource">
-    
-            PC <InputRadio Value="0" />
-            None <InputRadio Value="1" />
-    
+        <InputRadioGroup @bind-Value="DefaultSource" Name="pc2-default-source">
+            <div class="pc2-choice-grid pc2-choice-grid-wide">
+                @foreach (var source in DefaultSources)
+                {
+                    <label class="pc2-choice @(DefaultSource == source.Value ? "active" : "")">
+                        <InputRadio class="pc2-radio" Value="source.Value" />
+                        <span>@source.Label</span>
+                    </label>
+                }
+            </div>
         </InputRadioGroup>
-    </div>
-        <button style="grid-column: 2 /span 2" class="" @onclick='() => SendCommand("store")'>Store</button>
+    </section>
 </div>
 
-
-
 @code {
+    private static readonly int[] OptionValues = [0, 2, 4, 6];
+
+    private static readonly (int Value, string Label)[] DefaultSources =
+    [
+        (0, "PC"),
+        (1, "None")
+    ];
+
     public int Option { get; set; }
     public int DefaultSource { get; set; }
+
     [Parameter] public EventCallback<string> OnCommand { get; set; }
     [Parameter] public string? DeviceStatus { get; set; }
+
     private void SendCommand(string command) => OnCommand.InvokeAsync(command);
 }
