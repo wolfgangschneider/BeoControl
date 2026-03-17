@@ -44,7 +44,7 @@
         }
     </section>
 
-    <section class="pc2-card">
+    <section class="pc2-card pc2-card-disabled">
         <div class="pc2-card-header">
             <div>
                 <h3 class="pc2-card-title">Option</h3>
@@ -56,8 +56,8 @@
             <div class="pc2-choice-grid">
                 @foreach (var option in OptionValues)
                 {
-                    <label class="pc2-choice @(Option == option ? "active" : "")">
-                        <InputRadio class="pc2-radio" Value="option" />
+                    <label class="pc2-choice pc2-choice-disabled @(Option == option ? "active" : "")">
+                        <InputRadio class="pc2-radio" Value="option" disabled />
                         <span>@option</span>
                     </label>
                 }

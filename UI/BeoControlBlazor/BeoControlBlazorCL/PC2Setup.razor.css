@@ -8,6 +8,10 @@
     overflow: hidden;
 }
 
+.pc2-card-disabled {
+    opacity: 0.45;
+}
+
 .pc2-card-header {
     background: #111;
     color: #ccc;
@@ -128,6 +132,14 @@
     background: #2a4a2a;
     color: #aaddaa;
     border-color: rgba(170,221,170,0.35);
+}
+
+.pc2-choice-disabled,
+.pc2-choice-disabled:hover {
+    background: #151515;
+    color: #777;
+    border-color: transparent;
+    cursor: not-allowed;
 }
 
 .pc2-radio {
