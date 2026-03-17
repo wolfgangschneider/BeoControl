@@ -18,6 +18,7 @@ public sealed class Pc2Core : IDisposable
     /// formatted as an ANSI-colored string ready for display.
     /// </summary>
     public Action<string>? OnDebugMessage { get; set; }
+    public Action<string>? OnStatusChanged { get; set; }
 
     /// <summary>
     /// Called on the background thread for every incoming Masterlink telegram.
@@ -41,16 +42,16 @@ public sealed class Pc2Core : IDisposable
     public Pc2Core(AddressMask addressMask = AddressMask.Promiscuous)
     {
         AddressMask = addressMask;
-        Device  = new Pc2Device();
-        Mixer   = new Pc2Mixer(Device);
+        Device = new Pc2Device();
+        Mixer = new Pc2Mixer(Device);
         Beolink = new Beolink(Device);
 
         // Wire internal debug/telegram callbacks through to the public ones.
-        Device.DebugLog          = s => OnDebugMessage?.Invoke(s);
-        Beolink.DebugLog         = s => OnDebugMessage?.Invoke(s);
+        Device.DebugLog = s => OnDebugMessage?.Invoke(s);
+        Beolink.DebugLog = s => OnDebugMessage?.Invoke(s);
         Beolink.TelegramReceived = t => OnTelegram?.Invoke(t);
-        Beolink.StartupSourceDetect = s => RunCommand(s,0);
-        Beolink.RequestAudioBus  = RequestAudioBus;
+        Beolink.StartupSourceDetect = s => RunCommand(s, 0);
+        Beolink.RequestAudioBus = RequestAudioBus;
 
         // Wire Beo4 IR remote keys to the internal handler.
         Beolink.KeystrokeCallback = HandleBeo4Key;
@@ -78,7 +79,7 @@ public sealed class Pc2Core : IDisposable
         Device.SendMessage([0xF1]);             // INIT
         Device.SendMessage([0x80, 0x01, 0x00]); // SET_NODE = 0x01
         Mixer.SetParameters(AudioSetup); // apply default audio setup (volume 0, neutral bass/treble/balance, loudness off)
-  
+
     }
 
     /// <summary>
@@ -226,7 +227,7 @@ public sealed class Pc2Core : IDisposable
         {
             OnStore?.Invoke(AudioSetup);
             SetAudioSetup(AudioSetup);// ??
-          
+
         }
         else
         {
@@ -252,27 +253,40 @@ public sealed class Pc2Core : IDisposable
             OnDebugMessage?.Invoke(ConsoleLog.FormatUnknownMessage(tgram, 0));
             return;
         }
-       
+
         byte msgType = tgram[2];
         switch (msgType)
         {
             case 0x00: // Masterlink telegram
                 Beolink.ProcessMlTelegram(tgram);
+                MasterlinkTelegram mlt;
+                try
+                {
+                    mlt = MasterlinkTelegram.Parse(tgram);
+                    if (mlt.Type == MasterlinkTelegram.TelegramType.Status)
+                    {
+                        string source = SourceNames.GetName(mlt.Payload[1]);
+                        string track = mlt.Payload.Length > 2 ? $" ({mlt.Payload[2]})" : null;
+
+                        OnStatusChanged?.Invoke(source);
+                    }
+                }
+                catch (Exception e) { }
                 break;
             case 0x02: // Beo4 IR keycode
                 if (tgram.Length > 6)
                     Beolink.ProcessBeo4Keycode(tgram[4], tgram[6]);
-                  
-                OnDebugMessage?.Invoke("(Beo4 keycode: " + ((Beo4Key)tgram[6]) );
-             
+
+                OnDebugMessage?.Invoke("(Beo4 keycode: " + ((Beo4Key)tgram[6]));
+
                 break;
-                
-             
+
+
             case 0x03: // Mixer state
                 var r = Mixer.ProcessMixerState(tgram);
                 if (r != null)
                 {
-                   OnDebugMessage?.Invoke($"Mixer state {BitConverter.ToString(tgram)}");
+                    OnDebugMessage?.Invoke($"Mixer state {BitConverter.ToString(tgram)}");
                     AudioSetup = r;
                     OnAudioSetupChanged?.Invoke(r);
                     OnDebugMessage?.Invoke($"Mixer state (hw): volume={r.Volume}, bass={r.Bass}, treble={r.Treble}, balance={r.Balance}, loudness={r.Loudness}");
@@ -280,9 +294,9 @@ public sealed class Pc2Core : IDisposable
                 break;
             case 0x06: // Headphone state
                 Mixer.ProcessHeadphoneState(tgram);
-               OnDebugMessage?.Invoke("Headphone state: ");
+                OnDebugMessage?.Invoke("Headphone state: ");
                 break;
-            
+
             default:
                 OnDebugMessage?.Invoke(ConsoleLog.FormatUnknownMessage(tgram, msgType));
                 break;

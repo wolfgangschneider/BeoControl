@@ -77,13 +77,12 @@ public class Beolink
                 {
                     case MasterlinkTelegram.PayloadType.StatusInfo:
                         DebugLog?.Invoke($"Status info: source={SourceNames.GetName(mlt.Payload[1])}, track={mlt.Payload[2]}");
-                          
                         break;
 
                     case MasterlinkTelegram.PayloadType.TrackInfoLong:
-                   
+
                         // hack to get propper (more than once) trak info after source switch
-                        
+
                         if (mlt.Payload.Length > 2 && mlt.Payload[2] == 255)
                         {
                             byte newSource = mlt.Payload[1];
@@ -116,19 +115,19 @@ public class Beolink
                     case MasterlinkTelegram.PayloadType.AudioBus:
                         if (mlt.Payload.Length > 3)
                         {
-                            if(string.IsNullOrEmpty(LastSource))
-                                {
-                                   LastSource = SourceNames.GetName(mlt.Payload[3]);
-                                   StartupSourceDetect?.Invoke(LastSource);
-                                }
-                                else // get track info for new source
-                                {
-                                    var tgram = DecodedTelegrams.GotoSource(mlt.Payload[3], 0);
-                                    SendTelegram(tgram);
-                                    
-                                }
-                                lastSource = mlt.Payload[3];
-                               
+                            if (string.IsNullOrEmpty(LastSource))
+                            {
+                                LastSource = SourceNames.GetName(mlt.Payload[3]);
+                                StartupSourceDetect?.Invoke(LastSource);
+                            }
+                            else // get track info for new source
+                            {
+                                var tgram = DecodedTelegrams.GotoSource(mlt.Payload[3], 0);
+                                SendTelegram(tgram);
+
+                            }
+                            lastSource = mlt.Payload[3];
+
                         }
                         break;
 
@@ -147,12 +146,12 @@ public class Beolink
                 break;
 
             case MasterlinkTelegram.TelegramType.Info:
-                        DebugLog?.Invoke($"ML info: {mlt.PldType} {BitConverter.ToString(mlt.Payload)}");
+                DebugLog?.Invoke($"ML info: {mlt.PldType} {BitConverter.ToString(mlt.Payload)}");
                 break;
 
             default:
                 DebugLog?.Invoke($"Unknown ML telegram type: {mlt.Type} {BitConverter.ToString(mlt.Payload)}");
-               
+
                 break;
         }
     }

@@ -1,6 +1,5 @@
 using BeoControl.Interfaces;
 
-using Beoported.Masterlink;
 using Beoported.Pc2;
 
 namespace Pc2Adapter;
@@ -40,14 +39,13 @@ public sealed class Pc2Device : IDevice
             OnStore?.Invoke(setup);
             //OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, FormatAudioStatus(setup)));
         };
-        _core.OnTelegram = TelegramRecife;
+        _core.OnStatusChanged = StatusChanged;
 
     }
 
-    private void TelegramRecife(MasterlinkTelegram telegram)
+    private void StatusChanged(string status)
     {
-        string msg = "todo";
-        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, msg));
+        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, status));
     }
 
     public async Task Connect()
