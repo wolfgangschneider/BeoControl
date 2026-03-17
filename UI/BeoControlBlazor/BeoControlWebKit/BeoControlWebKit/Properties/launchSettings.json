@@ -1,0 +1,16 @@
+{
+  "profiles": {
+    "WebKitGtk.Test": {
+      "commandName": "Project"
+    },
+    "WSL": {
+      "commandName": "WSL2",
+      "distributionName": ""
+    },
+    "Remote ARM Linux": {
+      "commandName": "RemoteDotnetDebugger",
+      "RemoteMachine": "192.168.0.4",
+      "RemoteUser": "user"
+    }
+  }
+}
