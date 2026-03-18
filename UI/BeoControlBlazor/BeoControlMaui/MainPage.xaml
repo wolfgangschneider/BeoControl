@@ -6,11 +6,14 @@
              x:Class="BeoControlMaui.MainPage"
              BackgroundColor="Red"
              >
+    <Grid RowDefinitions="*">
 
-    <BlazorWebView  x:Name="blazorWebView" HostPage="wwwroot/index.html">
+        <BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html">
         <BlazorWebView.RootComponents>
             <RootComponent  Selector="#app" ComponentType="{x:Type components:Routes}" />
         </BlazorWebView.RootComponents>
     </BlazorWebView>
+    </Grid>
+
 
 </ContentPage>

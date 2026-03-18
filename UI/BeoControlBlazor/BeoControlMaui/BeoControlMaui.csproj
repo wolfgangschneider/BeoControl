@@ -52,7 +52,13 @@
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-android|AnyCPU'">
+	<PropertyGroup Condition="'$(TargetFramework)'=='net10.0-android'">
+		<RuntimeIdentifiers>android-arm;android-arm64</RuntimeIdentifiers>
+	</PropertyGroup>
+
+
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-android|AnyCPU'">
       <ApplicationTitle>BeoControl</ApplicationTitle>
     </PropertyGroup>
 

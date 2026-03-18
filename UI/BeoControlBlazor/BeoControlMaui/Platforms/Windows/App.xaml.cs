@@ -22,14 +22,24 @@ namespace BeoControlMaui.WinUI
 
         private WinForms.NotifyIcon? _trayIcon;
         private WinForms.ApplicationContext? _trayContext;
+        private WinForms.ContextMenuStrip? _trayMenu;
         private AppWindow? _appWindow;
         private Microsoft.UI.Xaml.Window? _win;
         private Microsoft.UI.Dispatching.DispatcherQueue? _dispatcher;
+        private IntPtr _windowHandle;
         private bool _exitRequested;
+        private readonly List<WinForms.ToolStripItem> _trayCommandItems = new();
 
         [DllImport("user32.dll")] static extern bool GetCursorPos(out System.Drawing.Point pt);
         [DllImport("user32.dll")] static extern IntPtr MonitorFromPoint(System.Drawing.Point pt, uint flags);
         [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr hMon, ref MonitorInfo mi);
+        [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        [DllImport("user32.dll")] static extern bool BringWindowToTop(IntPtr hWnd);
+        [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hWnd);
+        [DllImport("user32.dll")] static extern bool IsIconic(IntPtr hWnd);
+
+        private const int SwShow = 5;
+        private const int SwRestore = 9;
 
         [StructLayout(LayoutKind.Sequential)]
         struct MonitorInfo
@@ -67,9 +77,10 @@ namespace BeoControlMaui.WinUI
             {
                 _win = win;
                 _dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+                _windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(win);
                 _appWindow = AppWindow.GetFromWindowId(
                     Microsoft.UI.Win32Interop.GetWindowIdFromWindow(
-                        WinRT.Interop.WindowNative.GetWindowHandle(win)));
+                        _windowHandle));
 
                 _settings = AppSettings.Load();
                 int w = _settings.WindowWidth > 0 ? _settings.WindowWidth : RemoteWindow.Width;
@@ -122,6 +133,7 @@ namespace BeoControlMaui.WinUI
                 };
 
                 var menu = new WinForms.ContextMenuStrip();
+                _trayMenu = menu;
                 menu.Items.Add("Show", null, (_, _) =>
                 {
                     GetCursorPos(out var pt);
@@ -129,22 +141,25 @@ namespace BeoControlMaui.WinUI
                 });
                 menu.Items.Add(new WinForms.ToolStripSeparator());
 
-                menu.Items.Add("MUTE", null, (_, _) =>
+                var muteItem = new WinForms.ToolStripMenuItem("MUTE", null, (_, _) =>
                 {
                     _deviceService?.SendCommand("mute");
                 });
-                menu.Items.Add("A.TAPE", null, (_, _) =>
+                var aTapeItem = new WinForms.ToolStripMenuItem("A.TAPE", null, (_, _) =>
                 {
                     _deviceService?.SendCommand("mute");
                 });
-                menu.Items.Add("RADIO", null, (_, _) =>
+                var radioItem = new WinForms.ToolStripMenuItem("RADIO", null, (_, _) =>
                 {
                     _deviceService?.SendCommand("mute");
                 });
-                menu.Items.Add("PHONO", null, (_, _) =>
+                var phonoItem = new WinForms.ToolStripMenuItem("PHONO", null, (_, _) =>
                 {
                     _deviceService?.SendCommand("mute");
                 });
+                _trayCommandItems.Clear();
+                _trayCommandItems.AddRange([muteItem, aTapeItem, radioItem, phonoItem]);
+                menu.Items.AddRange([muteItem, aTapeItem, radioItem, phonoItem]);
 
                 menu.Items.Add(new WinForms.ToolStripSeparator());
                 menu.Items.Add("Exit", null, (_, _) =>
@@ -158,8 +173,10 @@ namespace BeoControlMaui.WinUI
                     _dispatcher?.TryEnqueue(() => ShowWindowAboveTray(pt));
                 };
 
+                UpdateTrayConnectionState(deviceService?.IsConnected ?? false);
+
                 if (deviceService is not null)
-                    deviceService.OnStatusChanged += _ => UpdateTrayIcon(deviceService.IsConnected);
+                    deviceService.OnStatusChanged += _ => UpdateTrayConnectionState(deviceService.IsConnected);
 
                 _trayContext = new WinForms.ApplicationContext();
                 WinForms.Application.Run(_trayContext);
@@ -171,12 +188,27 @@ namespace BeoControlMaui.WinUI
             thread.Start();
         }
 
-        private void UpdateTrayIcon(bool connected)
+        private void UpdateTrayConnectionState(bool connected)
+        {
+            if (_trayMenu is { IsDisposed: false, IsHandleCreated: true, InvokeRequired: true })
+            {
+                _trayMenu.BeginInvoke((Action)(() => UpdateTrayConnectionStateCore(connected)));
+                return;
+            }
+
+            UpdateTrayConnectionStateCore(connected);
+        }
+
+        private void UpdateTrayConnectionStateCore(bool connected)
         {
             if (_trayIcon is null) return;
+
             _trayIcon.Icon?.Dispose();
             _trayIcon.Icon = LoadIcon(connected);
             _trayIcon.Text = connected ? "BeoControl — Connected" : "BeoControl — Disconnected";
+
+            foreach (var item in _trayCommandItems)
+                item.Enabled = connected;
         }
 
         private static System.Drawing.Icon? LoadIcon(bool connected)
@@ -203,7 +235,17 @@ namespace BeoControlMaui.WinUI
             int y = work.Bottom - winH;
 
             _appWindow.Move(new PointInt32(x, y));
-            _appWindow.Show();
+            BringWindowToForeground();
+        }
+
+        private void BringWindowToForeground()
+        {
+            if (_windowHandle == IntPtr.Zero) return;
+
+            _appWindow?.Show();
+            ShowWindow(_windowHandle, IsIconic(_windowHandle) ? SwRestore : SwShow);
+            BringWindowToTop(_windowHandle);
+            SetForegroundWindow(_windowHandle);
             _win?.Activate();
         }
 
