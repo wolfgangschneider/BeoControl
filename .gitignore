@@ -23,3 +23,4 @@ TestResults/
 # OS
 Thumbs.db
 .DS_Store
+/Hardware/esp32_beo4/logs
