@@ -1,3 +1,4 @@
+@using BeoControlBlazorCL.Components
 @* Pure layout component — no service knowledge *@
 
 <div class="bl1000">
@@ -66,7 +67,7 @@
 
         <div class="bl1000-section">
             <button class="bl1000-btn" @onclick='() => SendCommand("av")'>AV</button>
-            <button class="bl1000-btn bl1000-red" @onclick='() => SendCommand(Cmd("standby"))'>&#9679;</button>
+            <StandbyButton  OnCommand='(cmd) => SendCommand(cmd)' />
             <button class="bl1000-btn" @onclick='() => SendCommand("mute")'>MUTE</button>
         </div>
 
@@ -81,11 +82,13 @@
     [Parameter, EditorRequired] public EventCallback<string> OnCommand { get; set; }
     [Parameter] public string? DeviceStatus { get; set; }
 
+   
+
     private static readonly Dictionary<string, string> AltMap = new()
     {
         ["atape"]   = "atape2",
         ["cd"]      = "cd2",
-        ["standby"] = "allstandby",
+    
         ["mute"]    = "loudness",
         ["phono"]   = "pc",
        

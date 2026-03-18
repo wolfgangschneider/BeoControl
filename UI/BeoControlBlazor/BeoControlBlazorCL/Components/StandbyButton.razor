@@ -1,0 +1,78 @@
+﻿@using Microsoft.JSInterop
+@implements IDisposable
+@* Pure layout component — no service knowledge *@
+@inject IJSRuntime JS
+
+@*duplicate code!!!*@
+<script>
+    window.registerLongPress = function (element, dotnetRef, threshold = 600) {
+        let timer;
+        let moved = false;
+
+        const start = () => {
+            moved = false;
+            timer = setTimeout(() => {
+                if (!moved) {
+                    dotnetRef.invokeMethodAsync("OnLongPress");
+                }
+            }, threshold);
+        };
+
+        const cancel = () => {
+            clearTimeout(timer);
+        };
+
+        const move = () => {
+            moved = true;
+            clearTimeout(timer);
+        };
+
+        element.addEventListener("touchstart", start);
+        element.addEventListener("touchend", cancel);
+        element.addEventListener("touchmove", move);
+
+        element.addEventListener("mousedown", (e) => {
+            if (e.button === 0) start();
+        });
+        element.addEventListener("mouseup", cancel);
+        element.addEventListener("mouseleave", cancel);
+    };
+</script>
+
+<button @ref="btnRef" class="bl-btn bl-btn-red" @onclick='() => OnCommand.InvokeAsync("standby")'>&#9679;</button>
+@code {
+    ElementReference btnRef;
+    private DotNetObjectReference<StandbyButton>? _dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+
+            await JS.InvokeVoidAsync(
+                "registerLongPress",
+                btnRef,
+                _dotNetRef,
+                2000
+            );
+        }
+
+    }
+    [Parameter]
+    public string Class { get; set; }
+
+    [Parameter] public EventCallback<string> OnCommand { get; set; } = default!;
+
+    [JSInvokable]
+    public void OnLongPress()
+    {
+        OnCommand.InvokeAsync("allstandby");
+        //OnCommand.InvokeAsync("mute");
+    }
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+    }
+}

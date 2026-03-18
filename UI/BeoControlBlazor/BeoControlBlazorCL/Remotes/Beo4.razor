@@ -1,4 +1,5 @@
-@* Pure layout component — no service knowledge *@
+@using BeoControlBlazorCL.Components
+
 
 <div class="beo4">
 
@@ -68,7 +69,7 @@
 
         <button class="beo4-btn" @onclick='() => SendCommand("stop")'>STOP</button>
         <button class="beo4-btn" @onclick='() => SendCommand("vol-")'>▼</button>
-        <button class="beo4-btn beo4-red" @onclick='() => SendCommand("standby")'>&#9679;</button>
+         <StandbyButton  OnCommand='(cmd) => SendCommand(cmd)' />
     </div>
     </div>
 
@@ -82,6 +83,10 @@
     [Parameter, EditorRequired] public EventCallback<string> OnCommand { get; set; }
     [Parameter] public string? DeviceStatus { get; set; }
 
+    
+
+
+   
     private static string ExtractSource(string? status)
     {
         if (string.IsNullOrEmpty(status)) return "";
@@ -99,7 +104,12 @@
         OnCommand.InvokeAsync(command);
         _listIndex = -1;
     }
-
+    private void OnRightClick( string command)
+    {
+       
+        OnCommand.InvokeAsync(command);
+        _listIndex = -1;
+    }
     // Commands not on physical keys — cycled via LIST
     private static readonly List<(string Cmd, string Display)> AltList =
     [
@@ -107,7 +117,6 @@
         ("pc",     "PC"),
         ("atape2",     "A.TAPE 2"),
         ("cd2",        "CD 2"),
-        ("allstandby", "ALL STBY"),
         ("phono",      "PHONO"),
         ("speaker",      "SOUND"),
 
@@ -149,4 +158,7 @@
     private void OnExitPressed() { } // unused
 
     private void ToggleShift() { } // unused, kept to avoid rename cascades
+
+   
+
 }
