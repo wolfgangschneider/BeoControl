@@ -40,7 +40,6 @@ static void printStartup(Channel& channel, bool irReady) {
     channel.println(irReady ? "OK" : "failed");
     channel.println("\n\n=== ESP32 Beo4 Emulator ===");
     printHelp(channel);
-    channel.print("beo4> ");
 }
 
 // ── poll a channel with its own command buffer ───────────────────────
@@ -52,7 +51,6 @@ static void pollChannel(Channel& channel, char* cmdBuf, uint8_t& cmdLen) {
                 cmdBuf[cmdLen] = '\0';
                 processCommand(cmdBuf, channel);
                 cmdLen = 0;
-                channel.print("beo4> ");
             }
         } else if (cmdLen < CMD_BUF_SIZE - 1) {
             cmdBuf[cmdLen++] = c;
@@ -73,6 +71,8 @@ void setup() {
 
  if (Serial) {
      // USB/UART connected — use serial channel
+  
+   
      
  } else {
      // No serial host — fall back to BLE

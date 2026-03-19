@@ -39,7 +39,7 @@
     };
 </script>
 
-<RemoteButton style=" color: #e83030;font-size: 12px;" @ref="remoteBtn" OnCommand="@((cmd) => OnCommand.InvokeAsync(cmd))" Caption="&#9679;" />
+<RemoteButton style=" color: #e83030;font-size: 12px;" @ref="remoteBtn" Cmd="standby" OnCommand="@((cmd) => OnCommand.InvokeAsync(cmd))" Caption="&#9679;" />
 @code {
   
     private RemoteButton remoteBtn;

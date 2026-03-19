@@ -39,6 +39,9 @@ public class AppSettings
     public int WindowWidth  { get; set; } = 0;
     public int WindowHeight { get; set; } = 0;
 
+    /// <summary>Remote button zoom percentage. Zero = use default.</summary>
+    public int RemoteButtonZoom { get; set; } = 100;
+
     public static AppSettings Load()
     {
         try

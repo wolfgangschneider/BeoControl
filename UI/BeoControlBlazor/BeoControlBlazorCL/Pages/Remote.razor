@@ -3,6 +3,7 @@
 @using BeoControlBlazor.Services
 @using BeoControlBlazorServices
 @using BeoControlBlazorCL.Remotes
+@using BeoControlBlazorCL.Components;
 @inject DeviceService DeviceService
 @inject NavigationManager Nav
 @implements IDisposable
@@ -27,6 +28,7 @@
             }
         </div>
             <button class="gear-btn" title="Setup" @onclick='() => Nav.NavigateTo("/setup")'>⚙</button>
+            @* <button class="gear-btn" title="Zoom" @onclick='Zoom'>🔍</button> *@
         </div>
     </div>
 
@@ -56,6 +58,7 @@
     protected override void OnInitialized()
     {
         Selected = DeviceService.Settings.LastRemote;
+        RemoteButton.Zoom = NormalizeZoom(DeviceService.Settings.RemoteButtonZoom);
         DeviceService.OnStatusChanged += OnStatusChanged;
     }
 
@@ -103,5 +106,24 @@
         RemoteType.Beolink1000 => "BL1000",
         RemoteType.Beo4        => "Beo4",
         _                      => r.ToString(),
+    };
+    private void Zoom(MouseEventArgs args)
+    {
+        RemoteButton.Zoom = RemoteButton.Zoom switch
+        {
+            100 => 150,
+            150 => 200,
+            _ => 100
+        };
+        DeviceService.Settings.RemoteButtonZoom = RemoteButton.Zoom;
+        DeviceService.Settings.Save();
+        StateHasChanged();
+        Nav.NavigateTo("/", true);
+    }
+
+    private static int NormalizeZoom(int zoom) => zoom switch
+    {
+        100 or 150 or 200 => zoom,
+        _ => 100
     };
 }

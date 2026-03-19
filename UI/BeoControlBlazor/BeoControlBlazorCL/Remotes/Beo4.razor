@@ -11,66 +11,66 @@
 
     <div>
         <div class="beo4-section">
-        <RemoteButton Cmd="tv" OnCommand="@((cmd) => SendCommand(cmd))" Caption="TV"/>
-        <button class="beo4-btn" @onclick='() => SendCommand("light")'>LIGHT</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("radio")'>RADIO</button>
+            <RemoteButton Cmd="tv" OnCommand="SendCommand" Caption="TV" />
+            <RemoteButton Cmd="light" OnCommand="SendCommand" Caption="LIGHT" />
+            <RemoteButton Cmd="radio" OnCommand="SendCommand" Caption="RADIO" />
 
-        <button class="beo4-btn" @onclick='() => SendCommand("sat")'>SAT</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("dvd")'>DVD</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("cd")'>CD</button>
+            <RemoteButton Cmd="sat" OnCommand="SendCommand" Caption="SAT" />
+            <RemoteButton Cmd="dvd" OnCommand="SendCommand" Caption="DVD" />
+            <RemoteButton Cmd="cd" OnCommand="SendCommand" Caption="CD" />
 
-        <button class="beo4-btn" @onclick='() => SendCommand("vtape")'>V.TAPE</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("record")'>RECORD</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("atape")'>A.TAPE</button>
-    </div>
+            <RemoteButton Cmd="vtape" OnCommand="SendCommand" Caption="V.TAPE" />
+            <RemoteButton Cmd="record" OnCommand="SendCommand" Caption="RECORD" />
+            <RemoteButton Cmd="atape" OnCommand="SendCommand" Caption="A.TAPE" />
+        </div>
 
-    <div class="beo4-section">
-        <button class="beo4-btn" @onclick='() => SendCommand("7")'>7</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("8")'>8</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("9")'>9</button>
+        <div class="beo4-section">
+            <RemoteButton Cmd="7" OnCommand="SendCommand" Caption="7" />
+            <RemoteButton Cmd="8" OnCommand="SendCommand" Caption="8" />
+            <RemoteButton Cmd="9" OnCommand="SendCommand" Caption="9" />
 
-        <button class="beo4-btn" @onclick='() => SendCommand("4")'>4</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("5")'>5</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("6")'>6</button>
+            <RemoteButton Cmd="4" OnCommand="SendCommand" Caption="4" />
+            <RemoteButton Cmd="5" OnCommand="SendCommand" Caption="5" />
+            <RemoteButton Cmd="6" OnCommand="SendCommand" Caption="6" />
 
-        <button class="beo4-btn" @onclick='() => SendCommand("1")'>1</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("2")'>2</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("3")'>3</button>
+            <RemoteButton Cmd="1" OnCommand="SendCommand" Caption="1" />
+            <RemoteButton Cmd="2" OnCommand="SendCommand" Caption="2" />
+            <RemoteButton Cmd="3" OnCommand="SendCommand" Caption="3" />
 
-        <button class="beo4-btn" @onclick='() => SendCommand("text")'>TEXT</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("0")'>0</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("menu")'>MENU</button>
-    </div>
+            <RemoteButton Cmd="text" OnCommand="SendCommand" Caption="TEXT" />
+            <RemoteButton Cmd="0" OnCommand="SendCommand" Caption="0" />
+            <RemoteButton Cmd="menu" OnCommand="SendCommand" Caption="MENU" />
+        </div>
 
-    <div class="beo4-nav-area">
-        <div class="beo4-nav">
+        <div class="beo4-nav-area">
+            <div class="beo4-nav">
             <button class="beo4-nav-btn" style="background:Green;width:30px;transform:rotate(-45deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand("green")'></button>
             <button style="z-index:10;transform: scaleX(2) " class="beo4-nav-btn beo4-nav-up" @onclick='() => SendCommand("up")'>▲</button>
             <button class="beo4-nav-btn" style="background:yellow;width:30px;transform:rotate(45deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand("yellow")'></button>
 
             <button style="z-index:10; transform: scaleY(2) " class="beo4-nav-btn beo4-nav-left" @onclick='() => SendCommand("left")'>◄</button>
 
-            <div style="z-index:10; background:#1a1a1a;transform: scale(1.1);transform-origin: center center;">
+                <div style="z-index:10; background:#1a1a1a;transform: scale(1.1);transform-origin: center center;">
                 <button style="width:100%;" class="beo4-nav-btn beo4-nav-go" @onclick="OnGoPressed">GO</button>
-           </div>
+                </div>
 
             <button class="beo4-nav-btn beo4-nav-right" style="z-index:10;transform: scaleY(2) " @onclick='() => SendCommand("right")'>►</button>
 
             <button class="beo4-nav-btn" style="background:Red;width:30px;transform:rotate(-135deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand("red")'></button>
             <button class="beo4-nav-btn beo4-nav-down" style="z-index:10;transform: scaleX(2) "  @onclick='() => SendCommand("down")'>▼</button>
             <button class="beo4-nav-btn" style="background:Blue;width:30px;transform:rotate(135deg) scaleY(1.5);margin:auto;"  @onclick='() => SendCommand("blue")'></button>
+            </div>
         </div>
-    </div>
 
-    <div class="beo4-section">
-        <button class="beo4-btn" @onclick="OnListPressed">LIST</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("vol+")'>▲</button>
-            <button class="beo4-btn" @onclick=' OnGoExit'>EXIT</button>
+        <div class="beo4-section">
+            <RemoteButton OnClick="OnListPressed" Caption="LIST" />
+            <RemoteButton Cmd="vol+" OnCommand="SendCommand" Caption="▲" />
+            <RemoteButton OnClick="OnGoExit" Caption="EXIT" />
 
-        <button class="beo4-btn" @onclick='() => SendCommand("stop")'>STOP</button>
-        <button class="beo4-btn" @onclick='() => SendCommand("vol-")'>▼</button>
-         <StandbyButton  OnCommand='(cmd) => SendCommand(cmd)' />
-    </div>
+            <RemoteButton Cmd="stop" OnCommand="SendCommand" Caption="STOP" />
+            <RemoteButton Cmd="vol-" OnCommand="SendCommand" Caption="▼" />
+            <StandbyButton  OnCommand="@((cmd) =>SendCommand(cmd))" />
+        </div>
     </div>
 
     <div class="beo4-footer">
@@ -83,10 +83,6 @@
     [Parameter, EditorRequired] public EventCallback<string> OnCommand { get; set; }
     [Parameter] public string? DeviceStatus { get; set; }
 
-    
-
-
-   
     private static string ExtractSource(string? status)
     {
         if (string.IsNullOrEmpty(status)) return "";
@@ -96,20 +92,21 @@
             if (idx >= 0)
                 return status[(idx + prefix.Length)..].Trim();
         }
-        return status.Substring(0, Math.Min(8, status.Length));
+        return status.Trim();
     }
 
-    private void SendCommand(string command) 
+    private Task SendCommand(string command)
+    {
+        _listIndex = -1;
+        return OnCommand.InvokeAsync(command);
+    }
+
+    private void OnRightClick(string command)
     {
         OnCommand.InvokeAsync(command);
         _listIndex = -1;
     }
-    private void OnRightClick( string command)
-    {
-       
-        OnCommand.InvokeAsync(command);
-        _listIndex = -1;
-    }
+
     // Commands not on physical keys — cycled via LIST
     private static readonly List<(string Cmd, string Display)> AltList =
     [
@@ -133,32 +130,32 @@
         _listIndex = InListMode ? (_listIndex + 1) % AltList.Count : 0;
     }
 
-    private void OnGoPressed()
+    private Task OnGoPressed()
     {
         if (InListMode)
         {
-           // do not reset list mode
-            // SendCommand(AltList[_listIndex].Cmd);
-            OnCommand.InvokeAsync(AltList[_listIndex].Cmd);
-          
+            return OnCommand.InvokeAsync(AltList[_listIndex].Cmd);
         }
-        else SendCommand("go");
+
+        return SendCommand("go");
     }
 
     private void OnGoExit()
     {
         if (InListMode)
         {
-            //SendCommand(AltList[_listIndex].Cmd);
             _listIndex = -1;
         }
-        else SendCommand("exit");
+        else
+        {
+            _ = SendCommand("exit");
+        }
     }
 
     private void OnExitPressed() { } // unused
 
     private void ToggleShift() { } // unused, kept to avoid rename cascades
 
-   
+
 
 }

@@ -3,6 +3,7 @@
 @using BeoControl.Interfaces
 @using BeoControlBlazorCL.Components
 @using BeoControlBlazorServices
+@using Microsoft.AspNetCore.Components.Forms
 @inject DeviceService DeviceService
 @inject NavigationManager Nav
 @implements IDisposable
@@ -37,6 +38,27 @@
     </div>
 
     <div class="setup-panel">
+
+        <section class="setup-card">
+            <div class="setup-card-header">
+                <div>
+                    <h3 class="setup-card-title">Remote zoom</h3>
+                    <p class="setup-card-subtitle">Choose the button scale factor for the remote UI.</p>
+                </div>
+            </div>
+
+            <InputRadioGroup @bind-Value="RemoteButtonZoom" Name="remote-button-zoom">
+                <div class="setup-choice-grid setup-choice-grid-zoom">
+                    @foreach (var option in ZoomOptions)
+                    {
+                        <label class="setup-choice @(RemoteButtonZoom == option.Value ? "active" : "")">
+                            <InputRadio class="setup-radio" Value="option.Value" />
+                            <span>@option.Label</span>
+                        </label>
+                    }
+                </div>
+            </InputRadioGroup>
+        </section>
 
         @if (ActiveTab == DeviceType.USB)
         {
@@ -133,6 +155,12 @@
 
 @code {
     private static readonly DeviceType[] Tabs = [DeviceType.USB, DeviceType.BT, DeviceType.PC2];
+    private static readonly (int Value, string Label)[] ZoomOptions =
+    [
+        (100, "1x"),
+        (150, "1.5x"),
+        (200, "2x"),
+    ];
 
     private DeviceType ActiveTab;
     private bool IsScanning;
@@ -143,6 +171,7 @@
     private List<DeviceInfo> SerialDevices = [];
     private List<DeviceInfo> BtDevices = [];
     private CancellationTokenSource? _scanCts;
+    private int _remoteButtonZoom = 100;
 
     private StatusType _statusType = StatusType.Idle;
     private string _statusText = "Not connected";
@@ -150,6 +179,21 @@
 
     private bool IsPc2Connected =>
         DeviceService.IsConnected && DeviceService.CurrentDevice?.Type == DeviceType.PC2;
+
+    private int RemoteButtonZoom
+    {
+        get => _remoteButtonZoom;
+        set
+        {
+            if (_remoteButtonZoom == value)
+                return;
+
+            _remoteButtonZoom = value;
+            RemoteButton.Zoom = value;
+            DeviceService.Settings.RemoteButtonZoom = value;
+            DeviceService.Settings.Save();
+        }
+    }
 
     private string DisplayStatusText =>
         DeviceService.IsConnected ? "Connected" : "Disconnected";
@@ -184,6 +228,7 @@
         SelectedBt     = DeviceService.Settings.LastBluetooth?.Id;
         _statusType    = DeviceService.LastStatus.Type;
         _statusText    = DeviceService.LastStatus.Text;
+        _remoteButtonZoom = NormalizeZoom(DeviceService.Settings.RemoteButtonZoom);
     }
 
     private async void OnServiceStatusChanged(StatusMessage msg)
@@ -312,6 +357,12 @@
         DeviceType.BT     => "Bluetooth",
         DeviceType.PC2    => "PC2",
         _                 => t.ToString(),
+    };
+
+    private static int NormalizeZoom(int zoom) => zoom switch
+    {
+        100 or 150 or 200 => zoom,
+        _ => 100
     };
 
     public void Dispose()

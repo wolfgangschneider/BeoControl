@@ -45,32 +45,6 @@
     margin: 8px 2px;
 }
 
-.beo4-btn {
-    background: #1a1a1a;
-    color: #ffffff;
-    border: none;
-    border-radius: 2px;
-    height: var(--btn-Height,22px);
-    padding: 0;
-    font-size: 8px;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1.1;
-}
-
-.beo4-btn:hover  { background: #303030; }
-.beo4-btn:active { background: #000; transform: scale(0.95); }
-.beo4-btn:disabled { color: #aaaaaa; cursor: default; pointer-events: none; }
-.beo4-btn:disabled:hover { background: #1a1a1a; }
-.beo4-active { background: #555 !important; outline: 1px solid #aaa; }
-
-.beo4-red { color: #e83030; font-size: 12px; }
-
 /* ── Navigation diamond ───────────────────────── */
 
 .beo4-nav-area {

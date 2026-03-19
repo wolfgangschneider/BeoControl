@@ -6,69 +6,69 @@
 
     <div>
         <div class="bl1000-section">
-            <button class="bl1000-btn" @onclick='() => SendCommand("tv")'>TV</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("light")'>LIGHT</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("radio")'>RADIO</button>
+            <RemoteButton Cmd="tv" OnCommand="SendCommand" Caption="TV" />
+            <RemoteButton Cmd="light" OnCommand="SendCommand" Caption="LIGHT" />
+            <RemoteButton Cmd="radio" OnCommand="SendCommand" Caption="RADIO" />
 
-            <button class="bl1000-btn" @onclick='() => SendCommand("sat")'>SAT</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("link")'>LINK</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("cd"))'>@Label("cd")</button>
+            <RemoteButton Cmd="sat" OnCommand="SendCommand" Caption="SAT" />
+            <RemoteButton Cmd="link" OnCommand="SendCommand" Caption="LINK" />
+            <RemoteButton Cmd='@Cmd("cd")' OnCommand="SendCommand" Caption='@Label("cd")' />
 
-            <button class="bl1000-btn" @onclick='() => SendCommand("vtape")'>V.TAPE</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("record")'>RECORD</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("atape"))'>@Label("atape")</button>
+            <RemoteButton Cmd="vtape" OnCommand="SendCommand" Caption="V.TAPE" />
+            <RemoteButton Cmd="record" OnCommand="SendCommand" Caption="RECORD" />
+            <RemoteButton Cmd='@Cmd("atape")' OnCommand="SendCommand" Caption='@Label("atape")' />
 
-            <button class="bl1000-btn" @onclick='() => SendCommand("menu")'>MENU</button>
-            <button class="bl1000-btn @(_shifted ? "bl1000-active" : "")" @onclick="ToggleShift">SHIFT</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand(Cmd("phono"))'>@Label("phono")</button>
+            <RemoteButton Cmd="menu" OnCommand="SendCommand" Caption="MENU" />
+            <RemoteButton style="@ShiftButtonStyle" OnClick="ToggleShift" Caption="SHIFT" />
+            <RemoteButton Cmd='@Cmd("phono")' OnCommand="SendCommand" Caption='@Label("phono")' />
         </div>
 
         <div class="bl1000-section">
-            <button class="bl1000-btn" @onclick='() => SendCommand("stop")'>STOP</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("up")'>&#9650;</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("play")'>PLAY</button>
+            <RemoteButton Cmd="stop" OnCommand="SendCommand" Caption="STOP" />
+            <RemoteButton Cmd="up" OnCommand="SendCommand" Caption="▲" />
+            <RemoteButton Cmd="play" OnCommand="SendCommand" Caption="PLAY" />
 
-            <button class="bl1000-btn" @onclick='() => SendCommand("left")' >&lt;&lt;</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("down")'>&#9660;</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("right")' >&gt;&gt;</button>
+            <RemoteButton Cmd="left" OnCommand="SendCommand" Caption="<<" />
+            <RemoteButton Cmd="down" OnCommand="SendCommand" Caption="▼" />
+            <RemoteButton Cmd="right" OnCommand="SendCommand" Caption=">>" />
         </div>
 
         <div class="bl1000-section">
-            <button class="bl1000-btn" @onclick='() => SendCommand("7")'>7</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("8")'>8</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("9")'>9</button>
+            <RemoteButton Cmd="7" OnCommand="SendCommand" Caption="7" />
+            <RemoteButton Cmd="8" OnCommand="SendCommand" Caption="8" />
+            <RemoteButton Cmd="9" OnCommand="SendCommand" Caption="9" />
 
-            <button class="bl1000-btn" @onclick='() => SendCommand("4")'>4</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("5")'>5</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("6")'>6</button>
+            <RemoteButton Cmd="4" OnCommand="SendCommand" Caption="4" />
+            <RemoteButton Cmd="5" OnCommand="SendCommand" Caption="5" />
+            <RemoteButton Cmd="6" OnCommand="SendCommand" Caption="6" />
 
-            <button class="bl1000-btn" @onclick='() => SendCommand("1")'>1</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("2")'>2</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("3")'>3</button>
+            <RemoteButton Cmd="1" OnCommand="SendCommand" Caption="1" />
+            <RemoteButton Cmd="2" OnCommand="SendCommand" Caption="2" />
+            <RemoteButton Cmd="3" OnCommand="SendCommand" Caption="3" />
 
-            <button class="bl1000-btn" @onclick='() => SendCommand("text")'>TEXT</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("0")'>0</button>
-            <button class="bl1000-btn" @onclick='() => SendCommand("goto")' disabled>GO TO</button>
+            <RemoteButton Cmd="text" OnCommand="SendCommand" Caption="TEXT" />
+            <RemoteButton Cmd="0" OnCommand="SendCommand" Caption="0" />
+            <RemoteButton Cmd="goto" OnCommand="SendCommand" Caption="GO TO" disabled />
         </div>
 
         <div class="bl1000-section">
-            <button class="bl1000-btn" @onclick='() => SendCommand("picture")'>PICTURE</button>
+            <RemoteButton Cmd="picture" OnCommand="SendCommand" Caption="PICTURE" />
             <span></span>
-            <button class="bl1000-btn" @onclick='() => SendCommand("vol+")' >&#9650;</button>
+            <RemoteButton Cmd="vol+" OnCommand="SendCommand" Caption="▲" />
 
-            <button class="bl1000-btn" @onclick='() => SendCommand("store")'>STORE</button>
+            <RemoteButton Cmd="store" OnCommand="SendCommand" Caption="STORE" />
             <span></span>
             <span></span>
 
-            <button class="bl1000-btn" @onclick='() => SendCommand("speaker")'>SOUND</button>
+            <RemoteButton Cmd="speaker" OnCommand="SendCommand" Caption="SOUND" />
             <span></span>
-            <button class="bl1000-btn" @onclick='() => SendCommand("vol-")' >&#9660;</button>
+            <RemoteButton Cmd="vol-" OnCommand="SendCommand" Caption="▼" />
         </div>
 
         <div class="bl1000-section">
-            <button class="bl1000-btn" @onclick='() => SendCommand("av")'>AV</button>
-            <StandbyButton  OnCommand='(cmd) => SendCommand(cmd)' />
-            <button class="bl1000-btn" @onclick='() => SendCommand("mute")'>MUTE</button>
+            <RemoteButton Cmd="av" OnCommand="SendCommand" Caption="AV" />
+            <StandbyButton OnCommand="SendCommand" />
+            <RemoteButton Cmd="mute" OnCommand="SendCommand" Caption="MUTE" />
         </div>
 
     </div>
@@ -82,16 +82,13 @@
     [Parameter, EditorRequired] public EventCallback<string> OnCommand { get; set; }
     [Parameter] public string? DeviceStatus { get; set; }
 
-   
-
     private static readonly Dictionary<string, string> AltMap = new()
     {
         ["atape"]   = "atape2",
         ["cd"]      = "cd2",
-    
+
         ["mute"]    = "loudness",
         ["phono"]   = "pc",
-       
     };
 
     private bool _shifted;
@@ -101,9 +98,11 @@
 
     private string Label(string primary) =>
         (_shifted && AltMap.TryGetValue(primary, out var alt) ? alt : primary).ToUpper()
-    .Replace("ATAPE", "A.TAPE");
+        .Replace("ATAPE", "A.TAPE");
 
     private void ToggleShift() => _shifted = !_shifted;
 
-    private void SendCommand(string command) => OnCommand.InvokeAsync(command);
+    private Task SendCommand(string command) => OnCommand.InvokeAsync(command);
+
+    private string? ShiftButtonStyle => _shifted ? "background:#555;outline:1px solid #aaa;" : null;
 }

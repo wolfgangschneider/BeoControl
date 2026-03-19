@@ -326,8 +326,8 @@ public sealed class Pc2Core : IDisposable
                         {
                             string source = SourceNames.GetName(mlt.Payload[1]);
                             if (mlt.Payload.Length > 2 && mlt.Payload[2] > 0 && mlt.Payload[2] != 255)
-                                source = $"Current source:{source} {mlt.Payload[2]}";
-                            OnStatusChanged?.Invoke(source);
+                                source = $"{source} {mlt.Payload[2]}";
+                            OnStatusChanged?.Invoke($"SRC:{source}");
                         }
                     }
                 }

@@ -1,25 +1,63 @@
-﻿<button @ref="ElementRef" class="remoteBtn" @attributes="AdditionalAttributes" @onclick='SendCommand'>
+﻿<button @ref="ElementRef" class="@CssClass" @attributes="RenderedAttributes" @onclick="HandleClick">
     @Caption
 </button>
 @code {
 
+    public static int Zoom { get; set; } = 100;
     public ElementReference ElementRef { get; private set; }
 
-   
-
     [Parameter] public EventCallback<string> OnCommand { get; set; } = default!;
+    [Parameter] public EventCallback OnClick { get; set; }
 
-    [Parameter]
-    public string Cmd { get; set; }
-    [Parameter]
-    public string Caption { get; set; }
+    [Parameter] public string? Cmd { get; set; }
+    [Parameter] public string? Caption { get; set; }
 
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
-    private void SendCommand()
+    private string CssClass => "remoteBtn";
+
+    private IReadOnlyDictionary<string, object>? RenderedAttributes
     {
-        OnCommand.InvokeAsync(Cmd);
-       
+        get
+        {
+            var attrs = AdditionalAttributes?
+                .Where(static pair => pair.Key != "class" && pair.Key != "style")
+                .ToDictionary();
+
+            var mergedStyle = MergedStyle;
+            if (!string.IsNullOrWhiteSpace(mergedStyle))
+            {
+                attrs ??= new Dictionary<string, object>();
+                attrs["style"] = mergedStyle;
+            }
+
+            return attrs;
+        }
     }
+
+    private string? MergedStyle
+    {
+        get
+        {
+            var zoomStyle = Zoom != 100 ? $"height:{ScaledHeightPx}px;" : null;
+            var extraStyle = AdditionalAttributes is not null &&
+                             AdditionalAttributes.TryGetValue("style", out var styleValue)
+                ? styleValue?.ToString()
+                : null;
+
+            return string.IsNullOrWhiteSpace(extraStyle)
+                ? zoomStyle
+                : string.IsNullOrWhiteSpace(zoomStyle)
+                    ? extraStyle
+                    : $"{extraStyle.TrimEnd(';')};{zoomStyle}";
+        }
+    }
+
+    private static int ScaledHeightPx => 22 * Zoom / 100;
+
+    private Task HandleClick() =>
+        OnClick.HasDelegate
+            ? OnClick.InvokeAsync()
+            : OnCommand.InvokeAsync(Cmd);
 }

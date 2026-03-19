@@ -92,7 +92,7 @@ public class SerialTransport : ITransport
             // Port opened successfully — use port name as fallback label if firmware didn't respond
             result ??= new DeviceInfo(DeviceType.USB, portLabel, portName);
 
-            _port.DiscardInBuffer();           // eat "beo4> " prompt + any leftover bytes
+            _port.DiscardInBuffer();           // discard any leftover bytes
             _port.ReadTimeout = 200;
             OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, "Connected", StatusKind.Connection));
 

@@ -123,6 +123,79 @@
     gap: 8px;
 }
 
+.setup-card {
+    overflow: hidden;
+}
+
+.setup-card-header {
+    background: #111;
+    color: #ccc;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.setup-card-title {
+    margin: 0;
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.setup-card-subtitle {
+    margin: 2px 0 0;
+    color: #777;
+    font-size: 8px;
+    letter-spacing: 0.3px;
+}
+
+.setup-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    padding: 10px 0;
+}
+
+.setup-choice-grid-zoom {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.setup-choice {
+    background: #1a1a1a;
+    color: #aaa;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    min-height: 28px;
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 8px;
+    font-weight: bold;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.setup-choice:hover {
+    background: #2a2a2a;
+    color: #ddd;
+}
+
+.setup-choice.active {
+    background: #2a4a2a;
+    color: #aaddaa;
+    border-color: rgba(170,221,170,0.35);
+}
+
+.setup-radio {
+    accent-color: #7eca7e;
+}
+
 /* ── Action buttons ───────────────────────────── */
 
 .setup-actions {
