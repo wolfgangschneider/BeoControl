@@ -1,0 +1,25 @@
+﻿<button @ref="ElementRef" class="remoteBtn" @attributes="AdditionalAttributes" @onclick='SendCommand'>
+    @Caption
+</button>
+@code {
+
+    public ElementReference ElementRef { get; private set; }
+
+   
+
+    [Parameter] public EventCallback<string> OnCommand { get; set; } = default!;
+
+    [Parameter]
+    public string Cmd { get; set; }
+    [Parameter]
+    public string Caption { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private void SendCommand()
+    {
+        OnCommand.InvokeAsync(Cmd);
+       
+    }
+}

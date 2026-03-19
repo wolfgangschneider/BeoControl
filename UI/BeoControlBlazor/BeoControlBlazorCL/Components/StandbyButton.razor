@@ -39,9 +39,11 @@
     };
 </script>
 
-<button @ref="btnRef" class="bl-btn bl-btn-red" @onclick='() => OnCommand.InvokeAsync("standby")'>&#9679;</button>
+<RemoteButton style=" color: #e83030;font-size: 12px;" @ref="remoteBtn" OnCommand="@((cmd) => OnCommand.InvokeAsync(cmd))" Caption="&#9679;" />
 @code {
-    ElementReference btnRef;
+  
+    private RemoteButton remoteBtn;
+
     private DotNetObjectReference<StandbyButton>? _dotNetRef;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -49,18 +51,19 @@
         if (firstRender)
         {
             _dotNetRef = DotNetObjectReference.Create(this);
+            // Jetzt hast du das echte DOM-Element:
+            var element = remoteBtn.ElementRef;
 
             await JS.InvokeVoidAsync(
                 "registerLongPress",
-                btnRef,
+                element,
                 _dotNetRef,
                 2000
             );
         }
 
     }
-    [Parameter]
-    public string Class { get; set; }
+   
 
     [Parameter] public EventCallback<string> OnCommand { get; set; } = default!;
 

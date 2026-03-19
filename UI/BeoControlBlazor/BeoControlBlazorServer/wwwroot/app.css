@@ -1,3 +1,5 @@
+
+
 @font-face {
     font-family: 'VT323';
     src: url('fonts/VT323-Regular.woff2') format('woff2');
@@ -8,7 +10,8 @@
 
 :root {
     --remote-width: 170px; /* actual remote component width (.beo4 / .bl1000) */
-    --body-width: 210px;   /* page body width — also update RemoteWindow.Width in MAUI */
+    --body-width: 210px; /* page body width — also update RemoteWindow.Width in MAUI */
+    --btn-Height: 22px;
 }
 
 html, body {

@@ -11,7 +11,7 @@
 
     <div>
         <div class="beo4-section">
-        <button class="beo4-btn" @onclick='() => SendCommand("tv")'>TV</button>
+        <RemoteButton Cmd="tv" OnCommand="@((cmd) => SendCommand(cmd))" Caption="TV"/>
         <button class="beo4-btn" @onclick='() => SendCommand("light")'>LIGHT</button>
         <button class="beo4-btn" @onclick='() => SendCommand("radio")'>RADIO</button>
 
