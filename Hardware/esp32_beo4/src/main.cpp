@@ -1,24 +1,45 @@
 #include <Arduino.h>
 #include "IrBeo4.h"
 #include "SerialChannel.h"
-#include "CommandProcessor.h"
 
 // IR TX pin per board
 #ifdef BOARD_M5ATOMS3
-  #include "BtNimbleMultiChannel.h"
-  using ActiveBtChannel = BtNimbleMultiChannel;
-  constexpr uint8_t IR_TX_PIN = 38;   // M5 Atom S3
+    #include "BtNimbleMultiChannel.h"
+    using ActiveBtChannel = BtNimbleMultiChannel;
+    constexpr uint8_t IR_TX_PIN = 38;   // M5 Atom S3
+    #undef DEVICE_NAME
+    #define DEVICE_NAME "Beo4Remote_AtomS3"
 #elif defined(BOARD_M5STAMPS3)
-  #include "BtNimbleMultiChannel.h"
-  using ActiveBtChannel = BtNimbleMultiChannel;
-  constexpr uint8_t IR_TX_PIN = 9;    // M5 Stamp S3 — G0
+    #include "BtNimbleMultiChannel.h"
+    using ActiveBtChannel = BtNimbleMultiChannel;
+    constexpr uint8_t IR_TX_PIN = 9;    // M5 Stamp S3 — G0
+    #undef DEVICE_NAME
+    #define DEVICE_NAME "Beo4Remote_StampS3"
+#elif defined(BOARD_M5STAMPC3)
+    #include "BtNimbleSingleChannel.h"
+    using ActiveBtChannel = BtNimbleSingleChannel;
+    constexpr uint8_t IR_TX_PIN = 4;    
+    #undef DEVICE_NAME
+    #define DEVICE_NAME "Beo4Remote_StampC3"
+
+#elif defined(BOARD_M5STACK_ATOM)
+    #include "BtNimbleSingleChannel.h"
+    using ActiveBtChannel = BtNimbleSingleChannel;
+    constexpr uint8_t IR_TX_PIN = 25;    // M5 Stack Atom — G0
+    #undef DEVICE_NAME
+    #define DEVICE_NAME "Beo4Remote_Atom"
 #else
-  //#include "BtClassicChannel.h"
-  //using ActiveBtChannel = BtClassicChannel;
-  #include "BtNimbleSingleChannel.h"
-  using ActiveBtChannel = BtNimbleSingleChannel;
-  constexpr uint8_t IR_TX_PIN = 32;   // esp32dev
+
+    //#include "BtClassicChannel.h"
+    //using ActiveBtChannel = BtClassicChannel;
+    #include "BtNimbleSingleChannel.h"
+    using ActiveBtChannel = BtNimbleSingleChannel;
+    constexpr uint8_t IR_TX_PIN = 32;   // esp32dev
+    #undef DEVICE_NAME
+    #define DEVICE_NAME "Beo4Remote_ESP32"
 #endif
+
+#include "CommandProcessor.h"
 
 // ── Beo4 IR ─────────────────────────────────────────────────────────
 static IrBeo4 beo4(-1, IR_TX_PIN);
@@ -69,18 +90,19 @@ void setup() {
     while (!Serial && millis() - t0 < 3000) delay(10);
 #endif
 
- if (Serial) {
-     // USB/UART connected — use serial channel
+
+// not working esp32 & Atom
+/*
+if (Serial) {
   
-   
-     
- } else {
+} 
+ else {
      // No serial host — fall back to BLE
      btCh.begin(DEVICE_NAME);
     
  }
-
-    //btCh.begin(DEVICE_NAME);
+*/
+    btCh.begin(DEVICE_NAME);
 
     // Beo4 IR TX
     pinMode(IR_TX_PIN, OUTPUT);

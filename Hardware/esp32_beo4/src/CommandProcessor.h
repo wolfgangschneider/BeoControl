@@ -3,7 +3,10 @@
 #include "IrBeo4.h"
 #include "Channel.h"
 
+//#define DEVICE_NAME "Beo4Remote"
+
 // ── Device identity ──────────────────────────────────────────────────
+/*
 #ifdef BOARD_M5ATOMS3
   #define DEVICE_NAME "Beo4Remote_AtomS3"
 #elif defined(BOARD_M5STAMPS3)
@@ -11,7 +14,7 @@
 #else
   #define DEVICE_NAME "Beo4Remote_ESP32"
 #endif
-
+*/
 // ── Command table ────────────────────────────────────────────────────
 struct CmdEntry {
     const char* name;

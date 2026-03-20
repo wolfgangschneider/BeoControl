@@ -39,26 +39,7 @@
 
     <div class="setup-panel">
 
-        <section class="setup-card">
-            <div class="setup-card-header">
-                <div>
-                    <h3 class="setup-card-title">Remote zoom</h3>
-                    <p class="setup-card-subtitle">Choose the button scale factor for the remote UI.</p>
-                </div>
-            </div>
-
-            <InputRadioGroup @bind-Value="RemoteButtonZoom" Name="remote-button-zoom">
-                <div class="setup-choice-grid setup-choice-grid-zoom">
-                    @foreach (var option in ZoomOptions)
-                    {
-                        <label class="setup-choice @(RemoteButtonZoom == option.Value ? "active" : "")">
-                            <InputRadio class="setup-radio" Value="option.Value" />
-                            <span>@option.Label</span>
-                        </label>
-                    }
-                </div>
-            </InputRadioGroup>
-        </section>
+        
 
         @if (ActiveTab == DeviceType.USB)
         {
@@ -117,33 +98,59 @@
 
         @if (ActiveTab == DeviceType.PC2)
         {
-            <p class="setup-hint">Connect directly via USB / Masterlink (PC2 controller).</p>
-            @if (!IsPc2Connected)
+            @if (!IsPc2Connected )
             {
                 <div class="setup-actions">
                     <button class="setup-btn" @onclick="ScanPc2" disabled="@IsScanning">
                         @if (IsScanning) { <span class="setup-spinner"></span> }
                         SCAN
                     </button>
-                    @if (Pc2Available)
-                    {
-                        <button class="setup-btn setup-btn-primary" @onclick="ConnectPc2" disabled="@IsBusy">
-                            @if (IsBusy) { <span class="setup-spinner"></span> }
-                            CONNECT PC2
-                        </button>
-                    }
                 </div>
+                     @if (Pc2Available )
+                    {
+                        <div class="setup-list">
+                            <button class="setup-list-item active )"
+                            @onclick="ConnectPc2" disabled="@IsBusy">
+                                @if (IsBusy) { <span class="setup-spinner"></span> }
+                                CONNECT PC2 bbb
+                            </button>
+                        </div>
+                    } 
+                
+            <p class="setup-hint">Connect directly via USB / Masterlink (PC2 controller).</p>
             }
             else
             {
                 <PC2Setup />
             }
+           
         }
 
         @if (!string.IsNullOrEmpty(ScanStatus))
         {
             <p class="setup-scan-status">@ScanStatus</p>
         }
+
+        <section class="setup-card">
+            <div class="setup-card-header">
+                <div>
+                    <h3 class="setup-card-title">Remote zoom</h3>
+                    <p class="setup-card-subtitle">Choose the button scale factor for the remote UI.</p>
+                </div>
+            </div>
+
+            <InputRadioGroup @bind-Value="RemoteButtonZoom" Name="remote-button-zoom">
+                <div class="setup-choice-grid setup-choice-grid-zoom">
+                    @foreach (var option in ZoomOptions)
+                    {
+                        <label class="setup-choice @(RemoteButtonZoom == option.Value ? "active" : "")">
+                            <InputRadio class="setup-radio" Value="option.Value" />
+                            <span>@option.Label</span>
+                        </label>
+                    }
+                </div>
+            </InputRadioGroup>
+        </section>
 
     </div>
 
