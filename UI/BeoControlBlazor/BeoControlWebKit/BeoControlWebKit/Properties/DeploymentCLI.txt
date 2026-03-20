@@ -1,0 +1,5 @@
+﻿ Maui Windows App Deployment CLI Command:
+ dotnet publish -f net10.0-windows10.0.19041.0 -c Release -p:PublishSingleFile=false -p:WindowsPackageType=None -p:DebugType=none -p:DebugSymbols=false --self-contained=true -r win-arm64
+ dotnet publish -f net10.0-windows10.0.19041.0 -c Release -p:PublishSingleFile=false -p:WindowsPackageType=None -p:DebugType=none -p:DebugSymbols=false --self-contained=true -r win-x64
+ as MSIX Package:
+ -p:WindowsPackageType=MSIX

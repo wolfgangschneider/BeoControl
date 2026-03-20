@@ -1,0 +1,7 @@
+﻿ Für native Linux-ARM64 (z.B. Raspberry Pi, Cloud-Server):
+ dotnet publish -f net10.0 -c Release -r linux-arm64 --self-contained true
+ Für Standard-Linux-x64 (Intel/AMD):
+ dotnet publish -f net10.0 -c Release -r linux-x64 --self-contained true
+
+ optional
+ -p:PublishSingleFile=true -p:PublishTrimmed=true

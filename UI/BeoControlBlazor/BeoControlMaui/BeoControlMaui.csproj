@@ -1,11 +1,30 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
-    <PropertyGroup>
+<!-- must be befor TargetFramework -->
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<UseMonoRuntime>false</UseMonoRuntime>
+		<WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+	</PropertyGroup>
+	
+	<PropertyGroup>
+		<!-- 1. Standard-Framework (Windows), falls nichts anderes gewählt wurde -->
+		<TargetFrameworks>net10.0-windows10.0.19041.0</TargetFrameworks>
+
+		<!-- 2. Android nur hinzufügen, wenn NICHT für Windows publiziert wird -->
+		<!-- Oder wenn explizit ein Android-RID (z.B. -r android-arm64) gesetzt ist -->
+		<TargetFrameworks Condition="'$(RuntimeIdentifier)' == '' or $(RuntimeIdentifier.StartsWith('android'))">$(TargetFrameworks);net10.0-android</TargetFrameworks>
+
+		<!-- 3. iOS/Catalyst nur auf Nicht-Linux-Systemen und ohne Windows-RID -->
+		<TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux')) and !$(RuntimeIdentifier.StartsWith('win'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<!--
         <TargetFrameworks>net10.0-android</TargetFrameworks>
         <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
         <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
-
-        <!-- Note for MacCatalyst:
+-->
+		<!-- Note for MacCatalyst:
             The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
             When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
             The Mac App Store will NOT accept apps with ONLY maccatalyst-arm64 indicated;
@@ -54,7 +73,10 @@
 
 	<PropertyGroup Condition="'$(TargetFramework)'=='net10.0-android'">
 		<RuntimeIdentifiers>android-arm;android-arm64</RuntimeIdentifiers>
+		
 	</PropertyGroup>
+
+	
 
 
 
