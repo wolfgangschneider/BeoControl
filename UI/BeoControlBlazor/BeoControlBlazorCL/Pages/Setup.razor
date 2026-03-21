@@ -320,6 +320,15 @@
             BtDevices = await DeviceService.ScanBluetoothAsync(
                 s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
                 _scanCts.Token);
+            if (BtDevices is [{ Id: { } singleDeviceId }])
+            {
+                SelectedBt = singleDeviceId;
+                ScanStatus = "Found 1 device. Connecting…";
+                StateHasChanged();
+                await ConnectBluetooth(SelectedBt);
+                return;
+            }
+
             if (BtDevices.Count > 0 && SelectedBt is null)
                 SelectedBt = BtDevices[0].Id;
             ScanStatus = BtDevices.Count > 0
@@ -403,7 +412,7 @@
         if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsMacCatalyst())
             return "Found 0 device(s).";
 
-        return "Found 0 device(s). On macOS, check System Settings > Privacy & Security > Bluetooth and allow the host app you launched this app from.";
+        return "No Bluetooth device selected. On macOS, Scan opens the Apple Bluetooth chooser. If it does not appear, check Bluetooth permission for the host app you launched this app from.";
     }
 
     private Task OnAutostartChanged()

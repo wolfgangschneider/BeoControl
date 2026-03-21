@@ -1,7 +1,9 @@
-﻿namespace BeoControlMaui
+namespace BeoControlMaui
 {
     public partial class MainPage : ContentPage
     {
+        private bool _permissionsChecked;
+
         public MainPage()
         {
             InitializeComponent();
@@ -11,19 +13,30 @@
         {
             base.OnAppearing();
 
-            if (DeviceInfo.Current.Platform != DevicePlatform.Android)
+            if (_permissionsChecked)
                 return;
-            // fast Quick & Dirty workaround to thest BT on Android
-            var bluetoothStatus = await EnsurePermissionAsync<Permissions.Bluetooth>();
-            var locationStatus = await EnsurePermissionAsync<Permissions.LocationWhenInUse>();
 
-            if (bluetoothStatus == PermissionStatus.Granted && locationStatus == PermissionStatus.Granted)
+            _permissionsChecked = true;
+
+            var platform = DeviceInfo.Current.Platform;
+
+            if (platform == DevicePlatform.Android)
             {
-                System.Diagnostics.Debug.WriteLine("Bluetooth permissions granted.");
+                var bluetoothStatus = await EnsurePermissionAsync<Permissions.Bluetooth>();
+                var locationStatus = await EnsurePermissionAsync<Permissions.LocationWhenInUse>();
+
+                if (bluetoothStatus == PermissionStatus.Granted && locationStatus == PermissionStatus.Granted)
+                {
+                    System.Diagnostics.Debug.WriteLine("Bluetooth permissions granted.");
+                    return;
+                }
+
+                await DisplayAlertAsync("Hinweis", "Ohne Bluetooth- und Standortberechtigung finden wir keine Geraete.", "OK");
                 return;
             }
 
-            await DisplayAlertAsync("Hinweis", "Ohne Bluetooth- und Standortberechtigung finden wir keine Geraete.", "OK");
+            if (platform == DevicePlatform.iOS || platform == DevicePlatform.MacCatalyst)
+                System.Diagnostics.Debug.WriteLine("Apple Bluetooth permission is handled by the OS when BLE is first accessed.");
         }
 
         private static async Task<PermissionStatus> EnsurePermissionAsync<TPermission>()

@@ -1,21 +1,20 @@
 using BeoControl.Interfaces;
-
 using InTheHand.Bluetooth;
-
 using System.Text;
 
 namespace Beo4Adapter.Transport;
 
 /// <summary>
 /// BLE NUS (Nordic UART Service) transport for the M5 Atom S3 Beo4Remote firmware.
-/// Uses InTheHand.BluetoothLE for cross-platform BLE support (Windows/Linux/macOS).
+/// Uses InTheHand.BluetoothLE for cross-platform BLE support.
 /// </summary>
 public class BluetoothTransport : ITransport
 {
-    // Nordic UART Service UUIDs — must match BtChannel.h
-    private static readonly BluetoothUuid NusService = BluetoothUuid.FromGuid(Guid.Parse("6E400001-B5A3-F393-E0A9-E50E24DCCA9E"));
-    private static readonly BluetoothUuid NusRxChar = BluetoothUuid.FromGuid(Guid.Parse("6E400002-B5A3-F393-E0A9-E50E24DCCA9E")); // write
-    private static readonly BluetoothUuid NusTxChar = BluetoothUuid.FromGuid(Guid.Parse("6E400003-B5A3-F393-E0A9-E50E24DCCA9E")); // notify
+    internal const string NusServiceUuidString = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
+    internal static readonly BluetoothUuid NusService = BluetoothUuid.FromGuid(Guid.Parse(NusServiceUuidString));
+    internal static readonly BluetoothUuid NusRxChar = BluetoothUuid.FromGuid(Guid.Parse("6E400002-B5A3-F393-E0A9-E50E24DCCA9E"));
+    internal static readonly BluetoothUuid NusTxChar = BluetoothUuid.FromGuid(Guid.Parse("6E400003-B5A3-F393-E0A9-E50E24DCCA9E"));
+
     private BluetoothDevice? _device;
     private GattCharacteristic? _rxChar;
     private GattCharacteristic? _txChar;
@@ -23,23 +22,20 @@ public class BluetoothTransport : ITransport
     private readonly string _deviceNamePrefix;
     private readonly string? _forcedDeviceId;
     private readonly string? _preferredDeviceName;
+    // Discovery varies by platform, but connection and NUS traffic handling stay shared here.
+    private readonly IBluetoothDiscovery _discovery;
 
     public bool IsConnected { get; private set; }
-
-
 
     public event Action<StatusMessage>? OnStatusChanged;
     public event Action<LogMessage>? OnLog;
 
-
-
-    /// <param name="deviceNamePrefix">BLE device name prefix to scan for. Defaults to "Beo4Remote".</param>
-    /// <param name="deviceId">Hardware device ID (e.g. "48CA43B76EC9"). When set, skips scan and connects directly.</param>
     public BluetoothTransport(string? deviceId = null, string? preferredDeviceName = null)
     {
         _deviceNamePrefix = "Beo4Remote";
         _forcedDeviceId = deviceId;
         _preferredDeviceName = preferredDeviceName;
+        _discovery = BluetoothDiscoveryFactory.Create();
     }
 
     public async Task<DeviceInfo?> Connect()
@@ -64,6 +60,7 @@ public class BluetoothTransport : ITransport
             OnLog?.Invoke(new LogMessage(LogLevel.Error, "Not connected via Bluetooth."));
             return;
         }
+
         Task.Run(async () =>
         {
             try
@@ -71,13 +68,14 @@ public class BluetoothTransport : ITransport
                 await WriteAsync(line + "\n");
                 await WriteAsync("status\n");
             }
-            catch (Exception ex) { OnLog?.Invoke(new LogMessage(LogLevel.Error, $"BLE send error: {ex.Message}")); }
+            catch (Exception ex)
+            {
+                OnLog?.Invoke(new LogMessage(LogLevel.Error, $"BLE send error: {ex.Message}"));
+            }
         });
     }
 
     public void Dispose() => Disconnect();
-
-    // ── private ──────────────────────────────────────────────────────────
 
     private async Task<DeviceInfo?> ConnectAsync(CancellationToken ct)
     {
@@ -85,7 +83,10 @@ public class BluetoothTransport : ITransport
         {
             return await ConnectOnceAsync(ct);
         }
-        catch (OperationCanceledException) { return null; }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
         catch (Exception ex)
         {
             CleanupConnectionState();
@@ -103,16 +104,17 @@ public class BluetoothTransport : ITransport
         if (_forcedDeviceId is not null)
         {
             OnStatusChanged?.Invoke(new StatusMessage(StatusType.Working, BuildConnectStatusText(_forcedDeviceId), StatusKind.Connection));
-            var d = await BluetoothDevice.FromIdAsync(_forcedDeviceId);
-            if (d is null) throw new Exception($"BLE device '{_forcedDeviceId}' not found");
+            var direct = await BluetoothDevice.FromIdAsync(_forcedDeviceId);
+            if (direct is null)
+                throw new Exception($"BLE device '{_forcedDeviceId}' not found");
+
             ct.ThrowIfCancellationRequested();
-            device = d;
+            device = direct;
             OnLog?.Invoke(new LogMessage(LogLevel.Debug, $"BLE direct: {device.Name} ({device.Id})"));
         }
         else
         {
-            (device, _) = await AutoDetect(_deviceNamePrefix, _preferredDeviceName, ct,
-                msg => OnStatusChanged?.Invoke(msg));
+            (device, _) = await AutoDetect(_deviceNamePrefix, _preferredDeviceName, _discovery, ct, msg => OnStatusChanged?.Invoke(msg));
             ct.ThrowIfCancellationRequested();
         }
 
@@ -123,73 +125,46 @@ public class BluetoothTransport : ITransport
     public async Task<List<DeviceInfo>> ScanAsync(CancellationToken ct, Action<StatusMessage>? status = null)
     {
         status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{_deviceNamePrefix}'...", StatusKind.Discovery));
-        var devices = await ScanWithPrefixAsync(_deviceNamePrefix, ct);
+        var devices = await _discovery.DiscoverAsync(_deviceNamePrefix, ct, status);
         ct.ThrowIfCancellationRequested();
 
-        return EnumerateMatchingDevices(devices, _deviceNamePrefix)
-            .Select(d => new DeviceInfo(DeviceType.BT, d.Name ?? d.Id ?? "Unknown", d.Id))
+        return devices
+            .Where(device => device is not null)
+            .Select(device => new DeviceInfo(DeviceType.BT, device.Name ?? device.Id ?? "Unknown", device.Id))
             .ToList();
-
     }
 
-    /// <summary>
-    /// Scans for ALL BLE devices whose name starts with <paramref name="namePrefix"/>.
-    /// Returns every match as (Id, Name). Returns an empty list if none found.
-    /// </summary>
-    public static async Task<List<DeviceInfo>> ScanDevices(
-        string namePrefix, CancellationToken ct, Action<StatusMessage>? status = null)
+    public static async Task<List<DeviceInfo>> ScanDevices(string namePrefix, CancellationToken ct, Action<StatusMessage>? status = null)
     {
         status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{namePrefix}'...", StatusKind.Discovery));
-
-        var devices = await ScanWithPrefixAsync(namePrefix, ct);
+        var devices = await BluetoothDiscoveryFactory.Create().DiscoverAsync(namePrefix, ct, status);
         ct.ThrowIfCancellationRequested();
 
-        return EnumerateMatchingDevices(devices, namePrefix)
-            .Select(d => new DeviceInfo(DeviceType.BT, d.Name ?? d.Id ?? "Unknown", d.Id))
+        return devices
+            .Where(device => device is not null)
+            .Select(device => new DeviceInfo(DeviceType.BT, device.Name ?? device.Id ?? "Unknown", device.Id))
             .ToList();
     }
 
-    /// <summary>
-    /// Scans for the first BLE device whose name starts with <paramref name="namePrefix"/>.
-    /// Returns the device and its hardware ID.  Throws if no device is found.
-    /// </summary>
     private static async Task<(BluetoothDevice Device, string Id)> AutoDetect(
-        string namePrefix, string? preferredDeviceName, CancellationToken ct, Action<StatusMessage>? status = null)
+        string namePrefix,
+        string? preferredDeviceName,
+        IBluetoothDiscovery discovery,
+        CancellationToken ct,
+        Action<StatusMessage>? status = null)
     {
         status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{namePrefix}'...", StatusKind.Discovery));
-
-        var devices = await ScanWithPrefixAsync(namePrefix, ct);
+        var devices = await discovery.DiscoverAsync(namePrefix, ct, status);
         ct.ThrowIfCancellationRequested();
 
         var device = SelectPreferredDevice(
-            EnumerateMatchingDevices(devices, namePrefix)
-                .Where(d => !string.IsNullOrWhiteSpace(d.Id)),
+            devices.Where(d => !string.IsNullOrWhiteSpace(d.Id)),
             preferredDeviceName);
 
         if (device is null)
             throw new Exception(BuildBluetoothNotFoundMessage(namePrefix));
 
         return (device, device.Id!);
-    }
-
-    private static async Task<IReadOnlyCollection<BluetoothDevice>> ScanWithPrefixAsync(string namePrefix, CancellationToken ct)
-    {
-        var filter = new BluetoothLEScanFilter { NamePrefix = namePrefix };
-        var options = new RequestDeviceOptions();
-        options.Filters.Add(filter);
-        options.AcceptAllDevices = false;
-
-        return await Bluetooth.ScanForDevicesAsync(options, ct) ?? [];
-    }
-
-    private static IEnumerable<BluetoothDevice> EnumerateMatchingDevices(IEnumerable<BluetoothDevice> devices, string namePrefix)
-    {
-        foreach (var device in devices)
-        {
-            var hasMatchingName = device.Name?.StartsWith(namePrefix, StringComparison.OrdinalIgnoreCase) == true;
-            if (hasMatchingName)
-                yield return device;
-        }
     }
 
     private static BluetoothDevice? SelectPreferredDevice(IEnumerable<BluetoothDevice> devices, string? preferredDeviceName)
@@ -227,11 +202,11 @@ public class BluetoothTransport : ITransport
 
     /// <summary>
     /// Connects GATT, discovers NUS service and characteristics, starts notifications.
-    /// Throws on any failure so <see cref="ConnectAsync"/> can handle it uniformly.
+    /// Throws on any failure so ConnectAsync can handle it uniformly.
     /// </summary>
     private async Task OpenGattAsync(BluetoothDevice device, CancellationToken ct)
     {
-        _device = device;   // set early so Disconnect() can always call Gatt.Disconnect()
+        _device = device;
         OnLog?.Invoke(new LogMessage(LogLevel.Debug, $"BLE device: {device.Name} ({device.Id})"));
 
         await device.Gatt.ConnectAsync();
@@ -244,28 +219,28 @@ public class BluetoothTransport : ITransport
             throw new Exception("GATT connection failed");
         }
 
-        var allSvcs = await device.Gatt.GetPrimaryServicesAsync(null);
-        var svc = allSvcs.FirstOrDefault(s => s.Uuid == NusService);
-        if (svc is null)
+        var allServices = await device.Gatt.GetPrimaryServicesAsync(null);
+        var service = allServices.FirstOrDefault(candidate => candidate.Uuid == NusService);
+        if (service is null)
         {
             device.Gatt.Disconnect();
-            var found = string.Join(", ", allSvcs.Select(s => s.Uuid.ToString()[..8]));
+            var found = string.Join(", ", allServices.Select(candidate => candidate.Uuid.ToString()[..8]));
             throw new Exception($"NUS service not found. Services seen: [{found}]");
         }
 
-        var rxChar = await svc.GetCharacteristicAsync(NusRxChar);
-        var txChar = await svc.GetCharacteristicAsync(NusTxChar);
-        if (rxChar is null || txChar is null)
+        var rxCharacteristic = await service.GetCharacteristicAsync(NusRxChar);
+        var txCharacteristic = await service.GetCharacteristicAsync(NusTxChar);
+        if (rxCharacteristic is null || txCharacteristic is null)
         {
             device.Gatt.Disconnect();
             throw new Exception("NUS RX/TX characteristics not found");
         }
 
-        _rxChar = rxChar;
-        _txChar = txChar;
+        _rxChar = rxCharacteristic;
+        _txChar = txCharacteristic;
 
-        txChar.CharacteristicValueChanged += OnNotification;
-        await txChar.StartNotificationsAsync();
+        txCharacteristic.CharacteristicValueChanged += OnNotification;
+        await txCharacteristic.StartNotificationsAsync();
 
         device.GattServerDisconnected += (_, _) =>
         {
@@ -280,7 +255,7 @@ public class BluetoothTransport : ITransport
 
     private void CleanupConnectionState()
     {
-        if (_txChar != null)
+        if (_txChar is not null)
         {
             _txChar.CharacteristicValueChanged -= OnNotification;
             _txChar = null;
@@ -297,18 +272,24 @@ public class BluetoothTransport : ITransport
 
     private async Task WriteAsync(string text)
     {
-        if (_rxChar is null) return;
+        if (_rxChar is null)
+            return;
+
         var bytes = Encoding.UTF8.GetBytes(text);
         await _rxChar.WriteValueWithResponseAsync(bytes);
     }
 
     private void OnNotification(object? sender, GattCharacteristicValueChangedEventArgs args)
     {
+        if (args.Value is null || args.Value.Length == 0)
+            return;
+
         var text = Encoding.UTF8.GetString(args.Value).TrimEnd('\r', '\n');
-        if (string.IsNullOrEmpty(text)) return;
+        if (string.IsNullOrEmpty(text))
+            return;
 
         if (text.StartsWith("Name:", StringComparison.OrdinalIgnoreCase))
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, $"Connected", StatusKind.Connection));
+            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, "Connected", StatusKind.Connection));
         else if (ProtocolStatusParser.TryParseSourceStatus(text, out var sourceStatus))
             OnStatusChanged?.Invoke(new StatusMessage(StatusType.Source, sourceStatus, StatusKind.Source));
         else
