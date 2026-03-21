@@ -10,6 +10,7 @@ builder.Services.AddRazorComponents()
 // Register DeviceService as singleton and as a hosted service for auto-connect on startup.
 builder.Services.AddSingleton<DeviceService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DeviceService>());
+builder.Services.AddSingleton<IAutostartRegistrationService, UnsupportedAutostartRegistrationService>();
 
 var app = builder.Build();
 

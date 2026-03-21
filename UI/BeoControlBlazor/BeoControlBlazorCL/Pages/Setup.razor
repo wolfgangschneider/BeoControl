@@ -5,6 +5,7 @@
 @using BeoControlBlazorServices
 @using Microsoft.AspNetCore.Components.Forms
 @inject DeviceService DeviceService
+@inject IAutostartRegistrationService AutostartRegistrationService
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -152,6 +153,27 @@
             </InputRadioGroup>
         </section>
 
+        <section class="setup-card">
+            <div class="setup-card-header">
+                <div>
+                    <h3 class="setup-card-title">Windows autostart</h3>
+                    <p class="setup-card-subtitle">Launch BeoControl with Windows using <code>/silent</code> so it starts hidden in the tray.</p>
+                </div>
+            </div>
+
+            @if (AutostartRegistrationService.IsSupported)
+            {
+                <label class="setup-choice">
+                    <input type="checkbox" @bind="_launchOnWindowsSignIn" @bind:after="OnAutostartChanged" />
+                    <span>Start with Windows</span>
+                </label>
+            }
+            else
+            {
+                <p class="setup-hint">Autostart can only be configured in the Windows MAUI app.</p>
+            }
+        </section>
+
     </div>
 
     <div class="setup-footer">
@@ -179,6 +201,7 @@
     private List<DeviceInfo> BtDevices = [];
     private CancellationTokenSource? _scanCts;
     private int _remoteButtonZoom = 100;
+    private bool _launchOnWindowsSignIn;
 
     private StatusType _statusType = StatusType.Idle;
     private string _statusText = "Not connected";
@@ -236,6 +259,7 @@
         _statusType    = DeviceService.LastStatus.Type;
         _statusText    = DeviceService.LastStatus.Text;
         _remoteButtonZoom = NormalizeZoom(DeviceService.Settings.RemoteButtonZoom);
+        _launchOnWindowsSignIn = AutostartRegistrationService.IsEnabled();
     }
 
     private async void OnServiceStatusChanged(StatusMessage msg)
@@ -380,6 +404,12 @@
             return "Found 0 device(s).";
 
         return "Found 0 device(s). On macOS, check System Settings > Privacy & Security > Bluetooth and allow the host app you launched this app from.";
+    }
+
+    private Task OnAutostartChanged()
+    {
+        AutostartRegistrationService.SetEnabled(_launchOnWindowsSignIn);
+        return Task.CompletedTask;
     }
 
     public void Dispose()

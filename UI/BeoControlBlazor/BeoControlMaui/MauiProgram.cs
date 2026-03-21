@@ -21,6 +21,12 @@ namespace BeoControlMaui
             builder.Services.AddMauiBlazorWebView();
 
 #if WINDOWS
+            builder.Services.AddSingleton<IAutostartRegistrationService, WindowsAutostartRegistrationService>();
+#else
+            builder.Services.AddSingleton<IAutostartRegistrationService, UnsupportedAutostartRegistrationService>();
+#endif
+
+#if WINDOWS
             // WebView2 needs a writable user-data folder; C:\Program Files is read-only for non-admins.
             Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

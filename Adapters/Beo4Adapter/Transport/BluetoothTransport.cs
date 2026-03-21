@@ -16,6 +16,7 @@ public class BluetoothTransport : ITransport
     private static readonly BluetoothUuid NusService = BluetoothUuid.FromGuid(Guid.Parse("6E400001-B5A3-F393-E0A9-E50E24DCCA9E"));
     private static readonly BluetoothUuid NusRxChar = BluetoothUuid.FromGuid(Guid.Parse("6E400002-B5A3-F393-E0A9-E50E24DCCA9E")); // write
     private static readonly BluetoothUuid NusTxChar = BluetoothUuid.FromGuid(Guid.Parse("6E400003-B5A3-F393-E0A9-E50E24DCCA9E")); // notify
+    private const int MaxConnectionAttempts = 10;
 
     private BluetoothDevice? _device;
     private GattCharacteristic? _rxChar;
@@ -23,6 +24,7 @@ public class BluetoothTransport : ITransport
     private CancellationTokenSource? _cts;
     private readonly string _deviceNamePrefix;
     private readonly string? _forcedDeviceId;
+    private readonly string? _preferredDeviceName;
 
     public bool IsConnected { get; private set; }
 
@@ -35,10 +37,11 @@ public class BluetoothTransport : ITransport
 
     /// <param name="deviceNamePrefix">BLE device name prefix to scan for. Defaults to "Beo4Remote".</param>
     /// <param name="deviceId">Hardware device ID (e.g. "48CA43B76EC9"). When set, skips scan and connects directly.</param>
-    public BluetoothTransport(string? deviceId = null)
+    public BluetoothTransport(string? deviceId = null, string? preferredDeviceName = null)
     {
         _deviceNamePrefix = "Beo4Remote";
         _forcedDeviceId = deviceId;
+        _preferredDeviceName = preferredDeviceName;
     }
 
     public async Task<DeviceInfo?> Connect()
@@ -52,15 +55,7 @@ public class BluetoothTransport : ITransport
     public void Disconnect()
     {
         _cts?.Cancel();
-        if (_txChar != null)
-        {
-            _txChar.CharacteristicValueChanged -= OnNotification;
-            _txChar = null;
-        }
-        _rxChar = null;
-        _device?.Gatt.Disconnect();
-        _device = null;
-        IsConnected = false;
+        CleanupConnectionState();
         OnStatusChanged?.Invoke(new StatusMessage(StatusType.Idle, "BLE disconnected", StatusKind.Connection));
     }
 
@@ -88,15 +83,49 @@ public class BluetoothTransport : ITransport
 
     private async Task<DeviceInfo?> ConnectAsync(CancellationToken ct)
     {
+        Exception? lastError = null;
+
+        for (var attempt = 1; attempt <= MaxConnectionAttempts; attempt++)
+        {
+            try
+            {
+                return await ConnectOnceAsync(ct, attempt);
+            }
+            catch (OperationCanceledException) { return null; }
+            catch (Exception ex) when (attempt < MaxConnectionAttempts)
+            {
+                lastError = ex;
+                CleanupConnectionState();
+
+                var retryDelay = GetRetryDelay(attempt);
+                OnLog?.Invoke(new LogMessage(LogLevel.Warning, $"BLE connect attempt {attempt}/{MaxConnectionAttempts} failed: {ex.Message}. Retrying in {retryDelay.TotalSeconds:0.#} s."));
+                OnStatusChanged?.Invoke(new StatusMessage(StatusType.Working, $"○ Retrying Bluetooth connection ({attempt + 1}/{MaxConnectionAttempts})…", StatusKind.Connection));
+                await Task.Delay(retryDelay, ct);
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+                break;
+            }
+        }
+
+        var finalError = lastError ?? new Exception("BLE connect failed");
+        var msg = $"BLE connect error: [{finalError.GetType().Name}] {finalError.Message}  HResult=0x{finalError.HResult:X8}";
+        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Error, $"✗ {BuildUserFacingBluetoothError(finalError)}", StatusKind.Connection));
+        OnLog?.Invoke(new LogMessage(LogLevel.Error, msg));
+        return null;
+    }
+
+    private async Task<DeviceInfo?> ConnectOnceAsync(CancellationToken ct, int attempt)
+    {
         try
         {
             BluetoothDevice device;
-            string? discoveredId = null;
 
             if (_forcedDeviceId is not null)
             {
                 // Direct connect — skip scan entirely (mirrors /port COMx in SerialTransport)
-                OnStatusChanged?.Invoke(new StatusMessage(StatusType.Working, $"○ Connecting to BLE {_forcedDeviceId}...", StatusKind.Connection));
+                OnStatusChanged?.Invoke(new StatusMessage(StatusType.Working, BuildConnectStatusText(_forcedDeviceId, attempt), StatusKind.Connection));
                 var d = await BluetoothDevice.FromIdAsync(_forcedDeviceId);
                 if (d is null) throw new Exception($"BLE device '{_forcedDeviceId}' not found");
                 ct.ThrowIfCancellationRequested();
@@ -105,7 +134,7 @@ public class BluetoothTransport : ITransport
             }
             else
             {
-                (device, discoveredId) = await AutoDetect(_deviceNamePrefix, ct,
+                (device, _) = await AutoDetect(_deviceNamePrefix, _preferredDeviceName, ct,
                     msg => OnStatusChanged?.Invoke(msg));
                 ct.ThrowIfCancellationRequested();
             }
@@ -118,14 +147,6 @@ public class BluetoothTransport : ITransport
 
         }
         catch (OperationCanceledException) { return null; }
-        catch (Exception ex)
-        {
-            var msg = $"BLE connect error: [{ex.GetType().Name}] {ex.Message}  HResult=0x{ex.HResult:X8}";
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Error, $"✗ {BuildUserFacingBluetoothError(ex)}", StatusKind.Connection));
-            OnLog?.Invoke(new LogMessage(LogLevel.Error, msg));
-            return null;
-        }
-
     }
 
     public async Task<List<DeviceInfo>> ScanAsync(CancellationToken ct, Action<StatusMessage>? status = null)
@@ -162,15 +183,17 @@ public class BluetoothTransport : ITransport
     /// Returns the device and its hardware ID.  Throws if no device is found.
     /// </summary>
     private static async Task<(BluetoothDevice Device, string Id)> AutoDetect(
-        string namePrefix, CancellationToken ct, Action<StatusMessage>? status = null)
+        string namePrefix, string? preferredDeviceName, CancellationToken ct, Action<StatusMessage>? status = null)
     {
         status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{namePrefix}'...", StatusKind.Discovery));
 
         var devices = await ScanWithPrefixAsync(namePrefix, ct);
         ct.ThrowIfCancellationRequested();
 
-        var device = EnumerateMatchingDevices(devices, namePrefix)
-            .FirstOrDefault(d => !string.IsNullOrWhiteSpace(d.Id));
+        var device = SelectPreferredDevice(
+            EnumerateMatchingDevices(devices, namePrefix)
+                .Where(d => !string.IsNullOrWhiteSpace(d.Id)),
+            preferredDeviceName);
 
         if (device is null)
             throw new Exception(BuildBluetoothNotFoundMessage(namePrefix));
@@ -196,6 +219,19 @@ public class BluetoothTransport : ITransport
             if (hasMatchingName)
                 yield return device;
         }
+    }
+
+    private static BluetoothDevice? SelectPreferredDevice(IEnumerable<BluetoothDevice> devices, string? preferredDeviceName)
+    {
+        if (!string.IsNullOrWhiteSpace(preferredDeviceName))
+        {
+            var preferred = devices.FirstOrDefault(device =>
+                string.Equals(device.Name, preferredDeviceName, StringComparison.OrdinalIgnoreCase));
+            if (preferred is not null)
+                return preferred;
+        }
+
+        return devices.FirstOrDefault();
     }
 
     private static string BuildBluetoothNotFoundMessage(string namePrefix)
@@ -270,6 +306,28 @@ public class BluetoothTransport : ITransport
         OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, $"Beo4Remote BLE ({device.Name})", StatusKind.Connection));
         await WriteAsync("name\n");
     }
+
+    private void CleanupConnectionState()
+    {
+        if (_txChar != null)
+        {
+            _txChar.CharacteristicValueChanged -= OnNotification;
+            _txChar = null;
+        }
+
+        _rxChar = null;
+        _device?.Gatt.Disconnect();
+        _device = null;
+        IsConnected = false;
+    }
+
+    private static TimeSpan GetRetryDelay(int attempt) =>
+        TimeSpan.FromSeconds(Math.Min(attempt, 3));
+
+    private static string BuildConnectStatusText(string deviceId, int attempt) =>
+        attempt == 1
+            ? $"○ Connecting to BLE {deviceId}..."
+            : $"○ Connecting to BLE {deviceId}... ({attempt}/{MaxConnectionAttempts})";
 
     private async Task WriteAsync(string text)
     {

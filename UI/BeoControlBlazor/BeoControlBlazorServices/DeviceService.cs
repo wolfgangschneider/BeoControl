@@ -17,6 +17,13 @@ namespace BeoControlBlazorServices;
 /// </summary>
 public class DeviceService : IHostedService, IDisposable
 {
+    private static readonly TimeSpan WindowsBluetoothAutostartDelay = TimeSpan.FromSeconds(4);
+    private static readonly string StartupTracePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "BeoControl", "startup-trace.log");
+
+    private readonly object _autoConnectLock = new();
+    private Task? _autoConnectTask;
     private IDevice? _device;
 
     public AppSettings Settings { get; } = AppSettings.Load();
@@ -43,18 +50,37 @@ public class DeviceService : IHostedService, IDisposable
 
     // ── Connect helpers ───────────────────────────────────────────────────────
 
-    public async Task AutoConnectAsync()
+    public Task AutoConnectAsync()
     {
+        lock (_autoConnectLock)
+        {
+            if (_autoConnectTask is { IsCompleted: false })
+                return _autoConnectTask;
+
+            _autoConnectTask = AutoConnectCoreAsync();
+            return _autoConnectTask;
+        }
+    }
+
+    private async Task AutoConnectCoreAsync()
+    {
+        TraceStartup($"AutoConnect start. LastDevice={Settings.LastDevice}, LastBluetoothId={Settings.LastBluetooth?.Id ?? "<null>"}, LastBluetoothName={Settings.LastBluetooth?.Name ?? "<null>"}, Silent={IsSilentLaunchRequested()}");
         switch (Settings.LastDevice)
         {
             case DeviceType.USB when Settings.LastSerial?.Id is { } port:
+                TraceStartup($"AutoConnect using USB port {port}.");
                 await ConnectSerialAsync(port);
                 break;
             case DeviceType.BT when Settings.LastBluetooth?.Id is { } id:
-                await ConnectBluetoothAsync(id);
+                TraceStartup($"AutoConnect using Bluetooth id {id}.");
+                await ConnectBluetoothAsync(id, delayForStartup: ShouldDelayBluetoothAutoConnect(), preferredDeviceName: Settings.LastBluetooth?.Name);
                 break;
             case DeviceType.PC2:
+                TraceStartup("AutoConnect using PC2.");
                 await ConnectPc2Async();
+                break;
+            default:
+                TraceStartup("AutoConnect skipped because no previous device was stored.");
                 break;
         }
     }
@@ -74,20 +100,78 @@ public class DeviceService : IHostedService, IDisposable
         catch (Exception ex) { Notify(StatusType.Error, $"Serial failed: {ex.Message}"); }
     }
 
-    public async Task ConnectBluetoothAsync(string? deviceId = null)
+    public async Task ConnectBluetoothAsync(string? deviceId = null, bool delayForStartup = false, string? preferredDeviceName = null)
     {
-        Notify(StatusType.Working, deviceId is not null ? $"Connecting to {deviceId}…" : "Scanning Bluetooth…");
         try
         {
             ReplaceDevice(null);
-            var device = new Beo4Device(new BluetoothTransport(deviceId));
-            await device.Connect();
-            ReplaceDevice(device);
-            PersistDevice();
-            Notify(StatusType.Ok, $"Connected: {device.Info.Name ?? device.Info.Id}");
+            if (delayForStartup)
+            {
+                TraceStartup($"Bluetooth auto-connect delaying for {WindowsBluetoothAutostartDelay.TotalSeconds:0.#} seconds.");
+                Notify(StatusType.Working, "Waiting for Windows Bluetooth startup…");
+                await Task.Delay(WindowsBluetoothAutostartDelay);
+            }
+
+            var preferScanFirst = ShouldPreferBluetoothScanFirst(delayForStartup);
+            Exception? firstAttemptError = null;
+
+            if (preferScanFirst)
+            {
+                TraceStartup($"Trying Bluetooth startup scan first. PreferredName={preferredDeviceName ?? "<null>"}.");
+                firstAttemptError = await TryConnectBluetoothAsync(null, preferredDeviceName);
+                if (firstAttemptError is null)
+                {
+                    TraceStartup("Bluetooth startup scan succeeded.");
+                    return;
+                }
+
+                TraceStartup($"Bluetooth startup scan failed: {firstAttemptError.Message}");
+                if (string.IsNullOrWhiteSpace(deviceId))
+                    throw firstAttemptError;
+
+                Notify(StatusType.Working, "Bluetooth scan failed, trying saved device id…");
+                TraceStartup($"Trying direct Bluetooth fallback with id {deviceId}.");
+                var directFallbackError = await TryConnectBluetoothAsync(deviceId, preferredDeviceName);
+                if (directFallbackError is null)
+                {
+                    TraceStartup($"Bluetooth direct fallback succeeded for {deviceId}.");
+                    return;
+                }
+
+                TraceStartup($"Bluetooth direct fallback failed for {deviceId}: {directFallbackError.Message}");
+                throw new Exception("Bluetooth reconnect failed after scan-first startup and direct fallback.", directFallbackError);
+            }
+
+            if (!string.IsNullOrWhiteSpace(deviceId))
+            {
+                TraceStartup($"Trying direct Bluetooth reconnect with id {deviceId}.");
+                firstAttemptError = await TryConnectBluetoothAsync(deviceId, preferredDeviceName);
+                if (firstAttemptError is null)
+                {
+                    TraceStartup($"Bluetooth direct reconnect succeeded for {deviceId}.");
+                    return;
+                }
+
+                TraceStartup($"Bluetooth direct reconnect failed for {deviceId}: {firstAttemptError.Message}");
+                Notify(StatusType.Working, "Bluetooth direct reconnect failed, scanning…");
+            }
+
+            TraceStartup($"Trying Bluetooth scan fallback. PreferredName={preferredDeviceName ?? "<null>"}.");
+            var scanFallbackError = await TryConnectBluetoothAsync(null, preferredDeviceName);
+            if (scanFallbackError is null)
+            {
+                TraceStartup("Bluetooth scan fallback succeeded.");
+                return;
+            }
+
+            TraceStartup($"Bluetooth scan fallback failed: {scanFallbackError.Message}");
+            throw firstAttemptError is not null
+                ? new Exception("Bluetooth reconnect failed after direct reconnect and scan fallback.", scanFallbackError)
+                : scanFallbackError;
         }
         catch (Exception ex) when (LastStatus is not { Type: StatusType.Error, Kind: StatusKind.Connection })
         {
+            TraceStartup($"Bluetooth connect failed: {ex.Message}");
             Notify(StatusType.Error, $"Bluetooth failed: {ex.Message}");
         }
     }
@@ -173,6 +257,65 @@ public class DeviceService : IHostedService, IDisposable
     public void Dispose() => Disconnect(silent: true);
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    private async Task<Exception?> TryConnectBluetoothAsync(string? deviceId, string? preferredDeviceName)
+    {
+        Notify(StatusType.Working, deviceId is not null ? $"Connecting to {deviceId}…" : "Scanning Bluetooth…");
+
+        Beo4Device? candidate = null;
+        try
+        {
+            candidate = new Beo4Device(new BluetoothTransport(deviceId, preferredDeviceName));
+            await candidate.Connect();
+            ReplaceDevice(candidate);
+            PersistDevice();
+            Notify(StatusType.Ok, $"Connected: {candidate.Info.Name ?? candidate.Info.Id}");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
+        finally
+        {
+            if (candidate is not null && !ReferenceEquals(_device, candidate))
+                candidate.Dispose();
+        }
+    }
+
+    private static bool ShouldDelayBluetoothAutoConnect()
+    {
+        if (!OperatingSystem.IsWindows())
+            return false;
+
+        return IsSilentLaunchRequested();
+    }
+
+    private static bool ShouldPreferBluetoothScanFirst(bool delayForStartup) =>
+        delayForStartup && OperatingSystem.IsWindows();
+
+    private static bool IsSilentLaunchRequested()
+    {
+        return Environment.GetCommandLineArgs()
+            .Any(argument => string.Equals(argument, "/silent", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void TraceStartup(string message)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(StartupTracePath)!);
+            File.AppendAllText(StartupTracePath, $"[{DateTimeOffset.Now:O}] {message}{Environment.NewLine}");
+        }
+        catch (IOException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Startup trace write failed: {ex.Message}");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Startup trace write failed: {ex.Message}");
+        }
+    }
 
     private void ReplaceDevice(IDevice? next)
     {

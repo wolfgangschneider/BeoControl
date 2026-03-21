@@ -69,6 +69,7 @@ namespace BeoControlMaui.WinUI
 
         private AppSettings? _settings;
         private DeviceService? _deviceService;
+
         protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
             base.OnLaunched(args);
@@ -93,10 +94,19 @@ namespace BeoControlMaui.WinUI
 
                 StartTrayThread();
                 StartSingleInstanceListener();
+                _ = _deviceService.AutoConnectAsync();
 
-                // Start minimized to tray
-                _appWindow.Hide();
+                if (IsSilentLaunchRequested())
+                {
+                    _appWindow.Hide();
+                }
             }
+        }
+
+        private static bool IsSilentLaunchRequested()
+        {
+            return Environment.GetCommandLineArgs()
+                .Any(argument => string.Equals(argument, "/silent", StringComparison.OrdinalIgnoreCase));
         }
 
         private void StartSingleInstanceListener()

@@ -42,6 +42,7 @@ internal class Program : IHostedService
 
         builder.Services.AddSingleton<DeviceService>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<DeviceService>());
+        builder.Services.AddSingleton<IAutostartRegistrationService, UnsupportedAutostartRegistrationService>();
 
         using var host = builder.Build();
 
