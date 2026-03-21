@@ -42,7 +42,7 @@
     }
     
     <div style="width:var(--remote-width); margin:0 auto;">
-        <div style="padding:4px; height:3em;" class="conn-bar conn-bar--@(DeviceService.IsConnected ? _status.Type.ToString().ToLower() : "disconnected")">
+        <div style="padding:4px; height:3em;" class="conn-bar conn-bar--@(DeviceService.IsConnected ? "connected" : "disconnected")">
             <span class="conn-dot"></span>
             <span class="conn-text">@ConnectionLabel()</span>
 

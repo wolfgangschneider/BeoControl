@@ -26,6 +26,8 @@
     font-size: 8px;
     font-weight: bold;
     letter-spacing: 1px;
+   /* background: #1a2e1a;
+    color: #6fcf6f;*/
 }
 
 .conn-dot {
@@ -34,6 +36,7 @@
     border-radius: 50%;
     flex-shrink: 0;
 }
+
 
 .conn-bar--ok         { background: #1a2e1a; color: #6fcf6f; }
 .conn-bar--ok         .conn-dot { background: #6fcf6f; }
