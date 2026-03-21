@@ -13,7 +13,7 @@ namespace BeoControlBlazorServices;
 
 /// <summary>
 /// Singleton service that owns the active B&amp;O device connection and persists settings.
-/// Registered as both a singleton and an <see cref="IHostedService"/> so it auto-connects on startup.
+/// Some app hosts register this as an <see cref="IHostedService"/>, while MAUI starts it from app lifecycle hooks.
 /// </summary>
 public class DeviceService : IHostedService, IDisposable
 {
@@ -39,8 +39,15 @@ public class DeviceService : IHostedService, IDisposable
 
     // ── IHostedService ────────────────────────────────────────────────────────
 
-    public async Task StartAsync(CancellationToken cancellationToken) =>
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        // The host only calls StartAsync/StopAsync when DeviceService is explicitly registered as an IHostedService.
+        // In the MAUI app we trigger auto-connect from App.OnStart/WinUI OnLaunched instead.
+        if (OperatingSystem.IsWindows())
+            return;
+
         await AutoConnectAsync();
+    }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
@@ -112,35 +119,7 @@ public class DeviceService : IHostedService, IDisposable
                 await Task.Delay(WindowsBluetoothAutostartDelay);
             }
 
-            var preferScanFirst = ShouldPreferBluetoothScanFirst(delayForStartup);
             Exception? firstAttemptError = null;
-
-            if (preferScanFirst)
-            {
-                TraceStartup($"Trying Bluetooth startup scan first. PreferredName={preferredDeviceName ?? "<null>"}.");
-                firstAttemptError = await TryConnectBluetoothAsync(null, preferredDeviceName);
-                if (firstAttemptError is null)
-                {
-                    TraceStartup("Bluetooth startup scan succeeded.");
-                    return;
-                }
-
-                TraceStartup($"Bluetooth startup scan failed: {firstAttemptError.Message}");
-                if (string.IsNullOrWhiteSpace(deviceId))
-                    throw firstAttemptError;
-
-                Notify(StatusType.Working, "Bluetooth scan failed, trying saved device id…");
-                TraceStartup($"Trying direct Bluetooth fallback with id {deviceId}.");
-                var directFallbackError = await TryConnectBluetoothAsync(deviceId, preferredDeviceName);
-                if (directFallbackError is null)
-                {
-                    TraceStartup($"Bluetooth direct fallback succeeded for {deviceId}.");
-                    return;
-                }
-
-                TraceStartup($"Bluetooth direct fallback failed for {deviceId}: {directFallbackError.Message}");
-                throw new Exception("Bluetooth reconnect failed after scan-first startup and direct fallback.", directFallbackError);
-            }
 
             if (!string.IsNullOrWhiteSpace(deviceId))
             {
@@ -290,9 +269,6 @@ public class DeviceService : IHostedService, IDisposable
 
         return IsSilentLaunchRequested();
     }
-
-    private static bool ShouldPreferBluetoothScanFirst(bool delayForStartup) =>
-        delayForStartup && OperatingSystem.IsWindows();
 
     private static bool IsSilentLaunchRequested()
     {

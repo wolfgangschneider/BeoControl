@@ -15,7 +15,8 @@ namespace BeoControlMaui
         protected override void OnStart()
         {
             base.OnStart();
-            _ = _deviceService.AutoConnectAsync();
+            if (!OperatingSystem.IsWindows())
+                _ = _deviceService.AutoConnectAsync();
         }
 
         protected override Window CreateWindow(IActivationState? activationState)
