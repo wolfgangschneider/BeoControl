@@ -2,6 +2,7 @@ using BeoControl.Interfaces;
 
 using System.IO.Ports;
 using System.Management;
+using System.Runtime.InteropServices;
 
 namespace Beo4Adapter.Transport;
 
@@ -311,6 +312,12 @@ public class SerialTransport : ITransport
     /// </summary>
     private static (string Port, string? Name)? ProbePort(string portName)
     {
+        if(OperatingSystem.IsMacOS() && portName.Contains("tty"))
+          return null;
+
+        if(OperatingSystem.IsMacCatalyst() && portName.Contains("tty"))
+          return null;
+  
         try
         {
             using var probe = new SerialPort(portName, 115200, Parity.None, 8, StopBits.One)
@@ -326,7 +333,7 @@ public class SerialTransport : ITransport
                 Thread.Sleep(1500);            // on Linux, DTR resets the ESP32 on open — wait for boot
             probe.DiscardInBuffer();
             probe.WriteLine("name");
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < 25; i++)
             {
                 try
                 {
