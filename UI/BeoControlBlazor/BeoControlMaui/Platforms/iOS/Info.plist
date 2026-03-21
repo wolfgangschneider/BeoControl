@@ -13,6 +13,8 @@
     <array>
         <string>arm64</string>
     </array>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>BeoControl uses Bluetooth to find and connect to your Beo4Remote device.</string>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
