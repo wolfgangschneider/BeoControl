@@ -7,12 +7,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Register DeviceService as singleton and as a hosted service for auto-connect on startup.
+// Register DeviceService as a normal singleton; this host drives its lifecycle explicitly.
 builder.Services.AddSingleton<DeviceService>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<DeviceService>());
 builder.Services.AddSingleton<IAutostartRegistrationService, UnsupportedAutostartRegistrationService>();
 
 var app = builder.Build();
+var deviceService = app.Services.GetRequiredService<DeviceService>();
+await deviceService.AutoConnectAsync();
+app.Lifetime.ApplicationStopping.Register(() => deviceService.Disconnect(silent: true));
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

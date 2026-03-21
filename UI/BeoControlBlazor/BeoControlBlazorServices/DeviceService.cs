@@ -5,17 +5,15 @@ using BeoControl.Interfaces;
 
 using BeoControlBlazor.Services;
 
-using Microsoft.Extensions.Hosting;
-
 using Pc2Adapter;
 
 namespace BeoControlBlazorServices;
 
 /// <summary>
 /// Singleton service that owns the active B&amp;O device connection and persists settings.
-/// Some app hosts register this as an <see cref="IHostedService"/>, while MAUI starts it from app lifecycle hooks.
+/// App hosts trigger startup/shutdown explicitly from their own lifecycle hooks.
 /// </summary>
-public class DeviceService : IHostedService, IDisposable
+public class DeviceService : IDisposable
 {
     private static readonly TimeSpan WindowsBluetoothAutostartDelay = TimeSpan.FromSeconds(4);
     private static readonly string StartupTracePath = Path.Combine(
@@ -36,24 +34,6 @@ public class DeviceService : IHostedService, IDisposable
     public StatusMessage LastStatus { get; private set; } = new(StatusType.Idle, "Not connected", StatusKind.Connection);
 
     public event Action<StatusMessage>? OnStatusChanged;
-
-    // ── IHostedService ────────────────────────────────────────────────────────
-
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        // The host only calls StartAsync/StopAsync when DeviceService is explicitly registered as an IHostedService.
-        // In the MAUI app we trigger auto-connect from App.OnStart/WinUI OnLaunched instead.
-        if (OperatingSystem.IsWindows())
-            return;
-
-        await AutoConnectAsync();
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        Disconnect(silent: true);
-        return Task.CompletedTask;
-    }
 
     // ── Connect helpers ───────────────────────────────────────────────────────
 

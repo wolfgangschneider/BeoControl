@@ -41,7 +41,6 @@ internal class Program : IHostedService
         .AddHostedService<Program>();
 
         builder.Services.AddSingleton<DeviceService>();
-        builder.Services.AddHostedService(sp => sp.GetRequiredService<DeviceService>());
         builder.Services.AddSingleton<IAutostartRegistrationService, UnsupportedAutostartRegistrationService>();
 
         using var host = builder.Build();
@@ -54,6 +53,7 @@ internal class Program : IHostedService
         WebKit.Module.Initialize();
 
         _serviceProvider = serviceProvider;
+        _deviceService = serviceProvider.GetRequiredService<DeviceService>();
         _app = Adw.Application.New("org.gir.core", Gio.ApplicationFlags.FlagsNone);
 
         _app.OnActivate += (sender, args) =>
@@ -82,6 +82,7 @@ internal class Program : IHostedService
         {
             Task.Run(() =>
             {
+                _ = _deviceService.AutoConnectAsync();
                 Environment.ExitCode = _app.Run(0, []);
             });
         });
@@ -91,11 +92,14 @@ internal class Program : IHostedService
             // Only call Quit if GTK hasn't already exited (e.g. external stop request)
             if (!_gtkExited)
                 _app.Quit();
+
+            _deviceService.Disconnect(silent: true);
         });
     }
 
     bool _gtkExited;
     readonly IServiceProvider _serviceProvider;
+    readonly DeviceService _deviceService;
     readonly Adw.Application _app;
 
     public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
