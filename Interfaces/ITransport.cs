@@ -3,7 +3,7 @@ namespace BeoControl.Interfaces;
 /// <summary>Describes a single command that a device can execute (used for help + tab completion).</summary>
 public record CommandInfo(string Name, string Description, string Category, string? ParamHint = null);
 
-public enum StatusType { Idle, Working, Ok, Error }
+public enum StatusType { Idle, Working, Ok, Source, Error }
 public enum StatusKind { Connection, Discovery, Source, AudioSetup, Transport, Info }
 
 /// <summary>One-line status bar message with semantic type for color rendering.</summary>

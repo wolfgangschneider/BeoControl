@@ -67,7 +67,8 @@
         if (msg.Kind == StatusKind.AudioSetup)
             return;
 
-        _status = msg;
+        if (msg.Kind == StatusKind.Source)
+           _status = msg;
         await InvokeAsync(StateHasChanged);
     }
 

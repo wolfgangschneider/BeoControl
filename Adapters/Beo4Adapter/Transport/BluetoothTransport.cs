@@ -286,7 +286,7 @@ public class BluetoothTransport : ITransport
         if (text.StartsWith("Name:", StringComparison.OrdinalIgnoreCase))
             OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, $"Connected", StatusKind.Connection));
         else if (ProtocolStatusParser.TryParseSourceStatus(text, out var sourceStatus))
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, sourceStatus, StatusKind.Source));
+            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Source, sourceStatus, StatusKind.Source));
         else
             OnLog?.Invoke(new LogMessage(LogLevel.Debug, text));
     }
