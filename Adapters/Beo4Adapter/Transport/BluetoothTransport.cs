@@ -121,7 +121,7 @@ public class BluetoothTransport : ITransport
         catch (Exception ex)
         {
             var msg = $"BLE connect error: [{ex.GetType().Name}] {ex.Message}  HResult=0x{ex.HResult:X8}";
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Error, $"✗ {ex.GetType().Name}: {ex.Message}", StatusKind.Connection));
+            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Error, $"✗ {BuildUserFacingBluetoothError(ex)}", StatusKind.Connection));
             OnLog?.Invoke(new LogMessage(LogLevel.Error, msg));
             return null;
         }
@@ -131,19 +131,11 @@ public class BluetoothTransport : ITransport
     public async Task<List<DeviceInfo>> ScanAsync(CancellationToken ct, Action<StatusMessage>? status = null)
     {
         status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{_deviceNamePrefix}'...", StatusKind.Discovery));
-        //unfortunately is null without device
-        ////OnStatusChanged?.Invoke(new StatusMessage(StatusType.Working, $"○BBB Scanning for BLE '{_deviceNamePrefix}'..."));
-        var filter = new BluetoothLEScanFilter { NamePrefix = _deviceNamePrefix };
-        var options = new RequestDeviceOptions();
-        options.Filters.Add(filter);
-        options.AcceptAllDevices = false;
-
-        var devices = await Bluetooth.ScanForDevicesAsync(options, ct);
+        var devices = await ScanWithPrefixAsync(_deviceNamePrefix, ct);
         ct.ThrowIfCancellationRequested();
 
-        return devices
-            .Where(d => d.Name?.StartsWith(_deviceNamePrefix, StringComparison.OrdinalIgnoreCase) == true)
-            .Select(d => new DeviceInfo(DeviceType.BT, d.Name ?? d.Id, d.Id))
+        return EnumerateMatchingDevices(devices, _deviceNamePrefix)
+            .Select(d => new DeviceInfo(DeviceType.BT, d.Name ?? d.Id ?? "Unknown", d.Id))
             .ToList();
 
     }
@@ -157,17 +149,11 @@ public class BluetoothTransport : ITransport
     {
         status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{namePrefix}'...", StatusKind.Discovery));
 
-        var filter = new BluetoothLEScanFilter { NamePrefix = namePrefix };
-        var options = new RequestDeviceOptions();
-        options.Filters.Add(filter);
-        options.AcceptAllDevices = false;
-
-        var devices = await Bluetooth.ScanForDevicesAsync(options, ct);
+        var devices = await ScanWithPrefixAsync(namePrefix, ct);
         ct.ThrowIfCancellationRequested();
 
-        return devices
-            .Where(d => d.Name?.StartsWith(namePrefix, StringComparison.OrdinalIgnoreCase) == true)
-            .Select(d => new DeviceInfo(DeviceType.BT, d.Name ?? d.Id, d.Id))
+        return EnumerateMatchingDevices(devices, namePrefix)
+            .Select(d => new DeviceInfo(DeviceType.BT, d.Name ?? d.Id ?? "Unknown", d.Id))
             .ToList();
     }
 
@@ -180,21 +166,56 @@ public class BluetoothTransport : ITransport
     {
         status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{namePrefix}'...", StatusKind.Discovery));
 
+        var devices = await ScanWithPrefixAsync(namePrefix, ct);
+        ct.ThrowIfCancellationRequested();
+
+        var device = EnumerateMatchingDevices(devices, namePrefix)
+            .FirstOrDefault(d => !string.IsNullOrWhiteSpace(d.Id));
+
+        if (device is null)
+            throw new Exception(BuildBluetoothNotFoundMessage(namePrefix));
+
+        return (device, device.Id!);
+    }
+
+    private static async Task<IReadOnlyCollection<BluetoothDevice>> ScanWithPrefixAsync(string namePrefix, CancellationToken ct)
+    {
         var filter = new BluetoothLEScanFilter { NamePrefix = namePrefix };
         var options = new RequestDeviceOptions();
         options.Filters.Add(filter);
         options.AcceptAllDevices = false;
 
-        var devices = await Bluetooth.ScanForDevicesAsync(options, ct);
-        ct.ThrowIfCancellationRequested();
+        return await Bluetooth.ScanForDevicesAsync(options, ct) ?? [];
+    }
 
-        var device = devices.FirstOrDefault(d =>
-            d.Name?.StartsWith(namePrefix, StringComparison.OrdinalIgnoreCase) == true);
+    private static IEnumerable<BluetoothDevice> EnumerateMatchingDevices(IEnumerable<BluetoothDevice> devices, string namePrefix)
+    {
+        foreach (var device in devices)
+        {
+            var hasMatchingName = device.Name?.StartsWith(namePrefix, StringComparison.OrdinalIgnoreCase) == true;
+            if (hasMatchingName)
+                yield return device;
+        }
+    }
 
-        if (device is null)
-            throw new Exception($"BLE scan timeout — '{namePrefix}' not found. Firmware flashed? Device powered?");
+    private static string BuildBluetoothNotFoundMessage(string namePrefix)
+    {
+        var message = $"BLE scan timeout — '{namePrefix}' not found. Firmware flashed? Device powered?";
+        return AppendMacBluetoothPermissionHint(message);
+    }
 
-        return (device, device.Id);
+    private static string BuildUserFacingBluetoothError(Exception ex)
+    {
+        var message = $"{ex.GetType().Name}: {ex.Message}";
+        return AppendMacBluetoothPermissionHint(message);
+    }
+
+    private static string AppendMacBluetoothPermissionHint(string message)
+    {
+        if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsMacCatalyst())
+            return message;
+
+        return $"{message} Check System Settings > Privacy & Security > Bluetooth and allow the host app (for example Terminal, iTerm, Rider, or Visual Studio).";
     }
 
     /// <summary>

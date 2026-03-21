@@ -86,7 +86,10 @@ public class DeviceService : IHostedService, IDisposable
             PersistDevice();
             Notify(StatusType.Ok, $"Connected: {device.Info.Name ?? device.Info.Id}");
         }
-        catch (Exception ex) { Notify(StatusType.Error, $"Bluetooth failed: {ex.Message}"); }
+        catch (Exception ex) when (LastStatus is not { Type: StatusType.Error, Kind: StatusKind.Connection })
+        {
+            Notify(StatusType.Error, $"Bluetooth failed: {ex.Message}");
+        }
     }
 
     public async Task ConnectPc2Async()

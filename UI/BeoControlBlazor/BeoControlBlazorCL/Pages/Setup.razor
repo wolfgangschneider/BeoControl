@@ -298,7 +298,9 @@
                 _scanCts.Token);
             if (BtDevices.Count > 0 && SelectedBt is null)
                 SelectedBt = BtDevices[0].Id;
-            ScanStatus = $"Found {BtDevices.Count} device(s).";
+            ScanStatus = BtDevices.Count > 0
+                ? $"Found {BtDevices.Count} device(s)."
+                : GetBluetoothEmptyScanMessage();
         }
         catch (OperationCanceledException) { ScanStatus = "Scan cancelled."; }
         catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
@@ -371,6 +373,14 @@
         100 or 150 or 200 => zoom,
         _ => 100
     };
+
+    private static string GetBluetoothEmptyScanMessage()
+    {
+        if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsMacCatalyst())
+            return "Found 0 device(s).";
+
+        return "Found 0 device(s). On macOS, check System Settings > Privacy & Security > Bluetooth and allow the host app you launched this app from.";
+    }
 
     public void Dispose()
     {
