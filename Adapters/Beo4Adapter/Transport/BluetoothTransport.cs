@@ -1,5 +1,7 @@
 using BeoControl.Interfaces;
+
 using InTheHand.Bluetooth;
+
 using System.Text;
 
 namespace Beo4Adapter.Transport;
@@ -134,17 +136,17 @@ public class BluetoothTransport : ITransport
             .ToList();
     }
 
-    public static async Task<List<DeviceInfo>> ScanDevices(string namePrefix, CancellationToken ct, Action<StatusMessage>? status = null)
-    {
-        status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{namePrefix}'...", StatusKind.Discovery));
-        var devices = await BluetoothDiscoveryFactory.Create().DiscoverAsync(namePrefix, ct, status);
-        ct.ThrowIfCancellationRequested();
+    //public static async Task<List<DeviceInfo>> ScanDevices(string namePrefix, CancellationToken ct, Action<StatusMessage>? status = null)
+    //{
+    //    status?.Invoke(new StatusMessage(StatusType.Working, $"○ Scanning for BLE '{namePrefix}'...", StatusKind.Discovery));
+    //    var devices = await BluetoothDiscoveryFactory.Create().DiscoverAsync(namePrefix, ct, status);
+    //    ct.ThrowIfCancellationRequested();
 
-        return devices
-            .Where(device => device is not null)
-            .Select(device => new DeviceInfo(DeviceType.BT, device.Name ?? device.Id ?? "Unknown", device.Id))
-            .ToList();
-    }
+    //    return devices
+    //        .Where(device => device is not null)
+    //        .Select(device => new DeviceInfo(DeviceType.BT, device.Name ?? device.Id ?? "Unknown", device.Id))
+    //        .ToList();
+    //}
 
     private static async Task<(BluetoothDevice Device, string Id)> AutoDetect(
         string namePrefix,

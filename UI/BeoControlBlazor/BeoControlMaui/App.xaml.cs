@@ -21,7 +21,7 @@ namespace BeoControlMaui
 
         protected override Window CreateWindow(IActivationState? activationState)
         {
-            return new Window(new MainPage()) { Title = "BeoControlMaui" };
+            return new Window(new MainPage()) { Title = "BC" };
         }
     }
 }
