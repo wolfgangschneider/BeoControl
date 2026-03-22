@@ -21,6 +21,7 @@ permissions:
 
 env:
   PROJECT_PATH: UI\BeoControlBlazor\BeoControlMaui\BeoControlMaui.csproj
+  WEBKIT_PROJECT_PATH: UI\BeoControlBlazor\BeoControlWebKit\BeoControlWebKit\BeoControlWebKit.csproj
   TARGET_FRAMEWORK: net10.0-windows10.0.19041.0
   CONFIGURATION: Release
 
@@ -121,6 +122,63 @@ jobs:
           $runtime = '${{ matrix.runtime }}'
           $publishDir = Join-Path $env:RUNNER_TEMP "publish\$runtime"
           $assetName = "BeoControlMaui-$tag-$runtime.zip"
+          $assetPath = Join-Path $env:RUNNER_TEMP $assetName
+
+          if (Test-Path $assetPath) {
+            Remove-Item $assetPath -Force
+          }
+
+          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $assetPath
+
+          "asset_name=$assetName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "asset_path=$assetPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.asset_name }}
+          path: ${{ steps.package.outputs.asset_path }}
+          if-no-files-found: error
+
+      - name: Upload asset to GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload '${{ needs.prepare-release.outputs.release_tag }}' '${{ steps.package.outputs.asset_path }}' --clobber
+
+  publish-webkit:
+    name: Publish BeoControlWebKit linux-x64
+    needs: prepare-release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish BeoControlWebKit
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP 'publish\webkit-linux-x64'
+
+          dotnet publish $env:WEBKIT_PROJECT_PATH `
+            -c $env:CONFIGURATION `
+            -r linux-x64 `
+            --self-contained false `
+            -o $publishDir
+
+      - name: Package published output
+        id: package
+        shell: pwsh
+        run: |
+          $tag = '${{ needs.prepare-release.outputs.release_tag }}'
+          $publishDir = Join-Path $env:RUNNER_TEMP 'publish\webkit-linux-x64'
+          $assetName = "BeoControlWebKit-$tag-linux-x64.zip"
           $assetPath = Join-Path $env:RUNNER_TEMP $assetName
 
           if (Test-Path $assetPath) {

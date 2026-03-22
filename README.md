@@ -137,12 +137,14 @@ Copy the `publish\` folder to any Windows machine — no installer or runtime in
 
 ### GitHub Release (MAUI Windows)
 
-The repository includes a GitHub Actions workflow at `.github/workflows/release-maui-windows.yml` that builds Windows release zips for the MAUI app and attaches them to a GitHub release.
+The repository includes a GitHub Actions workflow at `.github/workflows/release-maui-windows.yml` that builds release zips and attaches them to a GitHub release.
 
 - Push a tag like `v1.0.0` to trigger the workflow automatically.
 - Or run the `Release MAUI Windows` workflow manually and provide a tag such as `v1.0.0`.
 - The workflow publishes both `win-x64` and `win-arm64` self-contained builds.
+- It also publishes a `linux-x64` BeoControlWebKit zip.
 - Each build is uploaded as a zip asset named `BeoControlMaui-<tag>-<runtime>.zip`.
+- The WebKit build is uploaded as `BeoControlWebKit-<tag>-linux-x64.zip`.
 
 The workflow creates the GitHub release automatically if it does not already exist.
 
