@@ -1,3 +1,5 @@
+using BeoControlBlazor.Services;
+
 using BeoControlBlazorServices;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -54,19 +56,28 @@ internal class Program : IHostedService
 
         _serviceProvider = serviceProvider;
         _deviceService = serviceProvider.GetRequiredService<DeviceService>();
+        _settings = AppSettings.Load();
         _app = Adw.Application.New("org.gir.core", Gio.ApplicationFlags.FlagsNone);
 
         _app.OnActivate += (sender, args) =>
         {
-            var window = Gtk.ApplicationWindow.New((Adw.Application)sender);
-            window.Title = "BeoControl";
-            window.SetDefaultSize(220, 950);
+            if (_window is not null)
+            {
+                _window.Present();
+                return;
+            }
+
+            _window = Gtk.ApplicationWindow.New((Adw.Application)sender);
+            _window.Title = "BC";
+
+            var lastWinPosition = _settings.LastWinPosition;
+            _window.SetDefaultSize(lastWinPosition.WindowWidth, lastWinPosition.WindowHeight);
 
             var webView = new BlazorWebView(_serviceProvider);
             webView.Hexpand = true;
             webView.Vexpand = true;
-            window.SetChild(webView);
-            window.Show();
+            _window.SetChild(webView);
+            _window.Show();
 
             // Allow opening developer tools
             webView.GetSettings().EnableDeveloperExtras = true;
@@ -74,6 +85,7 @@ internal class Program : IHostedService
 
         _app.OnShutdown += (sender, args) =>
         {
+            SaveWindowState();
             _gtkExited = true;
             lifetime.StopApplication();
         };
@@ -89,6 +101,8 @@ internal class Program : IHostedService
 
         lifetime.ApplicationStopping.Register(() =>
         {
+            SaveWindowState();
+
             // Only call Quit if GTK hasn't already exited (e.g. external stop request)
             if (!_gtkExited)
                 _app.Quit();
@@ -100,7 +114,20 @@ internal class Program : IHostedService
     bool _gtkExited;
     readonly IServiceProvider _serviceProvider;
     readonly DeviceService _deviceService;
+    readonly AppSettings _settings;
     readonly Adw.Application _app;
+    Gtk.ApplicationWindow? _window;
+
+    private void SaveWindowState()
+    {
+        if (_window is null)
+            return;
+
+        var lastWinPosition = _settings.LastWinPosition;
+        lastWinPosition.WindowWidth = _window.GetWidth();
+        lastWinPosition.WindowHeight = _window.GetHeight();
+        _settings.Save();
+    }
 
     public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

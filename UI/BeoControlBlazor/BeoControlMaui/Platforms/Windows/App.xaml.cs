@@ -87,10 +87,9 @@ namespace BeoControlMaui.WinUI
                         _windowHandle));
 
                 _settings = AppSettings.Load();
+                var lastWinPosition = _settings.LastWinPosition;
 
-                int w = _settings.WindowWidth > 0 ? _settings.WindowWidth : RemoteWindow.Width;
-                int h = _settings.WindowHeight > 0 ? _settings.WindowHeight : RemoteWindow.Height;
-                _appWindow.Resize(new SizeInt32(w, h));
+                _appWindow.Resize(new SizeInt32(lastWinPosition.WindowWidth, lastWinPosition.WindowHeight));
 
                 var pos = CalcWindowsPosition(_settings);
                 _appWindow.Move(new PointInt32(pos.X, pos.Y));
@@ -240,28 +239,29 @@ namespace BeoControlMaui.WinUI
         {
             if (_appWindow is null) return;
 
-            //var hMon = MonitorFromPoint(cursor, 2 /*MONITOR_DEFAULTTONEAREST*/);
-            //var mi = new MonitorInfo { cbSize = Marshal.SizeOf<MonitorInfo>() };
-            //GetMonitorInfo(hMon, ref mi);
-            //var work = mi.rcWork;
-
-            //int winW = _settings.WindowWidth > 0 ? _settings.WindowWidth : RemoteWindow.Width;
-            //int winH = _settings.WindowHeight > 0 ? _settings.WindowHeight : RemoteWindow.Height;
-
-            //// Center on cursor horizontally, sit just above the taskbar
-            //int x = work.Width - winW;// Math.Clamp(cursor.X - winW / 2, work.Left, work.Right - winW);
-            //int y = work.Bottom - winH;
-
-            //_appWindow.Move(new PointInt32(x, y));
-
             var pos = CalcWindowsPosition(_settings);
             _appWindow.Move(new PointInt32(pos.X, pos.Y));
             BringWindowToForeground();
         }
-        private PointInt32 CalcWindowsPosition(AppSettings settings)
+
+        private PointInt32 CalcWindowsPosition(AppSettings? settings)
         {
-            int winW = settings.WindowWidth > 0 ? settings.WindowWidth : RemoteWindow.Width;
-            int winH = settings.WindowHeight > 0 ? settings.WindowHeight : RemoteWindow.Height;
+            if (settings is not null)
+            {
+                var lastWinPosition = settings.LastWinPosition;
+                if (lastWinPosition.WindowX != 0 || lastWinPosition.WindowY != 0)
+                    return new PointInt32(lastWinPosition.WindowX, lastWinPosition.WindowY);
+
+                return CalcDefaultWindowsPosition(lastWinPosition.WindowWidth, lastWinPosition.WindowHeight);
+            }
+
+            return CalcDefaultWindowsPosition(
+                AppSettings.WindowGeometry.DefaultWindowWidth,
+                AppSettings.WindowGeometry.DefaultWindowHeight);
+        }
+
+        private PointInt32 CalcDefaultWindowsPosition(int winW, int winH)
+        {
 
             const uint MONITOR_DEFAULTTOPRIMARY = 1;
 
@@ -291,9 +291,22 @@ namespace BeoControlMaui.WinUI
 
         private void OnAppWindowChanged(AppWindow sender, AppWindowChangedEventArgs e)
         {
-            if (!e.DidSizeChange || _settings is null) return;
-            _settings.WindowWidth = sender.Size.Width;
-            _settings.WindowHeight = sender.Size.Height;
+            if (_settings is null || (!e.DidSizeChange && !e.DidPositionChange)) return;
+
+            var lastWinPosition = _settings.LastWinPosition;
+
+            if (e.DidSizeChange)
+            {
+                lastWinPosition.WindowWidth = sender.Size.Width;
+                lastWinPosition.WindowHeight = sender.Size.Height;
+            }
+
+            if (e.DidPositionChange)
+            {
+                lastWinPosition.WindowX = sender.Position.X;
+                lastWinPosition.WindowY = sender.Position.Y;
+            }
+
             _settings.Save();
         }
 

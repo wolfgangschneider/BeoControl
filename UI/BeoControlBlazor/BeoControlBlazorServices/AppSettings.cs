@@ -35,9 +35,8 @@ public class AppSettings
     /// <summary>Last saved PC2 audio mixer settings.</summary>
     public AudioSetupDto AudioSetup { get; set; } = new();
 
-    /// <summary>Last window size (Windows only). Zero values = use defaults.</summary>
-    public int WindowWidth  { get; set; } = 0;
-    public int WindowHeight { get; set; } = 0;
+    /// <summary>Last window size and position shared by the desktop hosts.</summary>
+    public WindowGeometry LastWinPosition { get; set; } = new();
 
     /// <summary>Remote button zoom percentage. Zero = use default.</summary>
     public int RemoteButtonZoom { get; set; } = 100;
@@ -47,8 +46,9 @@ public class AppSettings
         try
         {
             if (!File.Exists(SettingsFile)) return new AppSettings();
-            var json = File.ReadAllText(SettingsFile);
-            return JsonSerializer.Deserialize<AppSettings>(json, JsonOpts) ?? new AppSettings();
+            var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsFile), JsonOpts) ?? new AppSettings();
+            settings.LastWinPosition ??= new WindowGeometry();
+            return settings;
         }
         catch { return new AppSettings(); }
     }
@@ -83,6 +83,17 @@ public class AppSettings
         AudioSetup.Balance  = src.Balance;
         AudioSetup.Loudness = src.Loudness;
         AudioSetup.DefaultSource = src.DefaultSource;
+    }
+
+    public sealed class WindowGeometry
+    {
+        public const int DefaultWindowWidth = 300;
+        public const int DefaultWindowHeight = 950;
+
+        public int WindowWidth { get; set; } = DefaultWindowWidth;
+        public int WindowHeight { get; set; } = DefaultWindowHeight;
+        public int WindowX { get; set; } = 0;
+        public int WindowY { get; set; } = 0;
     }
 }
 

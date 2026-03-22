@@ -32,6 +32,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Interfaces", "Interfaces", "{F950DB2C-3B87-4536-55E6-8585CBA5CF21}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_solutionFolder", "_solutionFolder", "{C5D1772A-BADF-43C6-ACC9-560703769D41}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\release-maui-windows.yml = .github\workflows\release-maui-windows.yml
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{35641C87-B552-4D0C-B615-FCE87D016BD9}"
 	ProjectSection(SolutionItems) = preProject
