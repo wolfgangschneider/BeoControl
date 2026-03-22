@@ -204,7 +204,6 @@
     private bool _launchOnWindowsSignIn;
 
     private StatusType _statusType = StatusType.Idle;
-    private string _statusText = "Not connected";
     private bool Pc2Available;
 
     private bool IsPc2Connected =>
@@ -256,8 +255,6 @@
         ActiveTab      = DeviceService.Settings.LastDevice;
         SelectedSerial = DeviceService.Settings.LastSerial?.Id;
         SelectedBt     = DeviceService.Settings.LastBluetooth?.Id;
-        _statusType    = DeviceService.LastStatus.Type;
-        _statusText    = DeviceService.LastStatus.Text;
         _remoteButtonZoom = NormalizeZoom(DeviceService.Settings.RemoteButtonZoom);
         _launchOnWindowsSignIn = AutostartRegistrationService.IsEnabled();
     }
@@ -271,7 +268,6 @@
         }
 
         _statusType = msg.Type;
-        _statusText = msg.Text;
         await InvokeAsync(StateHasChanged);
     }
 

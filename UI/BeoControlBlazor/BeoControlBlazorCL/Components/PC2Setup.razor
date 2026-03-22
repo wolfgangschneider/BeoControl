@@ -38,9 +38,9 @@
             <button class="pc2-rocker-btn" aria-label="Increase loudness" @onclick='() => SendCommand("lou+")'>+</button>
         </div>
 
-        @if (!string.IsNullOrWhiteSpace(DeviceService.LastPc2AudioStatusText))
+        @if (!string.IsNullOrWhiteSpace(_lastPc2AudioStatus?.Text))
         {
-            <p>@DeviceService.LastPc2AudioStatusText</p>
+            <p>@_lastPc2AudioStatus?.Text</p>
         }
     </section>
 
@@ -98,10 +98,15 @@
     ];
 
     public int Option { get; set; }
+    private BeoControl.Interfaces.StatusMessage? _lastPc2AudioStatus;
+
     public Beoported.Pc2.Pc2DefaultSource DefaultSource
     {
         get => DeviceService.CurrentPc2AudioSetup.DefaultSource;
-        set => DeviceService.UpdatePc2DefaultSource(value);
+        set
+        {
+            DeviceService.UpdatePc2DefaultSource(value);
+        }
     }
 
     private string CurrentVolume => DeviceService.CurrentPc2AudioSetup.Volume.ToString();
@@ -124,6 +129,15 @@
     {
         if (msg.Kind is not BeoControl.Interfaces.StatusKind.AudioSetup and not BeoControl.Interfaces.StatusKind.Connection)
             return;
+
+        if (msg.Kind == BeoControl.Interfaces.StatusKind.AudioSetup)
+        {
+            _lastPc2AudioStatus = msg;
+        }
+        else if (msg.Type is BeoControl.Interfaces.StatusType.Idle or BeoControl.Interfaces.StatusType.Error or BeoControl.Interfaces.StatusType.Working)
+        {
+            _lastPc2AudioStatus = null;
+        }
 
         await InvokeAsync(StateHasChanged);
     }

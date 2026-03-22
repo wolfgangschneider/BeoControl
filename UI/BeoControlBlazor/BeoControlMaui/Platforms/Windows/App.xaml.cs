@@ -1,4 +1,5 @@
-﻿using BeoControlBlazor.Services;
+﻿using BeoControl.Interfaces;
+using BeoControlBlazor.Services;
 
 using BeoControlBlazorServices;
 
