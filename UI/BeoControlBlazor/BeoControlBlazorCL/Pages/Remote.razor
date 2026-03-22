@@ -68,7 +68,7 @@
             return;
 
         if (msg.Kind == StatusKind.Source)
-           _status = msg;
+            _status = msg;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -84,14 +84,12 @@
     private void SendCommand(string command) =>
         DeviceService.SendCommand(command);
 
-    private string ConnBarClass() =>
-        DeviceService.IsConnected ? "conn-bar--connected" : "conn-bar--disconnected";
-
     private string ConnectionLabel()
     {
         var dev = DeviceService.CurrentDevice;
         if (dev is null || !DeviceService.IsConnected)
             return "DISCONNECTED";
+
         var detail = dev.Type switch
         {
             DeviceType.USB => dev.Name is not null ? $"{dev.Name}  |  {dev.Id}" : dev.Id ?? "Serial",

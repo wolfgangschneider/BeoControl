@@ -23,6 +23,10 @@
     <string>BeoControl uses Bluetooth to find and connect to your Beo4Remote device.</string>
     <key>NSBluetoothPeripheralUsageDescription</key>
     <string>BeoControl uses Bluetooth to find and connect to your Beo4Remote device.</string>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>bluetooth-central</string>
+    </array>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>

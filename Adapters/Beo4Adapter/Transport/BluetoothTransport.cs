@@ -260,7 +260,7 @@ public class BluetoothTransport : ITransport
         if (_txChar is not null)
         {
             _txChar.CharacteristicValueChanged -= OnNotification;
-            _txChar = null;
+        _txChar = null;
         }
 
         _rxChar = null;
