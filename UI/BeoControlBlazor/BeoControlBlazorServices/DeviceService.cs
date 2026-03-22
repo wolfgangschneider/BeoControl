@@ -16,6 +16,9 @@ namespace BeoControlBlazorServices;
 public class DeviceService : IDisposable
 {
     private static readonly TimeSpan WindowsBluetoothAutostartDelay = TimeSpan.FromSeconds(4);
+    private static readonly TimeSpan MacBluetoothAutostartDelay = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan MacBluetoothRetryDelay = TimeSpan.FromSeconds(2);
+    private const int MacBluetoothAutoconnectAttempts = 3;
     private static readonly string StartupTracePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "BeoControl", "startup-trace.log");
@@ -94,39 +97,31 @@ public class DeviceService : IDisposable
             ReplaceDevice(null);
             if (delayForStartup)
             {
-                TraceStartup($"Bluetooth auto-connect delaying for {WindowsBluetoothAutostartDelay.TotalSeconds:0.#} seconds.");
-                Notify(StatusType.Working, "Waiting for Windows Bluetooth startup…");
-                await Task.Delay(WindowsBluetoothAutostartDelay);
+                var startupDelay = GetBluetoothAutostartDelay();
+                TraceStartup($"Bluetooth auto-connect delaying for {startupDelay.TotalSeconds:0.#} seconds.");
+                Notify(StatusType.Working, OperatingSystem.IsMacCatalyst()
+                    ? "Waiting for Apple Bluetooth startup…"
+                    : "Waiting for Windows Bluetooth startup…");
+                await Task.Delay(startupDelay);
             }
 
-            Exception? firstAttemptError = null;
-
-            if (!string.IsNullOrWhiteSpace(deviceId))
+            Exception? connectError = null;
+            var attemptCount = GetBluetoothConnectAttemptCount(delayForStartup);
+            for (var attempt = 1; attempt <= attemptCount; attempt++)
             {
-                TraceStartup($"Trying direct Bluetooth reconnect with id {deviceId}.");
-                firstAttemptError = await TryConnectBluetoothAsync(deviceId, preferredDeviceName);
-                if (firstAttemptError is null)
+                if (attempt > 1)
                 {
-                    TraceStartup($"Bluetooth direct reconnect succeeded for {deviceId}.");
-                    return;
+                    TraceStartup($"Retrying Bluetooth auto-connect attempt {attempt}/{attemptCount} after {MacBluetoothRetryDelay.TotalSeconds:0.#} seconds.");
+                    Notify(StatusType.Working, "Retrying Bluetooth reconnect…");
+                    await Task.Delay(MacBluetoothRetryDelay);
                 }
 
-                TraceStartup($"Bluetooth direct reconnect failed for {deviceId}: {firstAttemptError.Message}");
-                Notify(StatusType.Working, "Bluetooth direct reconnect failed, scanning…");
+                connectError = await ConnectBluetoothAttemptAsync(deviceId, preferredDeviceName);
+                if (connectError is null)
+                    return;
             }
 
-            TraceStartup($"Trying Bluetooth scan fallback. PreferredName={preferredDeviceName ?? "<null>"}.");
-            var scanFallbackError = await TryConnectBluetoothAsync(null, preferredDeviceName);
-            if (scanFallbackError is null)
-            {
-                TraceStartup("Bluetooth scan fallback succeeded.");
-                return;
-            }
-
-            TraceStartup($"Bluetooth scan fallback failed: {scanFallbackError.Message}");
-            throw firstAttemptError is not null
-                ? new Exception("Bluetooth reconnect failed after direct reconnect and scan fallback.", scanFallbackError)
-                : scanFallbackError;
+            throw connectError ?? new Exception("Bluetooth reconnect failed.");
         }
         catch (Exception ex) when (LastStatus is not { Type: StatusType.Error, Kind: StatusKind.Connection })
         {
@@ -217,6 +212,38 @@ public class DeviceService : IDisposable
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
+    private async Task<Exception?> ConnectBluetoothAttemptAsync(string? deviceId, string? preferredDeviceName)
+    {
+        Exception? firstAttemptError = null;
+
+        if (!string.IsNullOrWhiteSpace(deviceId))
+        {
+            TraceStartup($"Trying direct Bluetooth reconnect with id {deviceId}.");
+            firstAttemptError = await TryConnectBluetoothAsync(deviceId, preferredDeviceName);
+            if (firstAttemptError is null)
+            {
+                TraceStartup($"Bluetooth direct reconnect succeeded for {deviceId}.");
+                return null;
+            }
+
+            TraceStartup($"Bluetooth direct reconnect failed for {deviceId}: {firstAttemptError.Message}");
+            Notify(StatusType.Working, "Bluetooth direct reconnect failed, scanning…");
+        }
+
+        TraceStartup($"Trying Bluetooth scan fallback. PreferredName={preferredDeviceName ?? "<null>"}.");
+        var scanFallbackError = await TryConnectBluetoothAsync(null, preferredDeviceName);
+        if (scanFallbackError is null)
+        {
+            TraceStartup("Bluetooth scan fallback succeeded.");
+            return null;
+        }
+
+        TraceStartup($"Bluetooth scan fallback failed: {scanFallbackError.Message}");
+        return firstAttemptError is not null
+            ? new Exception("Bluetooth reconnect failed after direct reconnect and scan fallback.", scanFallbackError)
+            : scanFallbackError;
+    }
+
     private async Task<Exception?> TryConnectBluetoothAsync(string? deviceId, string? preferredDeviceName)
     {
         Notify(StatusType.Working, deviceId is not null ? $"Connecting to {deviceId}…" : "Scanning Bluetooth…");
@@ -244,10 +271,29 @@ public class DeviceService : IDisposable
 
     private static bool ShouldDelayBluetoothAutoConnect()
     {
+        if (OperatingSystem.IsMacCatalyst())
+            return true;
+
         if (!OperatingSystem.IsWindows())
             return false;
 
         return IsSilentLaunchRequested();
+    }
+
+    private static TimeSpan GetBluetoothAutostartDelay()
+    {
+        if (OperatingSystem.IsMacCatalyst())
+            return MacBluetoothAutostartDelay;
+
+        return WindowsBluetoothAutostartDelay;
+    }
+
+    private static int GetBluetoothConnectAttemptCount(bool delayForStartup)
+    {
+        if (OperatingSystem.IsMacCatalyst() && delayForStartup)
+            return MacBluetoothAutoconnectAttempts;
+
+        return 1;
     }
 
     private static bool IsSilentLaunchRequested()
