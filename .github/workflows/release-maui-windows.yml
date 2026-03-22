@@ -79,15 +79,25 @@ jobs:
           gh @args
 
   publish:
-    name: Publish ${{ matrix.runtime }}
+    name: Publish MAUI ${{ matrix.runtime }} (${{ matrix.package_mode }})
     needs: prepare-release
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        runtime:
-          - win-x64
-          - win-arm64
+        include:
+          - runtime: win-x64
+            self_contained: "true"
+            package_mode: self-contained
+          - runtime: win-x64
+            self_contained: "false"
+            package_mode: framework-dependent
+          - runtime: win-arm64
+            self_contained: "true"
+            package_mode: self-contained
+          - runtime: win-arm64
+            self_contained: "false"
+            package_mode: framework-dependent
     steps:
       - uses: actions/checkout@v4
         with:
@@ -104,13 +114,15 @@ jobs:
       - name: Publish MAUI Windows app
         shell: pwsh
         run: |
-          $publishDir = Join-Path $env:RUNNER_TEMP "publish\${{ matrix.runtime }}"
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish\maui\${{ matrix.runtime }}\${{ matrix.package_mode }}"
 
           dotnet publish $env:PROJECT_PATH `
             -c $env:CONFIGURATION `
             -f $env:TARGET_FRAMEWORK `
             -r ${{ matrix.runtime }} `
-            --self-contained true `
+            --self-contained ${{ matrix.self_contained }} `
+            -p:WindowsAppSDKSelfContained=${{ matrix.self_contained }} `
+            -p:WindowsAppSdkSelfContained=${{ matrix.self_contained }} `
             -p:PublishTrimmed=false `
             -o $publishDir
 
@@ -120,8 +132,9 @@ jobs:
         run: |
           $tag = '${{ needs.prepare-release.outputs.release_tag }}'
           $runtime = '${{ matrix.runtime }}'
-          $publishDir = Join-Path $env:RUNNER_TEMP "publish\$runtime"
-          $assetName = "BeoControlMaui-$tag-$runtime.zip"
+          $packageMode = '${{ matrix.package_mode }}'
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish\maui\$runtime\$packageMode"
+          $assetName = "BeoControlMaui-$tag-$runtime-$packageMode.zip"
           $assetPath = Join-Path $env:RUNNER_TEMP $assetName
 
           if (Test-Path $assetPath) {
@@ -148,9 +161,25 @@ jobs:
           gh release upload '${{ needs.prepare-release.outputs.release_tag }}' '${{ steps.package.outputs.asset_path }}' --clobber
 
   publish-webkit:
-    name: Publish BeoControlWebKit linux-x64
+    name: Publish WebKit ${{ matrix.runtime }} (${{ matrix.package_mode }})
     needs: prepare-release
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runtime: linux-x64
+            self_contained: "true"
+            package_mode: self-contained
+          - runtime: linux-x64
+            self_contained: "false"
+            package_mode: framework-dependent
+          - runtime: linux-arm64
+            self_contained: "true"
+            package_mode: self-contained
+          - runtime: linux-arm64
+            self_contained: "false"
+            package_mode: framework-dependent
     steps:
       - uses: actions/checkout@v4
         with:
@@ -164,12 +193,12 @@ jobs:
       - name: Publish BeoControlWebKit
         shell: pwsh
         run: |
-          $publishDir = Join-Path $env:RUNNER_TEMP 'publish\webkit-linux-x64'
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish\webkit\${{ matrix.runtime }}\${{ matrix.package_mode }}"
 
           dotnet publish $env:WEBKIT_PROJECT_PATH `
             -c $env:CONFIGURATION `
-            -r linux-x64 `
-            --self-contained false `
+            -r ${{ matrix.runtime }} `
+            --self-contained ${{ matrix.self_contained }} `
             -o $publishDir
 
       - name: Package published output
@@ -177,8 +206,10 @@ jobs:
         shell: pwsh
         run: |
           $tag = '${{ needs.prepare-release.outputs.release_tag }}'
-          $publishDir = Join-Path $env:RUNNER_TEMP 'publish\webkit-linux-x64'
-          $assetName = "BeoControlWebKit-$tag-linux-x64.zip"
+          $runtime = '${{ matrix.runtime }}'
+          $packageMode = '${{ matrix.package_mode }}'
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish\webkit\$runtime\$packageMode"
+          $assetName = "BeoControlWebKit-$tag-$runtime-$packageMode.zip"
           $assetPath = Join-Path $env:RUNNER_TEMP $assetName
 
           if (Test-Path $assetPath) {

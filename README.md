@@ -141,10 +141,10 @@ The repository includes a GitHub Actions workflow at `.github/workflows/release-
 
 - Push a tag like `v1.0.0` to trigger the workflow automatically.
 - Or run the `Release MAUI Windows` workflow manually and provide a tag such as `v1.0.0`.
-- The workflow publishes both `win-x64` and `win-arm64` self-contained builds.
-- It also publishes a `linux-x64` BeoControlWebKit zip.
-- Each build is uploaded as a zip asset named `BeoControlMaui-<tag>-<runtime>.zip`.
-- The WebKit build is uploaded as `BeoControlWebKit-<tag>-linux-x64.zip`.
+- The MAUI app publishes `win-x64` and `win-arm64` builds in both `self-contained` and `framework-dependent` variants.
+- BeoControlWebKit publishes `linux-x64` and `linux-arm64` builds in both `self-contained` and `framework-dependent` variants.
+- MAUI assets are uploaded as `BeoControlMaui-<tag>-<runtime>-<package-mode>.zip`.
+- WebKit assets are uploaded as `BeoControlWebKit-<tag>-<runtime>-<package-mode>.zip`.
 
 The workflow creates the GitHub release automatically if it does not already exist.
 
