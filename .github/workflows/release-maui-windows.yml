@@ -1,0 +1,147 @@
+name: Release MAUI Windows
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to create or update (example: v1.0.0)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark the release as a prerelease"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+env:
+  PROJECT_PATH: UI\BeoControlBlazor\BeoControlMaui\BeoControlMaui.csproj
+  TARGET_FRAMEWORK: net10.0-windows10.0.19041.0
+  CONFIGURATION: Release
+
+jobs:
+  prepare-release:
+    name: Prepare GitHub release
+    runs-on: windows-latest
+    outputs:
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release metadata
+        id: meta
+        shell: pwsh
+        run: |
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            $tag = '${{ inputs.tag }}'
+            $prerelease = '${{ inputs.prerelease }}'
+          }
+          else {
+            $tag = '${{ github.ref_name }}'
+            $prerelease = if ($tag -match '-') { 'true' } else { 'false' }
+          }
+
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            throw 'Release tag is required.'
+          }
+
+          "release_tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "prerelease=$prerelease" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Create or update GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ steps.meta.outputs.release_tag }}'
+          $isPrerelease = '${{ steps.meta.outputs.prerelease }}' -eq 'true'
+
+          gh release view $tag | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $tag already exists."
+            exit 0
+          }
+
+          $args = @('release', 'create', $tag, '--title', $tag, '--generate-notes', '--target', '${{ github.sha }}')
+          if ($isPrerelease) {
+            $args += '--prerelease'
+          }
+
+          gh @args
+
+  publish:
+    name: Publish ${{ matrix.runtime }}
+    needs: prepare-release
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime:
+          - win-x64
+          - win-arm64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install MAUI Windows workload
+        run: dotnet workload install maui-windows
+
+      - name: Publish MAUI Windows app
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish\${{ matrix.runtime }}"
+
+          dotnet publish $env:PROJECT_PATH `
+            -c $env:CONFIGURATION `
+            -f $env:TARGET_FRAMEWORK `
+            -r ${{ matrix.runtime }} `
+            --self-contained true `
+            -p:PublishTrimmed=false `
+            -o $publishDir
+
+      - name: Package published output
+        id: package
+        shell: pwsh
+        run: |
+          $tag = '${{ needs.prepare-release.outputs.release_tag }}'
+          $runtime = '${{ matrix.runtime }}'
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish\$runtime"
+          $assetName = "BeoControlMaui-$tag-$runtime.zip"
+          $assetPath = Join-Path $env:RUNNER_TEMP $assetName
+
+          if (Test-Path $assetPath) {
+            Remove-Item $assetPath -Force
+          }
+
+          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $assetPath
+
+          "asset_name=$assetName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "asset_path=$assetPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.asset_name }}
+          path: ${{ steps.package.outputs.asset_path }}
+          if-no-files-found: error
+
+      - name: Upload asset to GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload '${{ needs.prepare-release.outputs.release_tag }}' '${{ steps.package.outputs.asset_path }}' --clobber

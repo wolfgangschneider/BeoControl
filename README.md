@@ -135,6 +135,17 @@ dotnet publish -f net10.0-windows10.0.19041.0 -c Release -r win-arm64 --self-con
 
 Copy the `publish\` folder to any Windows machine — no installer or runtime install needed.
 
+### GitHub Release (MAUI Windows)
+
+The repository includes a GitHub Actions workflow at `.github/workflows/release-maui-windows.yml` that builds Windows release zips for the MAUI app and attaches them to a GitHub release.
+
+- Push a tag like `v1.0.0` to trigger the workflow automatically.
+- Or run the `Release MAUI Windows` workflow manually and provide a tag such as `v1.0.0`.
+- The workflow publishes both `win-x64` and `win-arm64` self-contained builds.
+- Each build is uploaded as a zip asset named `BeoControlMaui-<tag>-<runtime>.zip`.
+
+The workflow creates the GitHub release automatically if it does not already exist.
+
 ### Run PC2 Example
 
 ```bash
