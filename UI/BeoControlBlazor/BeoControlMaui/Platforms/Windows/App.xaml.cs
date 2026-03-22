@@ -1,5 +1,4 @@
-﻿using BeoControl.Interfaces;
-using BeoControlBlazor.Services;
+﻿using BeoControlBlazor.Services;
 
 using BeoControlBlazorServices;
 
@@ -53,6 +52,7 @@ namespace BeoControlMaui.WinUI
 
         public App()
         {
+
             _instanceMutex = new Mutex(true, MutexName, out bool isNewInstance);
             if (!isNewInstance)
             {
@@ -71,8 +71,10 @@ namespace BeoControlMaui.WinUI
         private AppSettings? _settings;
         private DeviceService? _deviceService;
 
+
         protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
+
             base.OnLaunched(args);
 
             if (Application.Windows[0].Handler?.PlatformView is Microsoft.UI.Xaml.Window win)
@@ -85,9 +87,14 @@ namespace BeoControlMaui.WinUI
                         _windowHandle));
 
                 _settings = AppSettings.Load();
+
                 int w = _settings.WindowWidth > 0 ? _settings.WindowWidth : RemoteWindow.Width;
                 int h = _settings.WindowHeight > 0 ? _settings.WindowHeight : RemoteWindow.Height;
                 _appWindow.Resize(new SizeInt32(w, h));
+
+                var pos = CalcWindowsPosition(_settings);
+                _appWindow.Move(new PointInt32(pos.X, pos.Y));
+
                 _appWindow.Changed += OnAppWindowChanged;
                 _appWindow.Closing += OnWindowClosing;
 
@@ -233,20 +240,42 @@ namespace BeoControlMaui.WinUI
         {
             if (_appWindow is null) return;
 
-            var hMon = MonitorFromPoint(cursor, 2 /*MONITOR_DEFAULTTONEAREST*/);
+            //var hMon = MonitorFromPoint(cursor, 2 /*MONITOR_DEFAULTTONEAREST*/);
+            //var mi = new MonitorInfo { cbSize = Marshal.SizeOf<MonitorInfo>() };
+            //GetMonitorInfo(hMon, ref mi);
+            //var work = mi.rcWork;
+
+            //int winW = _settings.WindowWidth > 0 ? _settings.WindowWidth : RemoteWindow.Width;
+            //int winH = _settings.WindowHeight > 0 ? _settings.WindowHeight : RemoteWindow.Height;
+
+            //// Center on cursor horizontally, sit just above the taskbar
+            //int x = work.Width - winW;// Math.Clamp(cursor.X - winW / 2, work.Left, work.Right - winW);
+            //int y = work.Bottom - winH;
+
+            //_appWindow.Move(new PointInt32(x, y));
+
+            var pos = CalcWindowsPosition(_settings);
+            _appWindow.Move(new PointInt32(pos.X, pos.Y));
+            BringWindowToForeground();
+        }
+        private PointInt32 CalcWindowsPosition(AppSettings settings)
+        {
+            int winW = settings.WindowWidth > 0 ? settings.WindowWidth : RemoteWindow.Width;
+            int winH = settings.WindowHeight > 0 ? settings.WindowHeight : RemoteWindow.Height;
+
+            const uint MONITOR_DEFAULTTOPRIMARY = 1;
+
+            // Any point works; Windows ignores it when using DEFAULTTOPRIMARY
+            System.Drawing.Point dummy = new System.Drawing.Point { X = 0, Y = 0 };
+
+            IntPtr hMonitor = MonitorFromPoint(dummy, MONITOR_DEFAULTTOPRIMARY);
+
             var mi = new MonitorInfo { cbSize = Marshal.SizeOf<MonitorInfo>() };
-            GetMonitorInfo(hMon, ref mi);
+            GetMonitorInfo(hMonitor, ref mi);
             var work = mi.rcWork;
 
-            int winW = RemoteWindow.Width;
-            int winH = RemoteWindow.Height;
 
-            // Center on cursor horizontally, sit just above the taskbar
-            int x = Math.Clamp(cursor.X - winW / 2, work.Left, work.Right - winW);
-            int y = work.Bottom - winH;
-
-            _appWindow.Move(new PointInt32(x, y));
-            BringWindowToForeground();
+            return new PointInt32(work.Width - winW, work.Bottom - winH);
         }
 
         private void BringWindowToForeground()

@@ -76,7 +76,7 @@ public class DeviceService : IDisposable
             await device.Connect();
             ReplaceDevice(device);
             PersistDevice();
-            Notify(StatusType.Ok, $"Connected: {device.Info.Name ?? device.Info.Id}");
+            Notify(StatusType.Ok, $"{device.Info.Name ?? device.Info.Id}");
         }
         catch (Exception ex) { Notify(StatusType.Error, $"Serial failed: {ex.Message}"); }
     }

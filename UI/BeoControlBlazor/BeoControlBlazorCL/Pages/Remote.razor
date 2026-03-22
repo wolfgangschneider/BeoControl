@@ -97,7 +97,7 @@
             DeviceType.PC2    => "PC2",
             _                 => dev.Id ?? "Unknown"
         };
-        return $"CONNECTED  {detail}";
+        return $"{detail}";
     }
 
     private static string RemoteLabel(RemoteType r) => r switch
