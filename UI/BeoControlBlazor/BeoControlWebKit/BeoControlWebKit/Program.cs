@@ -56,7 +56,6 @@ internal class Program : IHostedService
 
         _serviceProvider = serviceProvider;
         _deviceService = serviceProvider.GetRequiredService<DeviceService>();
-        _settings = AppSettings.Load();
         _app = Adw.Application.New("org.gir.core", Gio.ApplicationFlags.FlagsNone);
 
         _app.OnActivate += (sender, args) =>
@@ -70,7 +69,7 @@ internal class Program : IHostedService
             _window = Gtk.ApplicationWindow.New((Adw.Application)sender);
             _window.Title = "BC";
 
-            var lastWinPosition = _settings.LastWinPosition;
+            var lastWinPosition = _deviceService.Settings.LastWinPosition;
             _window.SetDefaultSize(lastWinPosition.WindowWidth, lastWinPosition.WindowHeight);
 
             var webView = new BlazorWebView(_serviceProvider);
@@ -79,13 +78,19 @@ internal class Program : IHostedService
             _window.SetChild(webView);
             _window.Show();
 
+            // Save window geometry before GTK destroys the window (GetWidth/Height return 0 after)
+            _window.OnCloseRequest += (_, _) =>
+            {
+                SaveWindowState();
+                return false;
+            };
+
             // Allow opening developer tools
             webView.GetSettings().EnableDeveloperExtras = true;
         };
 
         _app.OnShutdown += (sender, args) =>
         {
-            SaveWindowState();
             _gtkExited = true;
             lifetime.StopApplication();
         };
@@ -101,8 +106,6 @@ internal class Program : IHostedService
 
         lifetime.ApplicationStopping.Register(() =>
         {
-            SaveWindowState();
-
             // Only call Quit if GTK hasn't already exited (e.g. external stop request)
             if (!_gtkExited)
                 _app.Quit();
@@ -114,19 +117,20 @@ internal class Program : IHostedService
     bool _gtkExited;
     readonly IServiceProvider _serviceProvider;
     readonly DeviceService _deviceService;
-    readonly AppSettings _settings;
     readonly Adw.Application _app;
     Gtk.ApplicationWindow? _window;
 
     private void SaveWindowState()
     {
+        Console.WriteLine("Call SaveWindowState");
         if (_window is null)
             return;
 
-        var lastWinPosition = _settings.LastWinPosition;
+        var lastWinPosition = _deviceService.Settings.LastWinPosition;
         lastWinPosition.WindowWidth = _window.GetWidth();
         lastWinPosition.WindowHeight = _window.GetHeight();
-        _settings.Save();
+        Console.WriteLine($"Save W{lastWinPosition.WindowWidth} H:{lastWinPosition.WindowHeight}");
+        _deviceService.Settings.Save();
     }
 
     public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
