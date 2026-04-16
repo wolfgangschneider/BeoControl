@@ -2,7 +2,7 @@
 
 .setup {
     display: grid;
-    grid-template-rows: auto auto auto 1fr auto;
+    grid-template-rows: auto 1fr;
     height: 100%;
     background: linear-gradient(170deg, #e2e2e2 0%, #c8c8c8 100%);
     border-radius: 6px 6px 0 0;
@@ -40,6 +40,11 @@
     font-size: 10px;
     font-weight: bold;
     letter-spacing: 3px;
+}
+
+.setup-scroll {
+    overflow-y: auto;
+    min-height: 0;
 }
 
 /* ── Status bar ───────────────────────────────── */

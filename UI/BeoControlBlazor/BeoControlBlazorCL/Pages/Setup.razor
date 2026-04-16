@@ -20,26 +20,27 @@
         <span class="setup-title">DEVICE SETUP</span>
     </div>
 
-    <div class="setup-status @DisplayStatusClass">
-        <span class="setup-dot @DisplayDotClass"></span>
-        <span class="setup-status-text">@DisplayStatusText</span>
-        @if (DeviceService.IsConnected && DeviceService.CurrentDevice is { } info)
-        {
-            <strong class="setup-device-name">@(info.Name ?? info.Id)</strong>
-            <button class="setup-btn setup-btn-outline" @onclick="Disconnect">DISCONNECT</button>
-        }
-    </div>
+    <div class="setup-scroll">
+        <div class="setup-status @DisplayStatusClass">
+            <span class="setup-dot @DisplayDotClass"></span>
+            <span class="setup-status-text">@DisplayStatusText</span>
+            @if (DeviceService.IsConnected && DeviceService.CurrentDevice is { } info)
+            {
+                <strong class="setup-device-name">@(info.Name ?? info.Id)</strong>
+                <button class="setup-btn setup-btn-outline" @onclick="Disconnect">DISCONNECT</button>
+            }
+        </div>
 
-    <div class="setup-tabs">
-        @foreach (var tab in Tabs)
-        {
-            <button class="setup-tab @(ActiveTab == tab ? "active" : "")" @onclick="() => SelectTab(tab)">
-                @TabLabel(tab)
-            </button>
-        }
-    </div>
+        <div class="setup-tabs">
+            @foreach (var tab in Tabs)
+            {
+                <button class="setup-tab @(ActiveTab == tab ? "active" : "")" @onclick="() => SelectTab(tab)">
+                    @TabLabel(tab)
+                </button>
+            }
+        </div>
 
-    <div class="setup-panel">
+        <div class="setup-panel">
 
         
 
@@ -228,10 +229,11 @@
             </div>
         </section>
 
-    </div>
+        </div>
 
-    <div class="setup-footer">
-        <span class="setup-brand">BANG &amp; OLUFSEN</span>
+        <div class="setup-footer">
+            <span class="setup-brand">BANG &amp; OLUFSEN</span>
+        </div>
     </div>
 
 </div>
