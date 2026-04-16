@@ -120,6 +120,10 @@
       <ApplicationTitle>BeoControl</ApplicationTitle>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(TargetFramework)'=='net10.0-ios'">
+      <ProvisioningType>manual</ProvisioningType>
+    </PropertyGroup>
+
     <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
         <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
         <Content Include="Platforms\Windows\tray_connected.ico" CopyToOutputDirectory="PreserveNewest" Link="tray_connected.ico" />
