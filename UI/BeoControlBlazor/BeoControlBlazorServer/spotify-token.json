@@ -1,0 +1,9 @@
+{
+  "AccessToken": "BQA2DODwl8X-ShyI6-f4fr4QFYzZVUWlxp8JLHGYrAc1z4NCImoy1BYVbCntBGmD0DFRji9mfH0P4KrS5IVsGNyBm6MzAIkrQFgdDibwl8cDKtRcOF7GcaULU2t8oiLArvnZJ3rcnb_p4KVr28TNzMrpetlI_k2m51YA9C1lkVT_QZzIKUC7TJttwmohWXjITVel6w7lhlB8a7BOUW7dbZ1zsXWsJdYBhhDh9sDS8OU5yAQMjFFU60896MzZr9B8jtEVotw",
+  "TokenType": "Bearer",
+  "ExpiresIn": 3600,
+  "Scope": "user-modify-playback-state user-read-playback-state user-read-currently-playing user-read-private",
+  "RefreshToken": "AQD2ZVfx37NYZxrU0NQmKJ5Rge4JMQsBJSVZK2RgR-pNeMwwzI9wyBjkSsRaLnoKAk-rq6qOiHe-HqInSA3ymjrxxkXX3GnN9JYVCAQtTOHU4Gl4ENSun9Xz9I3Jgs_vDTk",
+  "CreatedAt": "2026-04-16T16:34:16.5388281Z",
+  "IsExpired": false
+}

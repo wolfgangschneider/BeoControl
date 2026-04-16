@@ -3,10 +3,13 @@
 @using BeoControlBlazor.Services
 @using BeoControlBlazorServices
 @using BeoControlBlazorCL.Remotes
-@using BeoControlBlazorCL.Components;
+@using BeoControlBlazorCL.Components
+@using Microsoft.JSInterop
 @using Spotify
+
 @inject DeviceService DeviceService
 @inject NavigationManager Nav
+@inject IJSRuntime JS;
 @implements IDisposable
 
 
@@ -109,6 +112,11 @@
 
     private async Task SendCommand(string command)
     {
+        if (command == "menu" &&   IsSpotifyTriggerSelected())
+            {
+                OpenSpotifyAsync();
+                return;
+            }
         DeviceService.SendCommand(command);
 
         var spotifyCommand = TryMapSpotifyCommand(command);
@@ -118,6 +126,14 @@
         var spotifyController = await GetSpotifyControllerAsync();
         await spotifyController.ExecuteAsync(spotifyCommand.Value);
     }
+
+    protected async void OpenSpotifyAsync()
+    {
+      
+        await JS.InvokeVoidAsync("open", "https://open.spotify.com/", "spotifytab", "popup=yes,width=1200,height=900");
+        //await Launcher.Default.OpenAsync("https://open.spotify.com/");
+    }
+
 
     private async Task<SpotifyController> GetSpotifyControllerAsync()
     {
@@ -147,6 +163,7 @@
             || !string.Equals(redirectUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException("Spotify Redirect URI is invalid.");
+
         }
 
         var connection = await SpotifyController.ConnectAsync(SpotifyClientId, redirectUri.ToString());
