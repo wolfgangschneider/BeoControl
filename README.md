@@ -10,6 +10,7 @@ BeoControl lets you control B&O Masterlink devices (TV, Radio, CD, DVD, etc.) fr
 - **Audio control** — volume, bass, treble, balance, loudness
 - **Source switching** — TV, Radio, CD, DVD, SAT, PC and more
 - **Multi-transport support** — USB (PC2), Serial/USB (ESP32), Bluetooth LE (ESP32)
+- **Spotify playback control** — optional Spotify integration for play, pause, next, previous and now-playing info
 - **UI-agnostic design** — the core logic is fully decoupled from the UI layer, making it straightforward to add new frontends
 - **Shared settings** — all UIs share a single settings file (`%APPDATA%\BeoControl\beocontrol.settings.json`) and auto-connect on startup
 
@@ -79,6 +80,8 @@ Any UI  ──→  IDevice  ──→  Adapter  ──→  Transport  ──→ 
 | `Adapters/Pc2Adapter` | Adapts PC2 USB hardware to `IDevice` |
 | `Hardware/dotnet_pc2` | Low-level Masterlink/PC2 protocol implementation |
 | `Hardware/esp32_beo4` | ESP32 firmware (PlatformIO) for Beo4 remote emulation |
+| `AddIns/SpotifyApi/Spotify` | Shared Spotify playback integration library |
+| `AddIns/SpotifyApi/SpotifyHost` | Console host for Spotify authentication and playback control |
 | `UI/BeoControlTUI` | Terminal UI using RazorConsole |
 | `UI/BeoControlBlazor` | Web UI using ASP.NET Core Blazor Server |
 | `UI/BeoControlMaui` | Windows tray app using .NET MAUI + Blazor Hybrid |
@@ -153,6 +156,37 @@ The workflow creates the GitHub release automatically if it does not already exi
 ```bash
 dotnet run --project UI/PC2ControlExample/PC2ControlExample
 ```
+
+### Spotify
+
+BeoControl also includes an optional Spotify integration:
+
+- standalone Spotify console control via `SpotifyHost`
+- commands: `play`, `pause`, `next`, `prev`
+- now-playing information with title, artist and play/pause state
+- Blazor Beo4 integration: when the active source is `A.TAPE`, Beo4 transport keys can control Spotify and show track info in the display
+
+Build and run the Spotify host:
+
+```bash
+dotnet run --project AddIns/SpotifyApi/SpotifyHost
+```
+
+Create `AddIns/SpotifyApi/SpotifyHost/spotifysettings.json` with your Spotify app settings:
+
+```json
+{
+  "ClientId": "your-spotify-client-id",
+  "RedirectUri": "http://127.0.0.1:5543/callback",
+  "PreferredDeviceName": "Musikanlage"
+}
+```
+
+Notes:
+
+- you need a Spotify app Client ID
+- the redirect URI must match the URI configured in your Spotify app
+- a Spotify playback device must already be available (desktop app, phone, web player, etc.)
 
 ### Linux
 

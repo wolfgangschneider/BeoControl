@@ -1,9 +1,11 @@
 @page "/"
+@using System.Text.Json
 @using BeoControl.Interfaces
 @using BeoControlBlazor.Services
 @using BeoControlBlazorServices
 @using BeoControlBlazorCL.Remotes
 @using BeoControlBlazorCL.Components;
+@using Spotify
 @inject DeviceService DeviceService
 @inject NavigationManager Nav
 @implements IDisposable
@@ -38,7 +40,7 @@
     }
     else
     {
-        <Beo4 OnCommand="SendCommand" DeviceStatus="@_status.Text" />
+        <Beo4 OnCommand="SendCommand" DeviceStatus="@_status.Text" Info="@_info" />
     }
     
     <div style="width:var(--remote-width); margin:0 auto;">
@@ -54,6 +56,7 @@
 @code {
     private RemoteType Selected;
     private StatusMessage _status = new(StatusType.Idle, "");
+    private string _info = string.Empty;
 
     protected override void OnInitialized()
     {
@@ -68,7 +71,20 @@
             return;
 
         if (msg.Kind == StatusKind.Source)
+        {
+            var sourceChanged = !string.Equals(_status.Text, msg.Text, StringComparison.Ordinal);
             _status = msg;
+
+            if (sourceChanged)
+            {
+                _info = string.Empty;
+                if (IsATapeSelected())
+                {
+                    var spotifyController = await GetSpotifyControllerAsync();
+                    await spotifyController.RefreshNowPlayingAsync();
+                }
+            }
+        }
         await InvokeAsync(StateHasChanged);
     }
 
@@ -81,8 +97,119 @@
         DeviceService.Settings.Save();
     }
 
-    private void SendCommand(string command) =>
+    private Task<SpotifyController>? _spotifyControllerTask;
+
+    private async Task SendCommand(string command)
+    {
         DeviceService.SendCommand(command);
+
+        var spotifyCommand = TryMapSpotifyCommand(command);
+        if (spotifyCommand is null || !IsATapeSelected())
+            return;
+
+        var spotifyController = await GetSpotifyControllerAsync();
+        await spotifyController.ExecuteAsync(spotifyCommand.Value);
+    }
+
+    private Task<SpotifyController> GetSpotifyControllerAsync() =>
+        _spotifyControllerTask ??= ConnectSpotifyAsync();
+
+    private async Task<SpotifyController> ConnectSpotifyAsync()
+    {
+        var settings = await LoadSpotifySettingsAsync();
+        var connection = await SpotifyController.ConnectAsync(settings);
+        var selectedDevice = SelectSpotifyDevice(connection.Devices, settings.PreferredDeviceName);
+
+        var controller = new SpotifyController(
+            connection.Client,
+            connection.CurrentUserDisplayName,
+            selectedDevice,
+            OnSpotifyNowPlayingChanged);
+        await controller.RefreshNowPlayingAsync();
+        return controller;
+    }
+
+    private void OnSpotifyNowPlayingChanged(SpotifyNowPlaying? nowPlaying)
+    {
+        _ = InvokeAsync(() =>
+        {
+            _info = $"{nowPlaying?.Title ?? string.Empty} \n {nowPlaying?.Artist ?? string.Empty}";
+            StateHasChanged();
+        });
+    }
+
+    private static async Task<SpotifyAppSettings> LoadSpotifySettingsAsync()
+    {
+        return  new()
+        {
+        
+            PreferredDeviceName="Musikanlage",
+            ClientId = "d241779ec817475db4bf6b5bd0a457c7",
+            RedirectUri = "http://127.0.0.1:5543/callback",
+            
+        };
+        // const string settingsFileName = "spotifysettings.json";
+        // var settingsPath = Path.Combine(Environment.CurrentDirectory, settingsFileName);
+        // SpotifyAppSettings settings;
+
+        // if (File.Exists(settingsPath))
+        // {
+        //     await using var stream = File.OpenRead(settingsPath);
+        //     settings = await JsonSerializer.DeserializeAsync<SpotifyAppSettings>(stream)
+        //         ?? throw new InvalidOperationException($"Could not read {settingsFileName}.");
+        // }
+        // else
+        // {
+        //     settings = new SpotifyAppSettings();
+        // }
+
+        // if (string.IsNullOrWhiteSpace(settings.ClientId))
+        //     throw new InvalidOperationException(
+        //         $"Set ClientId in {settingsFileName} or via the SPOTIFY_CLIENT_ID environment variable.");
+
+        // if (!Uri.TryCreate(settings.RedirectUri, UriKind.Absolute, out var redirectUri)
+        //     || !string.Equals(redirectUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
+        // {
+        //     throw new InvalidOperationException("RedirectUri must be a valid http:// URL.");
+        // }
+
+        // return settings with { RedirectUri = redirectUri.ToString() };
+    }
+
+    private static SpotifyAPI.Web.Device SelectSpotifyDevice(
+        IReadOnlyList<SpotifyAPI.Web.Device> devices,
+        string? preferredDeviceName)
+    {
+        if (devices.Count == 0)
+            throw new InvalidOperationException("No Spotify playback device is available.");
+
+        if (!string.IsNullOrWhiteSpace(preferredDeviceName))
+        {
+            return devices.FirstOrDefault(device =>
+                       string.Equals(device.Name, preferredDeviceName, StringComparison.OrdinalIgnoreCase))
+                   ?? throw new InvalidOperationException(
+                       $"Preferred device '{preferredDeviceName}' was not found.");
+        }
+
+        return devices.FirstOrDefault(device => device.IsActive) ?? devices[0];
+    }
+
+    private bool IsATapeSelected() =>
+        _status.Kind == StatusKind.Source &&
+        (_status.Text.StartsWith("A.MEM", StringComparison.OrdinalIgnoreCase) ||
+         _status.Text.StartsWith("A.TAPE", StringComparison.OrdinalIgnoreCase) ||
+         _status.Text.StartsWith("ATAPE", StringComparison.OrdinalIgnoreCase));
+
+    private static SpotifyPlaybackCommand? TryMapSpotifyCommand(string command) => command switch
+    {
+        "left" => SpotifyPlaybackCommand.Previous,
+        "right" => SpotifyPlaybackCommand.Next,
+        "stop" => SpotifyPlaybackCommand.Pause,
+        "play" => SpotifyPlaybackCommand.Play,
+        "go" => SpotifyPlaybackCommand.Play,
+
+        _ => null
+    };
 
     private string ConnectionLabel()
     {

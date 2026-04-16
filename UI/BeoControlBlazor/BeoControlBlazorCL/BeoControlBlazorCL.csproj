@@ -18,6 +18,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
 	  <ProjectReference Include="..\..\..\Adapters\Beo4Adapter\Beo4Adapter.csproj" />
 	  <ProjectReference Include="..\..\..\Adapters\Pc2Adapter\Pc2Adapter.csproj" />
+	  <ProjectReference Include="..\..\..\AddIns\SpotifyApi\Spotify\Spotify.csproj" />
 	  <ProjectReference Include="..\..\..\Interfaces\BeoControlInterfaces.csproj" />
 	  <ProjectReference Include="..\BeoControlBlazorServices\BeoControlBlazorServices.csproj" />
 

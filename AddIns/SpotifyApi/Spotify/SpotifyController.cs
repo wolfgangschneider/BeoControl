@@ -12,7 +12,9 @@ public sealed class SpotifyController
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     private readonly Action<SpotifyNowPlaying?>? _nowPlayingCallback;
+    private readonly SemaphoreSlim _nowPlayingLock = new(1, 1);
     private readonly SpotifyClient _spotify;
+    private SpotifyNowPlaying? _lastNowPlaying;
 
     public SpotifyController(
         SpotifyClient spotify,
@@ -26,6 +28,9 @@ public sealed class SpotifyController
             : currentUserDisplayName;
         SelectedDevice = selectedDevice ?? throw new ArgumentNullException(nameof(selectedDevice));
         _nowPlayingCallback = nowPlayingCallback;
+
+        if (_nowPlayingCallback is not null)
+            _ = PollNowPlayingAsync();
     }
 
     public string CurrentUserDisplayName { get; }
@@ -71,7 +76,7 @@ public sealed class SpotifyController
                     {
                         DeviceId = SelectedDevice.Id
                     });
-                    await NotifyNowPlayingAsync();
+                    await NotifyNowPlayingAsync(delayMs: 500);
                     return "Playback started.";
 
                 case SpotifyPlaybackCommand.Pause:
@@ -79,7 +84,7 @@ public sealed class SpotifyController
                     {
                         DeviceId = SelectedDevice.Id
                     });
-                    await NotifyNowPlayingAsync();
+                    await NotifyNowPlayingAsync(delayMs: 500);
                     return "Playback paused.";
 
                 case SpotifyPlaybackCommand.Next:
@@ -87,7 +92,7 @@ public sealed class SpotifyController
                     {
                         DeviceId = SelectedDevice.Id
                     });
-                    await NotifyNowPlayingAsync();
+                    await NotifyNowPlayingAsync(delayMs: 500);
                     return "Skipped to next track.";
 
                 case SpotifyPlaybackCommand.Previous:
@@ -113,7 +118,7 @@ public sealed class SpotifyController
             {
                 DeviceId = SelectedDevice.Id
             });
-            await NotifyNowPlayingAsync();
+            await NotifyNowPlayingAsync(delayMs: 500);
 
             return "Restarted current track.";
         }
@@ -122,7 +127,7 @@ public sealed class SpotifyController
         {
             DeviceId = SelectedDevice.Id
         });
-        await NotifyNowPlayingAsync();
+        await NotifyNowPlayingAsync(delayMs: 500);
 
         return "Went to previous track.";
     }
@@ -132,15 +137,38 @@ public sealed class SpotifyController
         await NotifyNowPlayingAsync();
     }
 
-    private async Task NotifyNowPlayingAsync()
+    private async Task NotifyNowPlayingAsync(int delayMs = 0)
     {
         if (_nowPlayingCallback is null)
         {
             return;
         }
 
-        var playback = await _spotify.Player.GetCurrentPlayback();
-        _nowPlayingCallback(SpotifyNowPlaying.FromPlayback(playback));
+        await _nowPlayingLock.WaitAsync();
+        try
+        {
+            if (delayMs > 0)
+                await Task.Delay(delayMs);
+
+            var playback = await _spotify.Player.GetCurrentPlayback();
+            var nowPlaying = SpotifyNowPlaying.FromPlayback(playback);
+            if (EqualityComparer<SpotifyNowPlaying?>.Default.Equals(_lastNowPlaying, nowPlaying))
+                return;
+
+            _lastNowPlaying = nowPlaying;
+            _nowPlayingCallback(nowPlaying);
+        }
+        finally
+        {
+            _nowPlayingLock.Release();
+        }
+    }
+
+    private async Task PollNowPlayingAsync()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        while (await timer.WaitForNextTickAsync())
+            await NotifyNowPlayingAsync();
     }
 
     private static async Task<PKCETokenResponse> AuthenticateAsync(SpotifyAppSettings settings, string tokenPath)
