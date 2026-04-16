@@ -1,7 +1,8 @@
-using System.ComponentModel;
-using System.Text.Json;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
+
+using System.ComponentModel;
+using System.Text.Json;
 
 namespace Spotify;
 
@@ -114,7 +115,8 @@ public sealed class SpotifyController : IDisposable
         }
         catch (APIException ex)
         {
-            throw new InvalidOperationException($"Spotify API error: {ex.Message}", ex);
+            return "Spotify API error.";
+            //throw new InvalidOperationException($"Spotify API error: {ex.Message}", ex);
         }
     }
 
@@ -159,7 +161,7 @@ public sealed class SpotifyController : IDisposable
         }
         catch (APIException ex)
         {
-            throw new InvalidOperationException($"Spotify API error: {ex.Message}", ex);
+            //throw new InvalidOperationException($"Spotify API error: {ex.Message}", ex);
         }
     }
 

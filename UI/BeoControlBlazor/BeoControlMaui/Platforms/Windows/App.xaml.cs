@@ -6,6 +6,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 using Windows.Graphics;
 
@@ -28,7 +29,9 @@ namespace BeoControlMaui.WinUI
         private Microsoft.UI.Dispatching.DispatcherQueue? _dispatcher;
         private IntPtr _windowHandle;
         private bool _exitRequested;
+        private bool _isWindowVisible = true;
         private readonly List<WinForms.ToolStripItem> _trayCommandItems = new();
+        ToolStripMenuItem showHideItem;
 
         [DllImport("user32.dll")] static extern bool GetCursorPos(out System.Drawing.Point pt);
         [DllImport("user32.dll")] static extern IntPtr MonitorFromPoint(System.Drawing.Point pt, uint flags);
@@ -49,6 +52,7 @@ namespace BeoControlMaui.WinUI
             public System.Drawing.Rectangle rcWork;
             public uint dwFlags;
         }
+
 
         public App()
         {
@@ -79,12 +83,27 @@ namespace BeoControlMaui.WinUI
 
             if (Application.Windows[0].Handler?.PlatformView is Microsoft.UI.Xaml.Window win)
             {
+
                 _win = win;
                 _dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
                 _windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(win);
                 _appWindow = AppWindow.GetFromWindowId(
                     Microsoft.UI.Win32Interop.GetWindowIdFromWindow(
                         _windowHandle));
+                //win.SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
+
+
+
+
+                bool sm = IsSilentLaunchRequested();
+
+                ShowWindow(_windowHandle, sm ? 0 : 1); // 0 => silent, 1 => normal
+                _isWindowVisible = !sm;
+
+
+
+                if (_appWindow.Presenter is OverlappedPresenter presenter)
+                    presenter.SetBorderAndTitleBar(false, false);
 
                 _settings = AppSettings.Load();
                 var lastWinPosition = _settings.LastWinPosition;
@@ -103,10 +122,7 @@ namespace BeoControlMaui.WinUI
                 StartSingleInstanceListener();
                 _ = _deviceService.AutoConnectAsync();
 
-                if (IsSilentLaunchRequested())
-                {
-                    _appWindow.Hide();
-                }
+
             }
         }
 
@@ -151,11 +167,23 @@ namespace BeoControlMaui.WinUI
 
                 var menu = new WinForms.ContextMenuStrip();
                 _trayMenu = menu;
-                menu.Items.Add("Show", null, (_, _) =>
-                {
-                    GetCursorPos(out var pt);
-                    _dispatcher?.TryEnqueue(() => ShowWindowAboveTray(pt));
-                });
+                //menu.Items.Add("Show", null, (_, _) =>
+                //{
+                //    GetCursorPos(out var pt);
+                //    _dispatcher?.TryEnqueue(() => ShowWindowAboveTray(pt));
+                //});
+                //menu.Items.Add((_isWindowVisible) ? "Hide" : "Show", null, (_, _) =>
+                //{
+                //    GetCursorPos(out var pt);
+                //    ToggleWindowVisibility(pt);
+                //});
+
+                showHideItem = new WinForms.ToolStripMenuItem("Hide", null, (_, _) =>
+               {
+                   GetCursorPos(out var pt);
+                   ToggleWindowVisibility(pt);
+               });
+                menu.Items.Add(showHideItem);
                 menu.Items.Add(new WinForms.ToolStripSeparator());
 
                 var muteItem = new WinForms.ToolStripMenuItem("MUTE", null, (_, _) =>
@@ -164,19 +192,23 @@ namespace BeoControlMaui.WinUI
                 });
                 var aTapeItem = new WinForms.ToolStripMenuItem("A.TAPE", null, (_, _) =>
                 {
-                    _deviceService?.SendCommand("mute");
+                    _deviceService?.SendCommand("atape");
                 });
                 var radioItem = new WinForms.ToolStripMenuItem("RADIO", null, (_, _) =>
                 {
-                    _deviceService?.SendCommand("mute");
+                    _deviceService?.SendCommand("radio");
                 });
                 var phonoItem = new WinForms.ToolStripMenuItem("PHONO", null, (_, _) =>
                 {
-                    _deviceService?.SendCommand("mute");
+                    _deviceService?.SendCommand("phono");
+                });
+                var pcItem = new WinForms.ToolStripMenuItem("PC", null, (_, _) =>
+                {
+                    _deviceService?.SendCommand("pc");
                 });
                 _trayCommandItems.Clear();
-                _trayCommandItems.AddRange([muteItem, aTapeItem, radioItem, phonoItem]);
-                menu.Items.AddRange([muteItem, aTapeItem, radioItem, phonoItem]);
+                _trayCommandItems.AddRange([muteItem, aTapeItem, radioItem, phonoItem, pcItem]);
+                menu.Items.AddRange([muteItem, aTapeItem, radioItem, phonoItem, pcItem]);
 
                 menu.Items.Add(new WinForms.ToolStripSeparator());
                 menu.Items.Add("Exit", null, (_, _) =>
@@ -187,7 +219,7 @@ namespace BeoControlMaui.WinUI
                 {
                     if (e.Button != WinForms.MouseButtons.Left) return;
                     GetCursorPos(out var pt);
-                    _dispatcher?.TryEnqueue(() => ShowWindowAboveTray(pt));
+                    _dispatcher?.TryEnqueue(() => ToggleWindowVisibility(pt));
                 };
 
                 UpdateTrayConnectionState(deviceService?.IsConnected ?? false);
@@ -239,9 +271,41 @@ namespace BeoControlMaui.WinUI
         {
             if (_appWindow is null) return;
 
-            var pos = CalcWindowsPosition(_settings);
-            _appWindow.Move(new PointInt32(pos.X, pos.Y));
+            //var pos = CalcWindowsPosition(_settings);
+            //_appWindow.Move(new PointInt32(pos.X, pos.Y));
+
+            const uint MONITOR_DEFAULTTONEAREST = 2;
+
+            IntPtr hMonitor = MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST);
+            var mi = new MonitorInfo { cbSize = Marshal.SizeOf<MonitorInfo>() };
+            GetMonitorInfo(hMonitor, ref mi);
+            var work = mi.rcWork;
+
+            PointInt32 newPos = new()
+            {
+                X = work.Right - _appWindow.Size.Width,
+                Y = work.Bottom - _appWindow.Size.Height,
+            };
+            _appWindow.Move(newPos);
+
             BringWindowToForeground();
+        }
+
+        private void ToggleWindowVisibility(System.Drawing.Point cursor)
+        {
+            if (_appWindow is null)
+                return;
+
+            if (_isWindowVisible)
+            {
+                _appWindow.Hide();
+                showHideItem?.Text = "Show";
+                _isWindowVisible = false;
+                return;
+            }
+
+            showHideItem?.Text = "Hide";
+            ShowWindowAboveTray(cursor);
         }
 
         private PointInt32 CalcWindowsPosition(AppSettings? settings)
@@ -283,6 +347,7 @@ namespace BeoControlMaui.WinUI
             if (_windowHandle == IntPtr.Zero) return;
 
             _appWindow?.Show();
+            _isWindowVisible = true;
             ShowWindow(_windowHandle, IsIconic(_windowHandle) ? SwRestore : SwShow);
             BringWindowToTop(_windowHandle);
             SetForegroundWindow(_windowHandle);
@@ -315,6 +380,7 @@ namespace BeoControlMaui.WinUI
             if (_exitRequested) return;
             e.Cancel = true;
             _appWindow?.Hide();
+            _isWindowVisible = false;
         }
 
         private void ExitApp()
