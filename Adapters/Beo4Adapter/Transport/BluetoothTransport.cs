@@ -12,6 +12,8 @@ namespace Beo4Adapter.Transport;
 /// </summary>
 public class BluetoothTransport : ITransport
 {
+    private static readonly TimeSpan InitialHandshakeTimeout = TimeSpan.FromSeconds(3);
+
     internal const string NusServiceUuidString = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
     internal static readonly BluetoothUuid NusService = BluetoothUuid.FromGuid(Guid.Parse(NusServiceUuidString));
     internal static readonly BluetoothUuid NusRxChar = BluetoothUuid.FromGuid(Guid.Parse("6E400002-B5A3-F393-E0A9-E50E24DCCA9E"));
@@ -26,6 +28,7 @@ public class BluetoothTransport : ITransport
     private readonly string? _preferredDeviceName;
     // Discovery varies by platform, but connection and NUS traffic handling stay shared here.
     private readonly IBluetoothDiscovery _discovery;
+    private TaskCompletionSource<bool>? _initialHandshakeCompletion;
 
     public bool IsConnected { get; private set; }
 
@@ -240,6 +243,7 @@ public class BluetoothTransport : ITransport
 
         _rxChar = rxCharacteristic;
         _txChar = txCharacteristic;
+        _initialHandshakeCompletion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         txCharacteristic.CharacteristicValueChanged += OnNotification;
         await txCharacteristic.StartNotificationsAsync();
@@ -250,9 +254,11 @@ public class BluetoothTransport : ITransport
             OnStatusChanged?.Invoke(new StatusMessage(StatusType.Idle, "BLE disconnected", StatusKind.Connection));
         };
 
+        await WriteAsync("name\n");
+        await WaitForInitialHandshakeAsync(device, ct);
+
         IsConnected = true;
         OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, $"Beo4Remote BLE ({device.Name})", StatusKind.Connection));
-        await WriteAsync("name\n");
     }
 
     private void CleanupConnectionState()
@@ -264,6 +270,7 @@ public class BluetoothTransport : ITransport
         }
 
         _rxChar = null;
+        _initialHandshakeCompletion = null;
         _device?.Gatt.Disconnect();
         _device = null;
         IsConnected = false;
@@ -281,6 +288,31 @@ public class BluetoothTransport : ITransport
         await _rxChar.WriteValueWithResponseAsync(bytes);
     }
 
+    private async Task WaitForInitialHandshakeAsync(BluetoothDevice device, CancellationToken ct)
+    {
+        var handshakeCompletion = _initialHandshakeCompletion
+            ?? throw new InvalidOperationException("Bluetooth handshake was not initialized.");
+
+        Task completedTask;
+        try
+        {
+            completedTask = await Task.WhenAny(handshakeCompletion.Task, Task.Delay(InitialHandshakeTimeout, ct));
+        }
+        catch (OperationCanceledException)
+        {
+            CleanupConnectionState();
+            throw;
+        }
+
+        if (completedTask != handshakeCompletion.Task)
+        {
+            CleanupConnectionState();
+            throw new TimeoutException($"BLE device '{device.Name ?? device.Id ?? "Unknown"}' did not respond to the initial handshake.");
+        }
+
+        await handshakeCompletion.Task;
+    }
+
     private void OnNotification(object? sender, GattCharacteristicValueChangedEventArgs args)
     {
         if (args.Value is null || args.Value.Length == 0)
@@ -291,7 +323,11 @@ public class BluetoothTransport : ITransport
             return;
 
         if (text.StartsWith("Name:", StringComparison.OrdinalIgnoreCase))
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, "Connected", StatusKind.Connection));
+        {
+            _initialHandshakeCompletion?.TrySetResult(true);
+            if (IsConnected)
+                OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, "Connected", StatusKind.Connection));
+        }
         else if (ProtocolStatusParser.TryParseSourceStatus(text, out var sourceStatus))
             OnStatusChanged?.Invoke(new StatusMessage(StatusType.Source, sourceStatus, StatusKind.Source));
         else

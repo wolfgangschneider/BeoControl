@@ -1,4 +1,5 @@
 using BeoControl.Interfaces;
+using BeoControlBlazorServices;
 using Beoported.Pc2;
 
 using System.Text.Json;
@@ -43,6 +44,7 @@ public class AppSettings
     public bool SpotifyEnabled { get; set; } = true;
     public string SpotifyPreferredDeviceName { get; set; } = string.Empty;
     public string SpotifyTriggerCommand { get; set; } = "atape";
+    public SpotifyLaunchMode SpotifyLaunchMode { get; set; } = SpotifyLaunchMode.Web;
 
     public static AppSettings Load()
     {
@@ -54,6 +56,8 @@ public class AppSettings
             settings.SpotifyEnabled = settings.SpotifyEnabled;
             settings.SpotifyPreferredDeviceName ??= string.Empty;
             settings.SpotifyTriggerCommand ??= "atape";
+            if (!Enum.IsDefined(settings.SpotifyLaunchMode))
+                settings.SpotifyLaunchMode = SpotifyLaunchMode.Web;
             return settings;
         }
         catch { return new AppSettings(); }

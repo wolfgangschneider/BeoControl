@@ -213,6 +213,14 @@
                     </datalist>
                 </label>
 
+                <label class="setup-field">
+                    <span class="setup-field-label">Launch mode</span>
+                    <InputSelect class="setup-text-input" @bind-Value="SpotifyLaunchModeSetting" disabled="@(!SpotifyEnabled)">
+                        <option value="@SpotifyLaunchMode.Web">Web</option>
+                        <option value="@SpotifyLaunchMode.App">App</option>
+                    </InputSelect>
+                </label>
+
                 @if (SpotifyEnabled && !string.IsNullOrEmpty(SpotifyDevicesStatus))
                 {
                     <p class="setup-hint">@SpotifyDevicesStatus</p>
@@ -315,6 +323,19 @@
 
             _spotifyPreferredDeviceName = normalized;
             DeviceService.Settings.SpotifyPreferredDeviceName = normalized;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private SpotifyLaunchMode SpotifyLaunchModeSetting
+    {
+        get => DeviceService.Settings.SpotifyLaunchMode;
+        set
+        {
+            if (DeviceService.Settings.SpotifyLaunchMode == value)
+                return;
+
+            DeviceService.Settings.SpotifyLaunchMode = value;
             DeviceService.Settings.Save();
         }
     }

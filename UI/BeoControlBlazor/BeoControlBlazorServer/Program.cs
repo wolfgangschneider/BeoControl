@@ -9,6 +9,7 @@ builder.Services.AddRazorComponents()
 
 // Register DeviceService as a normal singleton; this host drives its lifecycle explicitly.
 builder.Services.AddSingleton<DeviceService>();
+builder.Services.AddScoped<ILaunchSpotifyService, LaunchSpotifyService>();
 builder.Services.AddSingleton<IAutostartRegistrationService, UnsupportedAutostartRegistrationService>();
 
 var app = builder.Build();
