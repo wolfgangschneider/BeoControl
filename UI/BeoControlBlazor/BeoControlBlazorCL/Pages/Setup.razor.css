@@ -196,6 +196,69 @@
     accent-color: #7eca7e;
 }
 
+.setup-form {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.setup-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.setup-field-label {
+    color: #aaa;
+    font-size: 8px;
+    font-weight: bold;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.setup-text-input {
+    background: #1a1a1a;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 2px;
+    padding: 6px 8px;
+    font-size: 9px;
+    font-family: inherit;
+    line-height: 1.2;
+    min-height: 32px;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+::deep select.setup-text-input,
+input.setup-text-input[list] {
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+::deep select.setup-text-input {
+    background: #1a1a1a;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 2px;
+    font-size: 9px;
+    font-family: inherit;
+    line-height: 1.2;
+    min-height: 32px;
+    padding: 6px 24px 6px 8px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath fill='%23ffffff' d='M0 0h10L5 6z'/%3E%3C/svg%3E");
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    background-size: 10px 6px;
+}
+
+input.setup-text-input[list]::-webkit-calendar-picker-indicator {
+    opacity: 1;
+    filter: grayscale(1) brightness(2);
+}
+
 /* ── Action buttons ───────────────────────────── */
 
 .setup-actions {

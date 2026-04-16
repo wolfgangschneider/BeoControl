@@ -4,6 +4,7 @@
 @using BeoControlBlazorCL.Components
 @using BeoControlBlazorServices
 @using Microsoft.AspNetCore.Components.Forms
+@using Spotify
 @inject DeviceService DeviceService
 @inject IAutostartRegistrationService AutostartRegistrationService
 @inject NavigationManager Nav
@@ -174,6 +175,51 @@
             }
         </section>
 
+        <section class="setup-card">
+            <div class="setup-card-header">
+                <div>
+                    <h3 class="setup-card-title">Spotify</h3>
+                    <p class="setup-card-subtitle">Enable Spotify forwarding, choose the trigger source and select a Spotify device.</p>
+                </div>
+            </div>
+
+            <div class="setup-form">
+                <label class="setup-choice">
+                    <input type="checkbox" @bind="SpotifyEnabled" @bind:after="OnSpotifyEnabledChanged" />
+                    <span>Connect to Spotify</span>
+                </label>
+
+                <label class="setup-field">
+                    <span class="setup-field-label">Trigger command</span>
+                    <InputSelect class="setup-text-input" @bind-Value="SpotifyTriggerCommand" disabled="@(!SpotifyEnabled)">
+                        @foreach (var source in SpotifyTriggerSources)
+                        {
+                            <option value="@source.Name">@FormatSpotifyTriggerSource(source.Name)</option>
+                        }
+                    </InputSelect>
+                </label>
+
+                <label class="setup-field">
+                    <span class="setup-field-label">Preferred device name</span>
+                    <input class="setup-text-input"
+                           list="spotify-device-names"
+                           @bind="SpotifyPreferredDeviceName"
+                           disabled="@(!SpotifyEnabled || IsLoadingSpotifyDevices)" />
+                    <datalist id="spotify-device-names">
+                        @foreach (var deviceName in SpotifyDevices)
+                        {
+                            <option value="@deviceName"></option>
+                        }
+                    </datalist>
+                </label>
+
+                @if (SpotifyEnabled && !string.IsNullOrEmpty(SpotifyDevicesStatus))
+                {
+                    <p class="setup-hint">@SpotifyDevicesStatus</p>
+                }
+            </div>
+        </section>
+
     </div>
 
     <div class="setup-footer">
@@ -190,6 +236,9 @@
         (150, "1.5x"),
         (200, "2x"),
     ];
+    private static readonly CommandInfo[] SpotifyTriggerSources =
+        BeoCommands.All.Where(command => string.Equals(command.Category, "Source", StringComparison.Ordinal))
+            .ToArray();
 
     private DeviceType ActiveTab;
     private bool IsScanning;
@@ -202,6 +251,10 @@
     private CancellationTokenSource? _scanCts;
     private int _remoteButtonZoom = 100;
     private bool _launchOnWindowsSignIn;
+    private bool IsLoadingSpotifyDevices;
+    private string SpotifyDevicesStatus = string.Empty;
+    private List<string> SpotifyDevices = [];
+    private string _spotifyPreferredDeviceName = string.Empty;
 
     private StatusType _statusType = StatusType.Idle;
     private bool Pc2Available;
@@ -220,6 +273,48 @@
             _remoteButtonZoom = value;
             RemoteButton.Zoom = value;
             DeviceService.Settings.RemoteButtonZoom = value;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private bool SpotifyEnabled
+    {
+        get => DeviceService.Settings.SpotifyEnabled;
+        set
+        {
+            if (DeviceService.Settings.SpotifyEnabled == value)
+                return;
+
+            DeviceService.Settings.SpotifyEnabled = value;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private string SpotifyTriggerCommand
+    {
+        get => DeviceService.Settings.SpotifyTriggerCommand;
+        set
+        {
+            var normalized = value?.Trim() ?? string.Empty;
+            if (DeviceService.Settings.SpotifyTriggerCommand == normalized)
+                return;
+
+            DeviceService.Settings.SpotifyTriggerCommand = normalized;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private string SpotifyPreferredDeviceName
+    {
+        get => _spotifyPreferredDeviceName;
+        set
+        {
+            var normalized = value?.Trim() ?? string.Empty;
+            if (_spotifyPreferredDeviceName == normalized)
+                return;
+
+            _spotifyPreferredDeviceName = normalized;
+            DeviceService.Settings.SpotifyPreferredDeviceName = normalized;
             DeviceService.Settings.Save();
         }
     }
@@ -256,7 +351,10 @@
         SelectedSerial = DeviceService.Settings.LastSerial?.Id;
         SelectedBt     = DeviceService.Settings.LastBluetooth?.Id;
         _remoteButtonZoom = NormalizeZoom(DeviceService.Settings.RemoteButtonZoom);
+        _spotifyPreferredDeviceName = DeviceService.Settings.SpotifyPreferredDeviceName;
         _launchOnWindowsSignIn = AutostartRegistrationService.IsEnabled();
+        if (SpotifyEnabled)
+            _ = LoadSpotifyDevicesAsync();
     }
 
     private async void OnServiceStatusChanged(StatusMessage msg)
@@ -416,6 +514,77 @@
         AutostartRegistrationService.SetEnabled(_launchOnWindowsSignIn);
         return Task.CompletedTask;
     }
+
+    private async Task OnSpotifyEnabledChanged()
+    {
+        if (!SpotifyEnabled)
+        {
+            IsLoadingSpotifyDevices = false;
+            SpotifyDevicesStatus = string.Empty;
+            SpotifyDevices = [];
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        await LoadSpotifyDevicesAsync();
+    }
+
+    private async Task LoadSpotifyDevicesAsync()
+    {
+        IsLoadingSpotifyDevices = true;
+        SpotifyDevicesStatus = "Loading Spotify devices…";
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var connection = await SpotifyController.ConnectAsync(
+                "d241779ec817475db4bf6b5bd0a457c7",
+                "http://127.0.0.1:5543/callback");
+
+            SpotifyDevices = connection.Devices
+                .Select(device => device.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .ToList()!;
+
+            SpotifyDevicesStatus = SpotifyDevices.Count == 0
+                ? "No Spotify playback devices available."
+                : string.Empty;
+        }
+        catch (Exception ex)
+        {
+            SpotifyDevices = [];
+            SpotifyDevicesStatus = ex.Message;
+        }
+        finally
+        {
+            IsLoadingSpotifyDevices = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private static string FormatSpotifyTriggerSource(string sourceName) => sourceName.ToUpperInvariant() switch
+    {
+        "TV" => "TV",
+        "RADIO" => "RADIO",
+        "CD" => "CD",
+        "CD2" => "CD 2",
+        "PHONO" => "PHONO",
+        "DVD" => "DVD",
+        "SAT" => "SAT",
+        "VTAPE" => "V.TAPE",
+        "PC" => "PC",
+        "DOORCAM" => "DOORCAM",
+        "LIGHT" => "LIGHT",
+        "AAUX" or "AAUX" => "A.AUX",
+        "VAUX" or "VAUX" => "V.AUX",
+        "ATAPE" => "A.TAPE",
+        "ATAPE2" => "A.TAPE 2",
+        "TEXT" => "TEXT",
+        "SPDEMO" => "SPDEMO",
+        _ => sourceName.ToUpperInvariant()
+    };
 
     public void Dispose()
     {

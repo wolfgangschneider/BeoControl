@@ -1,5 +1,4 @@
 @page "/"
-@using System.Text.Json
 @using BeoControl.Interfaces
 @using BeoControlBlazor.Services
 @using BeoControlBlazorServices
@@ -54,9 +53,13 @@
 
 
 @code {
+    private const string SpotifyClientId = "d241779ec817475db4bf6b5bd0a457c7";
+    private const string SpotifyRedirectUri = "http://127.0.0.1:5543/callback";
+
     private RemoteType Selected;
     private StatusMessage _status = new(StatusType.Idle, "");
     private string _info = string.Empty;
+    private string _spotifyPreferredDeviceName = string.Empty;
 
     protected override void OnInitialized()
     {
@@ -78,7 +81,7 @@
             if (sourceChanged)
             {
                 _info = string.Empty;
-                if (IsATapeSelected())
+                if (DeviceService.Settings.SpotifyEnabled && IsSpotifyTriggerSelected())
                 {
                     var spotifyController = await GetSpotifyControllerAsync();
                     await spotifyController.RefreshNowPlayingAsync();
@@ -88,7 +91,12 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    public void Dispose() => DeviceService.OnStatusChanged -= OnStatusChanged;
+    public void Dispose()
+    {
+        DeviceService.OnStatusChanged -= OnStatusChanged;
+        if (_spotifyControllerTask is { IsCompletedSuccessfully: true })
+            _spotifyControllerTask.Result.Dispose();
+    }
 
     private void SelectRemote(RemoteType r)
     {
@@ -104,27 +112,52 @@
         DeviceService.SendCommand(command);
 
         var spotifyCommand = TryMapSpotifyCommand(command);
-        if (spotifyCommand is null || !IsATapeSelected())
+        if (spotifyCommand is null || !DeviceService.Settings.SpotifyEnabled || !IsSpotifyTriggerSelected())
             return;
 
         var spotifyController = await GetSpotifyControllerAsync();
         await spotifyController.ExecuteAsync(spotifyCommand.Value);
     }
 
-    private Task<SpotifyController> GetSpotifyControllerAsync() =>
-        _spotifyControllerTask ??= ConnectSpotifyAsync();
+    private async Task<SpotifyController> GetSpotifyControllerAsync()
+    {
+        var preferredDeviceName = DeviceService.Settings.SpotifyPreferredDeviceName;
+        if (!string.Equals(_spotifyPreferredDeviceName, preferredDeviceName, StringComparison.Ordinal))
+        {
+            await DisposeSpotifyControllerAsync();
+            _spotifyControllerTask = null;
+            _spotifyPreferredDeviceName = preferredDeviceName;
+        }
+
+        return await (_spotifyControllerTask ??= ConnectSpotifyAsync());
+    }
+
+    private async Task DisposeSpotifyControllerAsync()
+    {
+        if (_spotifyControllerTask is null)
+            return;
+
+        var controller = await _spotifyControllerTask;
+        controller.Dispose();
+    }
 
     private async Task<SpotifyController> ConnectSpotifyAsync()
     {
-        var settings = await LoadSpotifySettingsAsync();
-        var connection = await SpotifyController.ConnectAsync(settings);
-        var selectedDevice = SelectSpotifyDevice(connection.Devices, settings.PreferredDeviceName);
+        if (!Uri.TryCreate(SpotifyRedirectUri, UriKind.Absolute, out var redirectUri)
+            || !string.Equals(redirectUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Spotify Redirect URI is invalid.");
+        }
+
+        var connection = await SpotifyController.ConnectAsync(SpotifyClientId, redirectUri.ToString());
+        var selectedDevice = SelectSpotifyDevice(connection.Devices, DeviceService.Settings.SpotifyPreferredDeviceName);
 
         var controller = new SpotifyController(
             connection.Client,
             connection.CurrentUserDisplayName,
             selectedDevice,
             OnSpotifyNowPlayingChanged);
+        await controller.ActivateSelectedDeviceAsync();
         await controller.RefreshNowPlayingAsync();
         return controller;
     }
@@ -133,47 +166,12 @@
     {
         _ = InvokeAsync(() =>
         {
-            _info = $"{nowPlaying?.Title ?? string.Empty} \n {nowPlaying?.Artist ?? string.Empty}";
+            if (nowPlaying?.IsPlaying == true)
+                _info = $"{nowPlaying.Title ?? string.Empty} \n {nowPlaying.Artist ?? string.Empty}";
+            else
+                _info = "Spotify is paused";
             StateHasChanged();
         });
-    }
-
-    private static async Task<SpotifyAppSettings> LoadSpotifySettingsAsync()
-    {
-        return  new()
-        {
-        
-            PreferredDeviceName="Musikanlage",
-            ClientId = "d241779ec817475db4bf6b5bd0a457c7",
-            RedirectUri = "http://127.0.0.1:5543/callback",
-            
-        };
-        // const string settingsFileName = "spotifysettings.json";
-        // var settingsPath = Path.Combine(Environment.CurrentDirectory, settingsFileName);
-        // SpotifyAppSettings settings;
-
-        // if (File.Exists(settingsPath))
-        // {
-        //     await using var stream = File.OpenRead(settingsPath);
-        //     settings = await JsonSerializer.DeserializeAsync<SpotifyAppSettings>(stream)
-        //         ?? throw new InvalidOperationException($"Could not read {settingsFileName}.");
-        // }
-        // else
-        // {
-        //     settings = new SpotifyAppSettings();
-        // }
-
-        // if (string.IsNullOrWhiteSpace(settings.ClientId))
-        //     throw new InvalidOperationException(
-        //         $"Set ClientId in {settingsFileName} or via the SPOTIFY_CLIENT_ID environment variable.");
-
-        // if (!Uri.TryCreate(settings.RedirectUri, UriKind.Absolute, out var redirectUri)
-        //     || !string.Equals(redirectUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
-        // {
-        //     throw new InvalidOperationException("RedirectUri must be a valid http:// URL.");
-        // }
-
-        // return settings with { RedirectUri = redirectUri.ToString() };
     }
 
     private static SpotifyAPI.Web.Device SelectSpotifyDevice(
@@ -194,11 +192,44 @@
         return devices.FirstOrDefault(device => device.IsActive) ?? devices[0];
     }
 
-    private bool IsATapeSelected() =>
-        _status.Kind == StatusKind.Source &&
-        (_status.Text.StartsWith("A.MEM", StringComparison.OrdinalIgnoreCase) ||
-         _status.Text.StartsWith("A.TAPE", StringComparison.OrdinalIgnoreCase) ||
-         _status.Text.StartsWith("ATAPE", StringComparison.OrdinalIgnoreCase));
+    private bool IsSpotifyTriggerSelected()
+    {
+        if (_status.Kind != StatusKind.Source)
+            return false;
+
+        var statusKey = NormalizeSourceKey(_status.Text);
+        var triggerKey = NormalizeSourceKey(DeviceService.Settings.SpotifyTriggerCommand);
+        if (string.IsNullOrEmpty(statusKey) || string.IsNullOrEmpty(triggerKey))
+            return false;
+
+        return GetSpotifyTriggerKeys(triggerKey).Any(statusKey.StartsWith);
+    }
+
+    private static string NormalizeSourceKey(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : new string(value.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+
+    private static IEnumerable<string> GetSpotifyTriggerKeys(string triggerKey)
+    {
+        yield return triggerKey;
+
+        switch (triggerKey)
+        {
+            case "ATAPE":
+                yield return "AMEM";
+                break;
+            case "AMEM":
+                yield return "ATAPE";
+                break;
+            case "ATAPE2":
+                yield return "AMEM2";
+                break;
+            case "AMEM2":
+                yield return "ATAPE2";
+                break;
+        }
+    }
 
     private static SpotifyPlaybackCommand? TryMapSpotifyCommand(string command) => command switch
     {

@@ -40,6 +40,9 @@ public class AppSettings
 
     /// <summary>Remote button zoom percentage. Zero = use default.</summary>
     public int RemoteButtonZoom { get; set; } = 100;
+    public bool SpotifyEnabled { get; set; } = true;
+    public string SpotifyPreferredDeviceName { get; set; } = string.Empty;
+    public string SpotifyTriggerCommand { get; set; } = "atape";
 
     public static AppSettings Load()
     {
@@ -48,6 +51,9 @@ public class AppSettings
             if (!File.Exists(SettingsFile)) return new AppSettings();
             var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsFile), JsonOpts) ?? new AppSettings();
             settings.LastWinPosition ??= new WindowGeometry();
+            settings.SpotifyEnabled = settings.SpotifyEnabled;
+            settings.SpotifyPreferredDeviceName ??= string.Empty;
+            settings.SpotifyTriggerCommand ??= "atape";
             return settings;
         }
         catch { return new AppSettings(); }

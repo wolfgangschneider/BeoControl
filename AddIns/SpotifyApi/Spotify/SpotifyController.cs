@@ -5,13 +5,14 @@ using SpotifyAPI.Web.Auth;
 
 namespace Spotify;
 
-public sealed class SpotifyController
+public sealed class SpotifyController : IDisposable
 {
     private const int RestartTrackThresholdMs = 3000;
     private const string TokenFileName = "spotify-token.json";
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     private readonly Action<SpotifyNowPlaying?>? _nowPlayingCallback;
+    private readonly CancellationTokenSource _pollCancellation = new();
     private readonly SemaphoreSlim _nowPlayingLock = new(1, 1);
     private readonly SpotifyClient _spotify;
     private SpotifyNowPlaying? _lastNowPlaying;
@@ -36,6 +37,15 @@ public sealed class SpotifyController
     public string CurrentUserDisplayName { get; }
 
     public Device SelectedDevice { get; }
+
+    public static Task<SpotifyConnection> ConnectAsync(string clientId, string redirectUri)
+    {
+        return ConnectAsync(new SpotifyAppSettings
+        {
+            ClientId = clientId,
+            RedirectUri = redirectUri
+        });
+    }
 
     public static async Task<SpotifyConnection> ConnectAsync(SpotifyAppSettings settings)
     {
@@ -137,6 +147,22 @@ public sealed class SpotifyController
         await NotifyNowPlayingAsync();
     }
 
+    public async Task ActivateSelectedDeviceAsync()
+    {
+        try
+        {
+            var playback = await _spotify.Player.GetCurrentPlayback();
+            await _spotify.Player.TransferPlayback(new PlayerTransferPlaybackRequest([SelectedDevice.Id])
+            {
+                Play = playback?.IsPlaying
+            });
+        }
+        catch (APIException ex)
+        {
+            throw new InvalidOperationException($"Spotify API error: {ex.Message}", ex);
+        }
+    }
+
     private async Task NotifyNowPlayingAsync(int delayMs = 0)
     {
         if (_nowPlayingCallback is null)
@@ -167,8 +193,20 @@ public sealed class SpotifyController
     private async Task PollNowPlayingAsync()
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-        while (await timer.WaitForNextTickAsync())
-            await NotifyNowPlayingAsync();
+        try
+        {
+            while (await timer.WaitForNextTickAsync(_pollCancellation.Token))
+                await NotifyNowPlayingAsync();
+        }
+        catch (OperationCanceledException) when (_pollCancellation.IsCancellationRequested)
+        {
+        }
+    }
+
+    public void Dispose()
+    {
+        _pollCancellation.Cancel();
+        _pollCancellation.Dispose();
     }
 
     private static async Task<PKCETokenResponse> AuthenticateAsync(SpotifyAppSettings settings, string tokenPath)
