@@ -41,7 +41,7 @@
     }
     else
     {
-        <Beo4 OnCommand="SendCommand" DeviceStatus="@_status.Text" Info="@_info" />
+        <Beo4 OnCommand="SendCommand" DeviceStatus="@_status.Text" Info="@DisplayedInfo()" />
     }
     
     <div style="width:var(--remote-width); margin:0 auto;">
@@ -94,7 +94,6 @@
 
             if (sourceChanged)
             {
-                _info = string.Empty;
                 if (DeviceService.Settings.SpotifyEnabled && IsSpotifyTriggerSelected())
                 {
                     var spotifyController = await GetSpotifyControllerAsync();
@@ -293,6 +292,8 @@
 
         _ => null
     };
+
+    private string DisplayedInfo() => IsSpotifyTriggerSelected() ? _info : string.Empty;
 
     private string ConnectionLabel()
     {

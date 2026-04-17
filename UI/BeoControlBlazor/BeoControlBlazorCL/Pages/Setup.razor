@@ -203,16 +203,15 @@
 
                 <label class="setup-field">
                     <span class="setup-field-label">Preferred device name</span>
-                    <input class="setup-text-input"
-                           list="spotify-device-names"
-                           @bind="SpotifyPreferredDeviceName"
-                           disabled="@(!SpotifyEnabled || IsLoadingSpotifyDevices)" />
-                    <datalist id="spotify-device-names">
-                        @foreach (var deviceName in SpotifyDevices)
+                    <InputSelect class="setup-text-input"
+                                 @key="_spotifyPreferredDeviceName"
+                                 @bind-Value="SpotifyPreferredDeviceName"
+                                 disabled="@(!SpotifyEnabled || IsLoadingSpotifyDevices)">
+                        @foreach (var deviceName in SpotifyDeviceOptions())
                         {
-                            <option value="@deviceName"></option>
+                            <option @key="deviceName" value="@deviceName">@deviceName</option>
                         }
-                    </datalist>
+                    </InputSelect>
                 </label>
 
                 <label class="setup-field">
@@ -580,6 +579,15 @@
             IsLoadingSpotifyDevices = false;
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private IEnumerable<string> SpotifyDeviceOptions()
+    {
+        if (string.IsNullOrWhiteSpace(_spotifyPreferredDeviceName)
+            || SpotifyDevices.Contains(_spotifyPreferredDeviceName, StringComparer.OrdinalIgnoreCase))
+            return SpotifyDevices;
+
+        return [_spotifyPreferredDeviceName, .. SpotifyDevices];
     }
 
     private static string FormatSpotifyTriggerSource(string sourceName) => sourceName.ToUpperInvariant() switch
