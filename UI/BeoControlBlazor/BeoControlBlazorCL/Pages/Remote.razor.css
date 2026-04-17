@@ -37,6 +37,13 @@
     flex-shrink: 0;
 }
 
+.conn-row--disconnected { color: #e04444; }
+.conn-row--disconnected .conn-dot { background: #e04444; }
+.conn-row--connected { color: #6fcf6f; }
+.conn-row--connected .conn-dot { background: #6fcf6f; }
+.conn-dot.conn-row-dot--disconnected { background: #e04444 !important; }
+.conn-dot.conn-row-dot--connected { background: #6fcf6f !important; }
+
 
 .conn-bar--ok         { background: #1a2e1a; color: #6fcf6f; }
 .conn-bar--ok         .conn-dot { background: #6fcf6f; }

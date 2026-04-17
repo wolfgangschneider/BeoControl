@@ -1,12 +1,16 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 
+using Spotify;
+
 namespace BeoControlBlazorServices;
 
 public sealed class LaunchSpotifyService : ILaunchSpotifyService
 {
     private const string SpotifyWebUrl = "https://open.spotify.com/";
     private const string SpotifyAppUrl = "spotify:";
+    private const string SpotifyClientId = "d241779ec817475db4bf6b5bd0a457c7";
+    private const string SpotifyRedirectUri = "http://127.0.0.1:5543/callback";
 
     public Task OpenAsync(SpotifyLaunchMode launchMode)
     {
@@ -18,5 +22,17 @@ public sealed class LaunchSpotifyService : ILaunchSpotifyService
         });
 
         return Task.CompletedTask;
+    }
+
+    public async Task<IReadOnlyList<string>> GetSpotifyDeviceNamesAsync()
+    {
+        var connection = await SpotifyController.ConnectAsync(SpotifyClientId, SpotifyRedirectUri)
+            ?? throw new InvalidOperationException("Spotify connection failed.");
+
+        return connection.Devices
+            .Select(device => device.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Cast<string>()
+            .ToList();
     }
 }

@@ -9,4 +9,5 @@ public enum SpotifyLaunchMode
 public interface ILaunchSpotifyService
 {
     Task OpenAsync(SpotifyLaunchMode launchMode);
+    Task<IReadOnlyList<string>> GetSpotifyDeviceNamesAsync();
 }

@@ -1,5 +1,7 @@
 using Microsoft.JSInterop;
 
+using Spotify;
+
 namespace BeoControlBlazorServices;
 
 public sealed class LaunchSpotifyService : ILaunchSpotifyService
@@ -8,6 +10,8 @@ public sealed class LaunchSpotifyService : ILaunchSpotifyService
     private const string SpotifyAppUrl = "spotify:";
     private const string SpotifyWebTarget = "spotifytab";
     private const string SpotifyWebFeatures = "popup=yes,width=1200,height=900";
+    private const string SpotifyClientId = "d241779ec817475db4bf6b5bd0a457c7";
+    private const string SpotifyRedirectUri = "http://127.0.0.1:5543/callback";
 
     private readonly IJSRuntime _jsRuntime;
 
@@ -22,5 +26,17 @@ public sealed class LaunchSpotifyService : ILaunchSpotifyService
             return _jsRuntime.InvokeVoidAsync("open", SpotifyAppUrl, "_self").AsTask();
 
         return _jsRuntime.InvokeVoidAsync("open", SpotifyWebUrl, SpotifyWebTarget, SpotifyWebFeatures).AsTask();
+    }
+
+    public async Task<IReadOnlyList<string>> GetSpotifyDeviceNamesAsync()
+    {
+        var connection = await SpotifyController.ConnectAsync(SpotifyClientId, SpotifyRedirectUri)
+            ?? throw new InvalidOperationException("Spotify connection failed.");
+
+        return connection.Devices
+            .Select(device => device.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Cast<string>()
+            .ToList();
     }
 }

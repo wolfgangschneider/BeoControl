@@ -7,6 +7,7 @@
 @using Spotify
 @inject DeviceService DeviceService
 @inject IAutostartRegistrationService AutostartRegistrationService
+@inject ILaunchSpotifyService LaunchSpotifyService
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -560,16 +561,10 @@
 
         try
         {
-            var connection = await SpotifyController.ConnectAsync(
-                "d241779ec817475db4bf6b5bd0a457c7",
-                "http://127.0.0.1:5543/callback");
-
-            SpotifyDevices = connection.Devices
-                .Select(device => device.Name)
-                .Where(name => !string.IsNullOrWhiteSpace(name))
+            SpotifyDevices = (await LaunchSpotifyService.GetSpotifyDeviceNamesAsync())
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-                .ToList()!;
+                .ToList();
 
             SpotifyDevicesStatus = SpotifyDevices.Count == 0
                 ? "No Spotify playback devices available."
