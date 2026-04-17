@@ -70,6 +70,13 @@ public sealed class SpotifyController : IDisposable
             var devices = devicesResponse.Devices ?? [];
             return new SpotifyConnection(spotify, me.DisplayName ?? me.Id, devices);
         }
+        catch (APITooManyRequestsException ex)
+        {
+            var wait = ex.RetryAfter;
+            Console.WriteLine($"Rate limit hit. Waiting {wait} seconds...");
+            return null;
+
+        }
         catch (APIException ex)
         {
             throw new InvalidOperationException($"Spotify API error: {ex.Message}", ex);
