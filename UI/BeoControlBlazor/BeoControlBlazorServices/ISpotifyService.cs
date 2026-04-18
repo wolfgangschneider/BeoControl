@@ -6,7 +6,7 @@ public enum SpotifyLaunchMode
     App
 }
 
-public interface ILaunchSpotifyService
+public interface ISpotifyService
 {
     bool SupportsSpotifyConnectionState { get; }
     Task OpenAsync(SpotifyLaunchMode launchMode);

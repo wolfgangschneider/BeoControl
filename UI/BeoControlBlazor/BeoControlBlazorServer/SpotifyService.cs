@@ -4,7 +4,7 @@ using Spotify;
 
 namespace BeoControlBlazorServices;
 
-public sealed class LaunchSpotifyService : ILaunchSpotifyService
+public sealed class SpotifyService : ISpotifyService
 {
     private const string SpotifyWebUrl = "https://open.spotify.com/";
     private const string SpotifyAppUrl = "spotify:";
@@ -15,7 +15,7 @@ public sealed class LaunchSpotifyService : ILaunchSpotifyService
 
     private readonly IJSRuntime _jsRuntime;
 
-    public LaunchSpotifyService(IJSRuntime jsRuntime)
+    public SpotifyService(IJSRuntime jsRuntime)
     {
         _jsRuntime = jsRuntime;
     }

@@ -12,7 +12,7 @@ using Spotify;
 
 namespace BeoControlBlazorServices;
 
-public sealed class LaunchSpotifyService : ILaunchSpotifyService
+public sealed class SpotifyService : ISpotifyService
 {
     private const string SpotifyWebUri = "https://open.spotify.com/";
     private const string SpotifyAppUri = "spotify:";
