@@ -1,33 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
+using BeoControlBlazorServices;
 
-using Spotify;
+namespace Spotify;
 
-namespace BeoControlBlazorServices;
-
-public sealed class SpotifyService : ISpotifyService
+public abstract class SpotifyServiceBase : ISpotifyService
 {
-    private const string SpotifyWebUrl = "https://open.spotify.com/";
-    private const string SpotifyAppUrl = "spotify:";
     private const string SpotifyClientId = "d241779ec817475db4bf6b5bd0a457c7";
     private const string SpotifyRedirectUri = "http://127.0.0.1:5543/callback";
 
     public bool SupportsSpotifyConnectionState => false;
 
-    public Task OpenAsync(SpotifyLaunchMode launchMode)
-    {
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "xdg-open",
-            Arguments = launchMode == SpotifyLaunchMode.App ? SpotifyAppUrl : SpotifyWebUrl,
-            UseShellExecute = true
-        });
-
-        return Task.CompletedTask;
-    }
+    public abstract Task OpenAsync(SpotifyLaunchMode launchMode);
 
     public async Task<IReadOnlyList<string>> GetSpotifyDeviceNamesAsync()
     {

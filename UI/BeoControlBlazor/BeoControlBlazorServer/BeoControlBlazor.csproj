@@ -14,6 +14,7 @@
 
 
 	<ItemGroup>
+	  <ProjectReference Include="..\..\..\AddIns\Spotify\SpotifyBase\SpotifyBase.csproj" />
 	  <ProjectReference Include="..\..\..\Adapters\Beo4Adapter\Beo4Adapter.csproj" />
 	  <ProjectReference Include="..\..\..\Adapters\Pc2Adapter\Pc2Adapter.csproj" />
 	  <ProjectReference Include="..\..\..\Interfaces\BeoControlInterfaces.csproj" />
@@ -25,7 +26,7 @@
 	
   
  
-  </ItemGroup>
+	</ItemGroup>
 
   <ItemGroup>
     <Folder Include="wwwroot\lib\" />

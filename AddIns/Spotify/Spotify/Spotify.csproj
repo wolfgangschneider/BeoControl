@@ -11,4 +11,8 @@
     <PackageReference Include="SpotifyAPI.Web.Auth" Version="7.*" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SpotifyBase\SpotifyBase.csproj" />
+  </ItemGroup>
+
 </Project>

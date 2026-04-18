@@ -57,8 +57,13 @@ namespace BeoControlMaui
 #else
             builder.Services.AddSingleton<IAutostartRegistrationService, UnsupportedAutostartRegistrationService>();
 #endif
-            builder.Services.AddSingleton<SpotifyService>();
-            builder.Services.AddSingleton<ISpotifyService>(sp => sp.GetRequiredService<SpotifyService>());
+#if ANDROID
+            builder.Services.AddSingleton<AndroidSpotifyService>();
+            builder.Services.AddSingleton<ISpotifyService>(sp => sp.GetRequiredService<AndroidSpotifyService>());
+#else
+            builder.Services.AddSingleton<MauiSpotifyService>();
+            builder.Services.AddSingleton<ISpotifyService>(sp => sp.GetRequiredService<MauiSpotifyService>());
+#endif
 
 #if WINDOWS
             // WebView2 needs a writable user-data folder; C:\Program Files is read-only for non-admins.

@@ -43,8 +43,8 @@ internal class Program : IHostedService
         .AddHostedService<Program>();
 
         builder.Services.AddSingleton<DeviceService>();
-        builder.Services.AddSingleton<SpotifyService>();
-        builder.Services.AddSingleton<ISpotifyService>(sp => sp.GetRequiredService<SpotifyService>());
+        builder.Services.AddSingleton<WebKitSpotifyService>();
+        builder.Services.AddSingleton<ISpotifyService>(sp => sp.GetRequiredService<WebKitSpotifyService>());
         builder.Services.AddSingleton<IAutostartRegistrationService, UnsupportedAutostartRegistrationService>();
 
         using var host = builder.Build();

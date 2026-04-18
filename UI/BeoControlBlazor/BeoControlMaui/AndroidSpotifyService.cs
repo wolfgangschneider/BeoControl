@@ -5,14 +5,11 @@ using System.Text.Json;
 
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Authentication;
-using Microsoft.Maui.Devices;
 using Microsoft.Maui.Storage;
-
-using Spotify;
 
 namespace BeoControlBlazorServices;
 
-public sealed class SpotifyService : ISpotifyService
+public sealed class AndroidSpotifyService : ISpotifyService
 {
     private const string SpotifyWebUri = "https://open.spotify.com/";
     private const string SpotifyAppUri = "spotify:";
@@ -20,7 +17,6 @@ public sealed class SpotifyService : ISpotifyService
     private const string SpotifyAuthorizeUri = "https://accounts.spotify.com/authorize";
     private const string SpotifyTokenUri = "https://accounts.spotify.com/api/token";
     private const string SpotifyClientId = "d241779ec817475db4bf6b5bd0a457c7";
-    private const string SpotifyDesktopRedirectUri = "http://127.0.0.1:5543/callback";
     private const string SpotifyAndroidRedirectUri = "beocontrolspotify://callbac";
     private const string SpotifyTokenCacheFileName = "spotify-mobile-token.json";
     private static readonly SemaphoreSlim SpotifyTokenLock = new(1, 1);
@@ -32,7 +28,7 @@ public sealed class SpotifyService : ISpotifyService
         "user-read-currently-playing",
         "user-modify-playback-state"
     ];
-    public bool SupportsSpotifyConnectionState => DeviceInfo.Platform == DevicePlatform.Android;
+    public bool SupportsSpotifyConnectionState => true;
 
     // maui kann im browser nicht tab recyclen
     public Task OpenAsync(SpotifyLaunchMode launchMode)
@@ -43,42 +39,22 @@ public sealed class SpotifyService : ISpotifyService
 
     public Task<IReadOnlyList<string>> GetSpotifyDeviceNamesAsync()
     {
-        return DeviceInfo.Platform == DevicePlatform.Android
-            ? GetAndroidSpotifyDeviceNamesAsync()
-            : GetDesktopSpotifyDeviceNamesAsync();
+        return GetAndroidSpotifyDeviceNamesAsync();
     }
 
     public Task<string?> GetSpotifyConnectedDeviceNameAsync(string? preferredDeviceName)
     {
-        return DeviceInfo.Platform == DevicePlatform.Android
-            ? GetAndroidSpotifyConnectedDeviceNameAsync(preferredDeviceName)
-            : Task.FromResult<string?>(null);
+        return GetAndroidSpotifyConnectedDeviceNameAsync(preferredDeviceName);
     }
 
     public Task<bool> ExecuteSpotifyCommandAsync(string command, string? preferredDeviceName)
     {
-        return DeviceInfo.Platform == DevicePlatform.Android
-            ? ExecuteAndroidSpotifyCommandAsync(command, preferredDeviceName)
-            : Task.FromResult(false);
+        return ExecuteAndroidSpotifyCommandAsync(command, preferredDeviceName);
     }
 
     public Task<string?> GetSpotifyNowPlayingTextAsync(string? preferredDeviceName)
     {
-        return DeviceInfo.Platform == DevicePlatform.Android
-            ? GetAndroidSpotifyNowPlayingTextAsync()
-            : Task.FromResult<string?>(null);
-    }
-
-    private static async Task<IReadOnlyList<string>> GetDesktopSpotifyDeviceNamesAsync()
-    {
-        var connection = await SpotifyController.ConnectAsync(SpotifyClientId, SpotifyDesktopRedirectUri)
-            ?? throw new InvalidOperationException("Spotify connection failed.");
-
-        return connection.Devices
-            .Select(device => device.Name)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Cast<string>()
-            .ToList();
+        return GetAndroidSpotifyNowPlayingTextAsync();
     }
 
     private static async Task<IReadOnlyList<string>> GetAndroidSpotifyDeviceNamesAsync()
