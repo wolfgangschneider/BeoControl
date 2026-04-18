@@ -159,6 +159,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\AddIns\Spotify\SpotifyBase\SpotifyBase.csproj" />
+      <ProjectReference Include="..\..\..\AddIns\Spotify\Spotify\Spotify.csproj" />
       <ProjectReference Include="..\BeoControlBlazorCL\BeoControlBlazorCL.csproj" />
       <ProjectReference Include="..\BeoControlBlazorServices\BeoControlBlazorServices.csproj" />
     </ItemGroup>

@@ -58,11 +58,11 @@ namespace BeoControlMaui
             builder.Services.AddSingleton<IAutostartRegistrationService, UnsupportedAutostartRegistrationService>();
 #endif
 #if ANDROID
-            builder.Services.AddSingleton<AndroidSpotifyService>();
-            builder.Services.AddSingleton<ISpotifyService>(sp => sp.GetRequiredService<AndroidSpotifyService>());
+            // builder.Services.AddSingleton<AndroidSpotifyService>();
+            builder.Services.AddSingleton<ISpotifyService, AndroidSpotifyService>();
 #else
-            builder.Services.AddSingleton<MauiSpotifyService>();
-            builder.Services.AddSingleton<ISpotifyService>(sp => sp.GetRequiredService<MauiSpotifyService>());
+            // builder.Services.AddSingleton<MauiSpotifyService>();
+            builder.Services.AddSingleton<ISpotifyService, MauiSpotifyService>();
 #endif
 
 #if WINDOWS
