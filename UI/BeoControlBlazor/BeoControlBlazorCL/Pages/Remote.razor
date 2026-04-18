@@ -72,6 +72,7 @@
     private StatusMessage _status = new(StatusType.Idle, "");
     private string _info = string.Empty;
     private string _spotifyPreferredDeviceName = string.Empty;
+    private string? _spotifyConnectedDeviceName;
 
     protected override void OnInitialized()
     {
@@ -96,9 +97,19 @@
             {
                 if (DeviceService.Settings.SpotifyEnabled && IsSpotifyTriggerSelected())
                 {
-                    var spotifyController = await GetSpotifyControllerAsync();
-                    if (spotifyController is not null)
-                        await spotifyController.RefreshNowPlayingAsync();
+                    if (LaunchSpotifyService.SupportsSpotifyConnectionState)
+                    {
+                        _spotifyConnectedDeviceName = await LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(
+                            DeviceService.Settings.SpotifyPreferredDeviceName);
+                        _info = await LaunchSpotifyService.GetSpotifyNowPlayingTextAsync(
+                            DeviceService.Settings.SpotifyPreferredDeviceName) ?? _info;
+                    }
+                    else
+                    {
+                        var spotifyController = await GetSpotifyControllerAsync();
+                        if (spotifyController is not null)
+                            await spotifyController.RefreshNowPlayingAsync();
+                    }
                 }
             }
         }
@@ -133,6 +144,22 @@
         var spotifyCommand = TryMapSpotifyCommand(command);
         if (spotifyCommand is null || !DeviceService.Settings.SpotifyEnabled || !IsSpotifyTriggerSelected())
             return;
+
+        if (LaunchSpotifyService.SupportsSpotifyConnectionState)
+        {
+            var executed = await LaunchSpotifyService.ExecuteSpotifyCommandAsync(
+                spotifyCommand.Value.ToString(),
+                DeviceService.Settings.SpotifyPreferredDeviceName);
+            if (!executed)
+                return;
+
+            _spotifyConnectedDeviceName = await LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(
+                DeviceService.Settings.SpotifyPreferredDeviceName);
+            _info = await LaunchSpotifyService.GetSpotifyNowPlayingTextAsync(
+                DeviceService.Settings.SpotifyPreferredDeviceName) ?? _info;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
 
         var spotifyController = await GetSpotifyControllerAsync();
         if (spotifyController is null)
@@ -177,6 +204,15 @@
             {
                 await DisposeSpotifyControllerAsync();
                 _spotifyControllerTask = null;
+                _spotifyConnectedDeviceName = null;
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            if (LaunchSpotifyService.SupportsSpotifyConnectionState)
+            {
+                _spotifyConnectedDeviceName = await LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(
+                    DeviceService.Settings.SpotifyPreferredDeviceName);
                 await InvokeAsync(StateHasChanged);
                 return;
             }
@@ -187,6 +223,7 @@
         catch
         {
             _spotifyControllerTask = null;
+            _spotifyConnectedDeviceName = null;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -316,6 +353,17 @@
         if (!DeviceService.Settings.SpotifyEnabled)
             return "SPOTIFY DISABLED";
 
+        if (LaunchSpotifyService.SupportsSpotifyConnectionState)
+        {
+            if (!string.IsNullOrWhiteSpace(_spotifyConnectedDeviceName))
+                return $"{_spotifyConnectedDeviceName}  |  SPOTIFY";
+
+            if (!string.IsNullOrWhiteSpace(DeviceService.Settings.SpotifyPreferredDeviceName))
+                return $"{DeviceService.Settings.SpotifyPreferredDeviceName}  |  SPOTIFY";
+
+            return "SPOTIFY DISCONNECTED";
+        }
+
         if (!string.IsNullOrWhiteSpace(DeviceService.Settings.SpotifyPreferredDeviceName))
         {
             if (_spotifyControllerTask is { IsCompletedSuccessfully: true } && _spotifyControllerTask.Result is not null)
@@ -337,6 +385,9 @@
     {
         if (!DeviceService.Settings.SpotifyEnabled)
             return "disconnected";
+
+        if (LaunchSpotifyService.SupportsSpotifyConnectionState)
+            return string.IsNullOrWhiteSpace(_spotifyConnectedDeviceName) ? "disconnected" : "connected";
 
         return _spotifyControllerTask is { IsCompletedSuccessfully: true } && _spotifyControllerTask.Result is not null
             ? "connected"

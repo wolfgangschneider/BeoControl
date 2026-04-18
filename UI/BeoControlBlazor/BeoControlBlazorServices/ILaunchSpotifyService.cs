@@ -8,6 +8,10 @@ public enum SpotifyLaunchMode
 
 public interface ILaunchSpotifyService
 {
+    bool SupportsSpotifyConnectionState { get; }
     Task OpenAsync(SpotifyLaunchMode launchMode);
     Task<IReadOnlyList<string>> GetSpotifyDeviceNamesAsync();
+    Task<string?> GetSpotifyConnectedDeviceNameAsync(string? preferredDeviceName);
+    Task<bool> ExecuteSpotifyCommandAsync(string command, string? preferredDeviceName);
+    Task<string?> GetSpotifyNowPlayingTextAsync(string? preferredDeviceName);
 }

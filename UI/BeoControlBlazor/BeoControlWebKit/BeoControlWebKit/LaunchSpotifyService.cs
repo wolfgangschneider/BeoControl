@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Spotify;
@@ -11,6 +14,8 @@ public sealed class LaunchSpotifyService : ILaunchSpotifyService
     private const string SpotifyAppUrl = "spotify:";
     private const string SpotifyClientId = "d241779ec817475db4bf6b5bd0a457c7";
     private const string SpotifyRedirectUri = "http://127.0.0.1:5543/callback";
+
+    public bool SupportsSpotifyConnectionState => false;
 
     public Task OpenAsync(SpotifyLaunchMode launchMode)
     {
@@ -35,4 +40,13 @@ public sealed class LaunchSpotifyService : ILaunchSpotifyService
             .Cast<string>()
             .ToList();
     }
+
+    public Task<string?> GetSpotifyConnectedDeviceNameAsync(string? preferredDeviceName) =>
+        Task.FromResult<string?>(null);
+
+    public Task<bool> ExecuteSpotifyCommandAsync(string command, string? preferredDeviceName) =>
+        Task.FromResult(false);
+
+    public Task<string?> GetSpotifyNowPlayingTextAsync(string? preferredDeviceName) =>
+        Task.FromResult<string?>(null);
 }

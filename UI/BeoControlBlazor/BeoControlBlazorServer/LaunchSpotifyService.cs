@@ -20,6 +20,8 @@ public sealed class LaunchSpotifyService : ILaunchSpotifyService
         _jsRuntime = jsRuntime;
     }
 
+    public bool SupportsSpotifyConnectionState => false;
+
     public Task OpenAsync(SpotifyLaunchMode launchMode)
     {
         if (launchMode == SpotifyLaunchMode.App)
@@ -39,4 +41,13 @@ public sealed class LaunchSpotifyService : ILaunchSpotifyService
             .Cast<string>()
             .ToList();
     }
+
+    public Task<string?> GetSpotifyConnectedDeviceNameAsync(string? preferredDeviceName) =>
+        Task.FromResult<string?>(null);
+
+    public Task<bool> ExecuteSpotifyCommandAsync(string command, string? preferredDeviceName) =>
+        Task.FromResult(false);
+
+    public Task<string?> GetSpotifyNowPlayingTextAsync(string? preferredDeviceName) =>
+        Task.FromResult<string?>(null);
 }
