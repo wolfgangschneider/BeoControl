@@ -52,7 +52,7 @@ public sealed class SpotifyController : IDisposable
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        var tokenPath = Path.Combine(Environment.CurrentDirectory, TokenFileName);
+        var tokenPath = GetTokenPath();
         var token = await AuthenticateAsync(settings, tokenPath);
 
         var authenticator = new PKCEAuthenticator(settings.ClientId, token);
@@ -218,6 +218,17 @@ public sealed class SpotifyController : IDisposable
         _pollCancellation.Dispose();
     }
 
+    private static string GetTokenPath()
+    {
+        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (string.IsNullOrWhiteSpace(appDataPath))
+            throw new InvalidOperationException("Application data folder is unavailable for Spotify token storage.");
+
+        var tokenDirectory = Path.Combine(appDataPath, "BeoControl");
+        Directory.CreateDirectory(tokenDirectory);
+        return Path.Combine(tokenDirectory, TokenFileName);
+    }
+
     private static async Task<PKCETokenResponse> AuthenticateAsync(SpotifyAppSettings settings, string tokenPath)
     {
         if (File.Exists(tokenPath))
@@ -233,7 +244,7 @@ public sealed class SpotifyController : IDisposable
             }
             catch (JsonException ex)
             {
-                throw new InvalidOperationException($"Invalid JSON token cache in {TokenFileName}: {ex.Message}", ex);
+                throw new InvalidOperationException($"Invalid JSON token cache in {tokenPath}: {ex.Message}", ex);
             }
         }
 

@@ -187,6 +187,7 @@ Notes:
 - you need a Spotify app Client ID
 - the redirect URI must match the URI configured in your Spotify app
 - a Spotify playback device must already be available (desktop app, phone, web player, etc.)
+- the Spotify token cache is stored in the BeoControl app-data folder (for example `~/.config/BeoControl/spotify-token.json` on Linux)
 
 ### Linux
 
