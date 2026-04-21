@@ -1,3 +1,4 @@
+﻿@using BeoControl.Interfaces
 @using BeoControlBlazorCL.Components
 @* Pure layout component — no service knowledge *@
 
@@ -6,69 +7,69 @@
 
     <div>
         <div class="bl1000-section">
-            <RemoteButton Cmd="tv" OnCommand="SendCommand" Caption="TV" />
-            <RemoteButton Cmd="light" OnCommand="SendCommand" Caption="LIGHT" />
-            <RemoteButton Cmd="radio" OnCommand="SendCommand" Caption="RADIO" />
+            <RemoteButton CommandId="@CommandId.Tv" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Light" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Radio" OnCommand="SendCommand" />
 
-            <RemoteButton Cmd="sat" OnCommand="SendCommand" Caption="SAT" />
-            <RemoteButton Cmd="link" OnCommand="SendCommand" Caption="LINK" />
-            <RemoteButton Cmd='@Cmd("cd")' OnCommand="SendCommand" Caption='@Label("cd")' />
+            <RemoteButton CommandId="@CommandId.Sat" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Link" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@ShiftedCommandId(CommandId.Cd)" OnCommand="SendCommand" />
 
-            <RemoteButton Cmd="vtape" OnCommand="SendCommand" Caption="V.TAPE" />
-            <RemoteButton Cmd="record" OnCommand="SendCommand" Caption="RECORD" />
-            <RemoteButton Cmd='@Cmd("atape")' OnCommand="SendCommand" Caption='@Label("atape")' />
+            <RemoteButton CommandId="@CommandId.Vtape" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Record" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@ShiftedCommandId(CommandId.Atape)" OnCommand="SendCommand" />
 
-            <RemoteButton Cmd="menu" OnCommand="SendCommand" Caption="MENU" />
+            <RemoteButton CommandId="@CommandId.Menu" OnCommand="SendCommand" />
             <RemoteButton style="@ShiftButtonStyle" OnClick="ToggleShift" Caption="SHIFT" />
-            <RemoteButton Cmd='@Cmd("phono")' OnCommand="SendCommand" Caption='@Label("phono")' />
+            <RemoteButton CommandId="@ShiftedCommandId(CommandId.Phono)" OnCommand="SendCommand" />
         </div>
 
         <div class="bl1000-section">
-            <RemoteButton Cmd="stop" OnCommand="SendCommand" Caption="STOP" />
-            <RemoteButton Cmd="up" OnCommand="SendCommand" Caption="▲" />
-            <RemoteButton Cmd="play" OnCommand="SendCommand" Caption="PLAY" />
+            <RemoteButton CommandId="@CommandId.Stop" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Up" OnCommand="SendCommand" Caption="▲" />
+            <RemoteButton CommandId="@CommandId.Play" OnCommand="SendCommand" />
 
-            <RemoteButton Cmd="left" OnCommand="SendCommand" Caption="<<" />
-            <RemoteButton Cmd="down" OnCommand="SendCommand" Caption="▼" />
-            <RemoteButton Cmd="right" OnCommand="SendCommand" Caption=">>" />
+            <RemoteButton CommandId="@CommandId.Left" OnCommand="SendCommand" Caption="<<" />
+            <RemoteButton CommandId="@CommandId.Down" OnCommand="SendCommand" Caption="▼" />
+            <RemoteButton CommandId="@CommandId.Right" OnCommand="SendCommand" Caption=">>" />
         </div>
 
         <div class="bl1000-section">
-            <RemoteButton Cmd="7" OnCommand="SendCommand" Caption="7" />
-            <RemoteButton Cmd="8" OnCommand="SendCommand" Caption="8" />
-            <RemoteButton Cmd="9" OnCommand="SendCommand" Caption="9" />
+            <RemoteButton CommandId="@CommandId.Digit7" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit8" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit9" OnCommand="SendCommand" />
 
-            <RemoteButton Cmd="4" OnCommand="SendCommand" Caption="4" />
-            <RemoteButton Cmd="5" OnCommand="SendCommand" Caption="5" />
-            <RemoteButton Cmd="6" OnCommand="SendCommand" Caption="6" />
+            <RemoteButton CommandId="@CommandId.Digit4" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit5" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit6" OnCommand="SendCommand" />
 
-            <RemoteButton Cmd="1" OnCommand="SendCommand" Caption="1" />
-            <RemoteButton Cmd="2" OnCommand="SendCommand" Caption="2" />
-            <RemoteButton Cmd="3" OnCommand="SendCommand" Caption="3" />
+            <RemoteButton CommandId="@CommandId.Digit1" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit2" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit3" OnCommand="SendCommand" />
 
-            <RemoteButton Cmd="text" OnCommand="SendCommand" Caption="TEXT" />
-            <RemoteButton Cmd="0" OnCommand="SendCommand" Caption="0" />
-            <RemoteButton Cmd="goto" OnCommand="SendCommand" Caption="GO TO" disabled />
+            <RemoteButton CommandId="@CommandId.Text" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit0" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Goto" OnCommand="SendCommand" disabled />
         </div>
 
         <div class="bl1000-section">
-            <RemoteButton Cmd="picture" OnCommand="SendCommand" Caption="PICTURE" />
+            <RemoteButton CommandId="@CommandId.Picture" OnCommand="SendCommand" />
             <span></span>
-            <RemoteButton Cmd="vol+" OnCommand="SendCommand" Caption="▲" />
+            <RemoteButton CommandId="@CommandId.VolumeUp" OnCommand="SendCommand" Caption="▲" />
 
-            <RemoteButton Cmd="store" OnCommand="SendCommand" Caption="STORE" />
+            <RemoteButton CommandId="@CommandId.Store" OnCommand="SendCommand" />
             <span></span>
             <span></span>
 
-            <RemoteButton Cmd="speaker" OnCommand="SendCommand" Caption="SOUND" />
+            <RemoteButton CommandId="@CommandId.Speaker" OnCommand="SendCommand" />
             <span></span>
-            <RemoteButton Cmd="vol-" OnCommand="SendCommand" Caption="▼" />
+            <RemoteButton CommandId="@CommandId.VolumeDown" OnCommand="SendCommand" Caption="▼" />
         </div>
 
         <div class="bl1000-section">
-            <RemoteButton Cmd="av" OnCommand="SendCommand" Caption="AV" />
+            <RemoteButton CommandId="@CommandId.Av" OnCommand="SendCommand" />
             <StandbyButton OnCommand="SendCommand" />
-            <RemoteButton Cmd="mute" OnCommand="SendCommand" Caption="MUTE" />
+            <RemoteButton CommandId="@ShiftedCommandId(CommandId.Mute)" OnCommand="SendCommand" />
         </div>
 
     </div>
@@ -79,30 +80,23 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public EventCallback<string> OnCommand { get; set; }
+    [Parameter, EditorRequired] public EventCallback<BeoCommand> OnCommand { get; set; }
     [Parameter] public string? DeviceStatus { get; set; }
-
-    private static readonly Dictionary<string, string> AltMap = new()
-    {
-        ["atape"]   = "atape2",
-        ["cd"]      = "cd2",
-
-        ["mute"]    = "loudness",
-        ["phono"]   = "pc",
-    };
 
     private bool _shifted;
 
-    private string Cmd(string primary) =>
-        _shifted && AltMap.TryGetValue(primary, out var alt) ? alt : primary;
-
-    private string Label(string primary) =>
-        (_shifted && AltMap.TryGetValue(primary, out var alt) ? alt : primary).ToUpper()
-        .Replace("ATAPE", "A.TAPE");
-
     private void ToggleShift() => _shifted = !_shifted;
 
-    private Task SendCommand(string command) => OnCommand.InvokeAsync(command);
+    private Task SendCommand(BeoCommand command) => OnCommand.InvokeAsync(command);
 
     private string? ShiftButtonStyle => _shifted ? "background:#555;outline:1px solid #aaa;" : null;
+
+    private CommandId ShiftedCommandId(CommandId commandId) => !_shifted ? commandId : commandId switch
+    {
+        CommandId.Cd => CommandId.Cd2,
+        CommandId.Phono => CommandId.Pc,
+        CommandId.Atape => CommandId.Atape2,
+        CommandId.Mute => CommandId.Loudness,
+        _ => commandId,
+    };
 }

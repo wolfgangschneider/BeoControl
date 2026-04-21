@@ -1,4 +1,5 @@
-﻿@using Microsoft.JSInterop
+﻿@using BeoControl.Interfaces
+@using Microsoft.JSInterop
 @implements IDisposable
 @* Pure layout component — no service knowledge *@
 @inject IJSRuntime JS
@@ -39,7 +40,7 @@
     };
 </script>
 
-<RemoteButton style=" color: #e83030;font-size: 12px;" @ref="remoteBtn" Cmd="standby" OnCommand="@((cmd) => OnCommand.InvokeAsync(cmd))" Caption="&#9679;" />
+<RemoteButton style=" color: #e83030;font-size: 12px;" @ref="remoteBtn" CommandId="@CommandId.Standby" OnCommand="OnCommand" Caption="&#9679;" />
 @code {
   
     private RemoteButton remoteBtn;
@@ -65,12 +66,12 @@
     }
    
 
-    [Parameter] public EventCallback<string> OnCommand { get; set; } = default!;
+    [Parameter] public EventCallback<BeoCommand> OnCommand { get; set; } = default!;
 
     [JSInvokable]
     public void OnLongPress()
     {
-        OnCommand.InvokeAsync("allstandby");
+        OnCommand.InvokeAsync(BeoCommands.Get(CommandId.AllStandby));
         //OnCommand.InvokeAsync("mute");
     }
 

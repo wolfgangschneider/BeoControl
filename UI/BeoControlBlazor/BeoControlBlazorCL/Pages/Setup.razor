@@ -195,7 +195,7 @@
                     <InputSelect class="setup-text-input" @bind-Value="SpotifyTriggerCommand" disabled="@(!SpotifyEnabled)">
                         @foreach (var source in SpotifyTriggerSources)
                         {
-                            <option value="@source.Name">@FormatSpotifyTriggerSource(source.Name)</option>
+                            <option value="@source.Cmd">@FormatSpotifyTriggerSource(source.Cmd)</option>
                         }
                     </InputSelect>
                 </label>
@@ -245,8 +245,8 @@
         (150, "1.5x"),
         (200, "2x"),
     ];
-    private static readonly CommandInfo[] SpotifyTriggerSources =
-        BeoCommands.All.Where(command => string.Equals(command.Category, "Source", StringComparison.Ordinal))
+    private static readonly BeoCommand[] SpotifyTriggerSources =
+        BeoCommands.All.Where(command => command.Category == CommandCategory.Source)
             .ToArray();
 
     private DeviceType ActiveTab;

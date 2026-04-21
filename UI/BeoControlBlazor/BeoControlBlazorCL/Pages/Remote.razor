@@ -64,15 +64,21 @@
 
 
 @code {
+    private const string SpotifyAddInName = "Spotify";
+    private static readonly BeoCommand[] SourceCommands =
+        BeoCommands.All.Where(command => command.Category == CommandCategory.Source).ToArray();
+
     private RemoteType Selected;
     private StatusMessage _status = new(StatusType.Idle, "");
     private string _info = string.Empty;
     private string? _spotifyConnectedDeviceName;
+    private BeoCommand? _currentSource;
 
     protected override void OnInitialized()
     {
         Selected = DeviceService.Settings.LastRemote;
         RemoteButton.Zoom = NormalizeZoom(DeviceService.Settings.RemoteButtonZoom);
+        SyncSpotifySourceAddIn();
         DeviceService.OnStatusChanged += OnStatusChanged;
         _ = EnsureSpotifyConnectionStateAsync();
     }
@@ -86,10 +92,11 @@
         {
             var sourceChanged = !string.Equals(_status.Text, msg.Text, StringComparison.Ordinal);
             _status = msg;
+            _currentSource = BeoCommands.ResolveSourceCommand(msg.Text) ?? _currentSource;
 
             if (sourceChanged)
             {
-                if (DeviceService.Settings.SpotifyEnabled && IsSpotifyTriggerSelected())
+                if (DeviceService.Settings.SpotifyEnabled && IsSpotifySourceSelected())
                 {
                     _spotifyConnectedDeviceName = await LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(
                         DeviceService.Settings.SpotifyPreferredDeviceName);
@@ -113,17 +120,20 @@
         DeviceService.Settings.Save();
     }
 
-    private async Task SendCommand(string command)
+    private async Task SendCommand(BeoCommand command)
     {
-        if (command == "menu" &&   IsSpotifyTriggerSelected())
+        if (command.Category == CommandCategory.Source)
+            _currentSource = command;
+
+        if (command.Id == CommandId.Menu && IsSpotifySourceSelected())
         {
             await OpenSpotifyAsync();
             return;
         }
-        DeviceService.SendCommand(command);
+        DeviceService.SendCommand(command.Cmd);
 
         var spotifyCommand = TryMapSpotifyCommand(command);
-        if (spotifyCommand is null || !DeviceService.Settings.SpotifyEnabled || !IsSpotifyTriggerSelected())
+        if (spotifyCommand is null || !DeviceService.Settings.SpotifyEnabled || !IsSpotifySourceSelected())
             return;
 
         var executed = await LaunchSpotifyService.ExecuteSpotifyCommandAsync(
@@ -166,57 +176,36 @@
         }
     }
 
-    private bool IsSpotifyTriggerSelected()
+    private bool IsSpotifySourceSelected()
     {
-        if (_status.Kind != StatusKind.Source)
-            return false;
-
-        var statusKey = NormalizeSourceKey(_status.Text);
-        var triggerKey = NormalizeSourceKey(DeviceService.Settings.SpotifyTriggerCommand);
-        if (string.IsNullOrEmpty(statusKey) || string.IsNullOrEmpty(triggerKey))
-            return false;
-
-        return GetSpotifyTriggerKeys(triggerKey).Any(statusKey.StartsWith);
+        return string.Equals(_currentSource?.AddIn, SpotifyAddInName, StringComparison.Ordinal);
     }
 
-    private static string NormalizeSourceKey(string? value) =>
-        string.IsNullOrWhiteSpace(value)
-            ? string.Empty
-            : new string(value.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
-
-    private static IEnumerable<string> GetSpotifyTriggerKeys(string triggerKey)
+    private void SyncSpotifySourceAddIn()
     {
-        yield return triggerKey;
+        foreach (var sourceCommand in SourceCommands)
+            sourceCommand.AddIn = null;
 
-        switch (triggerKey)
-        {
-            case "ATAPE":
-                yield return "AMEM";
-                break;
-            case "AMEM":
-                yield return "ATAPE";
-                break;
-            case "ATAPE2":
-                yield return "AMEM2";
-                break;
-            case "AMEM2":
-                yield return "ATAPE2";
-                break;
-        }
+        if (!DeviceService.Settings.SpotifyEnabled)
+            return;
+
+        var triggerCommand = BeoCommands.Find(DeviceService.Settings.SpotifyTriggerCommand);
+        if (triggerCommand?.Category == CommandCategory.Source)
+            triggerCommand.AddIn = SpotifyAddInName;
     }
 
-    private static string? TryMapSpotifyCommand(string command) => command switch
+    private static string? TryMapSpotifyCommand(BeoCommand command) => command.Id switch
     {
-        "left" => "Previous",
-        "right" => "Next",
-        "stop" => "Pause",
-        "play" => "Play",
-        "go" => "Play",
+        CommandId.Left => "Previous",
+        CommandId.Right => "Next",
+        CommandId.Stop => "Pause",
+        CommandId.Play => "Play",
+        CommandId.Go => "Play",
 
         _ => null
     };
 
-    private string DisplayedInfo() => IsSpotifyTriggerSelected() ? _info : string.Empty;
+    private string DisplayedInfo() => IsSpotifySourceSelected() ? _info : string.Empty;
 
     private string ConnectionLabel()
     {

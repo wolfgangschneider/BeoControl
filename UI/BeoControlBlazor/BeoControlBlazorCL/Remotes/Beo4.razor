@@ -1,3 +1,4 @@
+@using BeoControl.Interfaces
 @using BeoControlBlazorCL.Components
 
 
@@ -10,67 +11,67 @@
         </div>
     </div>
 
-    <div>
-        <div class="beo4-section">
-            <RemoteButton Cmd="tv" OnCommand="SendCommand" Caption="TV" />
-            <RemoteButton Cmd="light" OnCommand="SendCommand" Caption="LIGHT" />
-            <RemoteButton Cmd="radio" OnCommand="SendCommand" Caption="RADIO" />
+        <div>
+            <div class="beo4-section">
+            <RemoteButton CommandId="@CommandId.Tv" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Light" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Radio" OnCommand="SendCommand" />
 
-            <RemoteButton Cmd="sat" OnCommand="SendCommand" Caption="SAT" />
-            <RemoteButton Cmd="dvd" OnCommand="SendCommand" Caption="DVD" />
-            <RemoteButton Cmd="cd" OnCommand="SendCommand" Caption="CD" />
+            <RemoteButton CommandId="@CommandId.Sat" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Dvd" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Cd" OnCommand="SendCommand" />
 
-            <RemoteButton Cmd="vtape" OnCommand="SendCommand" Caption="V.TAPE" />
-            <RemoteButton Cmd="record" OnCommand="SendCommand" Caption="RECORD" />
-            <RemoteButton Cmd="atape" OnCommand="SendCommand" Caption="A.TAPE" />
+            <RemoteButton CommandId="@CommandId.Vtape" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Record" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Atape" OnCommand="SendCommand" />
         </div>
 
         <div class="beo4-section">
-            <RemoteButton Cmd="7" OnCommand="SendCommand" Caption="7" />
-            <RemoteButton Cmd="8" OnCommand="SendCommand" Caption="8" />
-            <RemoteButton Cmd="9" OnCommand="SendCommand" Caption="9" />
+            <RemoteButton CommandId="@CommandId.Digit7" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit8" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit9" OnCommand="SendCommand" />
 
-            <RemoteButton Cmd="4" OnCommand="SendCommand" Caption="4" />
-            <RemoteButton Cmd="5" OnCommand="SendCommand" Caption="5" />
-            <RemoteButton Cmd="6" OnCommand="SendCommand" Caption="6" />
+            <RemoteButton CommandId="@CommandId.Digit4" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit5" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit6" OnCommand="SendCommand" />
 
-            <RemoteButton Cmd="1" OnCommand="SendCommand" Caption="1" />
-            <RemoteButton Cmd="2" OnCommand="SendCommand" Caption="2" />
-            <RemoteButton Cmd="3" OnCommand="SendCommand" Caption="3" />
+            <RemoteButton CommandId="@CommandId.Digit1" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit2" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit3" OnCommand="SendCommand" />
 
-            <RemoteButton Cmd="text" OnCommand="SendCommand" Caption="TEXT" />
-            <RemoteButton Cmd="0" OnCommand="SendCommand" Caption="0" />
-            <RemoteButton Cmd="menu" OnCommand="SendCommand" Caption="MENU" />
+            <RemoteButton CommandId="@CommandId.Text" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Digit0" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Menu" OnCommand="SendCommand" />
         </div>
 
         <div class="beo4-nav-area">
             <div class="beo4-nav">
-            <button class="beo4-nav-btn" style="background:Green;width:30px;transform:rotate(-45deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand("green")'></button>
-            <button style="z-index:10;transform: scaleX(2) " class="beo4-nav-btn beo4-nav-up" @onclick='() => SendCommand("up")'>▲</button>
-            <button class="beo4-nav-btn" style="background:yellow;width:30px;transform:rotate(45deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand("yellow")'></button>
+            <button class="beo4-nav-btn" style="background:Green;width:30px;transform:rotate(-45deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand(CommandId.Green)'></button>
+            <button style="z-index:10;transform: scaleX(2) " class="beo4-nav-btn beo4-nav-up" @onclick='() => SendCommand(CommandId.Up)'>▲</button>
+            <button class="beo4-nav-btn" style="background:yellow;width:30px;transform:rotate(45deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand(CommandId.Yellow)'></button>
 
-            <button style="z-index:10; transform: scaleY(2) " class="beo4-nav-btn beo4-nav-left" @onclick='() => SendCommand("left")'>◄</button>
+            <button style="z-index:10; transform: scaleY(2) " class="beo4-nav-btn beo4-nav-left" @onclick='() => SendCommand(CommandId.Left)'>◄</button>
 
                 <div style="z-index:10; background:#1a1a1a;transform: scale(1.1);transform-origin: center center;">
                 <button style="width:100%;" class="beo4-nav-btn beo4-nav-go" @onclick="OnGoPressed">GO</button>
                 </div>
 
-            <button class="beo4-nav-btn beo4-nav-right" style="z-index:10;transform: scaleY(2) " @onclick='() => SendCommand("right")'>►</button>
+            <button class="beo4-nav-btn beo4-nav-right" style="z-index:10;transform: scaleY(2) " @onclick='() => SendCommand(CommandId.Right)'>►</button>
 
-            <button class="beo4-nav-btn" style="background:Red;width:30px;transform:rotate(-135deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand("red")'></button>
-            <button class="beo4-nav-btn beo4-nav-down" style="z-index:10;transform: scaleX(2) "  @onclick='() => SendCommand("down")'>▼</button>
-            <button class="beo4-nav-btn" style="background:Blue;width:30px;transform:rotate(135deg) scaleY(1.5);margin:auto;"  @onclick='() => SendCommand("blue")'></button>
+            <button class="beo4-nav-btn" style="background:Red;width:30px;transform:rotate(-135deg) scaleY(1.5);margin:auto;" @onclick='() => SendCommand(CommandId.Red)'></button>
+            <button class="beo4-nav-btn beo4-nav-down" style="z-index:10;transform: scaleX(2) "  @onclick='() => SendCommand(CommandId.Down)'>▼</button>
+            <button class="beo4-nav-btn" style="background:Blue;width:30px;transform:rotate(135deg) scaleY(1.5);margin:auto;"  @onclick='() => SendCommand(CommandId.Blue)'></button>
             </div>
         </div>
 
         <div class="beo4-section">
             <RemoteButton OnClick="OnListPressed" Caption="LIST" />
-            <RemoteButton Cmd="vol+" OnCommand="SendCommand" Caption="▲" />
+            <RemoteButton CommandId="@CommandId.VolumeUp" OnCommand="SendCommand" Caption="▲" />
             <RemoteButton OnClick="OnGoExit" Caption="EXIT" />
 
-            <RemoteButton Cmd="stop" OnCommand="SendCommand" Caption="STOP" />
-            <RemoteButton Cmd="vol-" OnCommand="SendCommand" Caption="▼" />
-            <StandbyButton  OnCommand="@((cmd) =>SendCommand(cmd))" />
+            <RemoteButton CommandId="@CommandId.Stop" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.VolumeDown" OnCommand="SendCommand" Caption="▼" />
+            <StandbyButton OnCommand="SendCommand" />
         </div>
     </div>
 
@@ -81,7 +82,7 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public EventCallback<string> OnCommand { get; set; }
+    [Parameter, EditorRequired] public EventCallback<BeoCommand> OnCommand { get; set; }
     [Parameter] public string? DeviceStatus { get; set; }
     [Parameter] public string? Info { get; set; }
 
@@ -97,38 +98,31 @@
         return status.Trim();
     }
 
-    private Task SendCommand(string command)
+    private Task SendCommand(CommandId commandId) => SendCommand(BeoCommands.Get(commandId));
+
+    private Task SendCommand(BeoCommand command)
     {
         _listIndex = -1;
         return OnCommand.InvokeAsync(command);
     }
 
-    private void OnRightClick(string command)
+    private void OnRightClick(BeoCommand command)
     {
         OnCommand.InvokeAsync(command);
         _listIndex = -1;
     }
 
-    // Commands not on physical keys — cycled via LIST
-    private static readonly List<(string Cmd, string Display)> AltList =
-    [
-        ("mute",     "MUTE"),
-        ("pc",     "PC"),
-        ("atape2",     "A.TAPE 2"),
-        ("cd2",        "CD 2"),
-        ("phono",      "PHONO"),
-        ("speaker",      "SOUND"),
-
-    ];
-
     private int _listIndex = -1;
     private bool InListMode => _listIndex >= 0;
 
     private string DisplayText =>
-        InListMode ? AltList[_listIndex].Display : ExtractSource(DeviceStatus);
+        InListMode ? LabelFor(AltList[_listIndex]) : ExtractSource(DeviceStatus);
 
     private void OnListPressed()
     {
+        if (AltList.Count == 0)
+            return;
+
         _listIndex = InListMode ? (_listIndex + 1) % AltList.Count : 0;
     }
 
@@ -136,10 +130,10 @@
     {
         if (InListMode)
         {
-            return OnCommand.InvokeAsync(AltList[_listIndex].Cmd);
+            return OnCommand.InvokeAsync(AltList[_listIndex]);
         }
 
-        return SendCommand("go");
+        return SendCommand(CommandId.Go);
     }
 
     private void OnGoExit()
@@ -150,13 +144,28 @@
         }
         else
         {
-            _ = SendCommand("exit");
+            _ = SendCommand(CommandId.Exit);
         }
     }
 
     private void OnExitPressed() { } // unused
 
     private void ToggleShift() { } // unused, kept to avoid rename cascades
+
+    private static List<BeoCommand> AltList =>
+    [
+        BeoCommands.Get(CommandId.Mute),
+        BeoCommands.Get(CommandId.Pc),
+        BeoCommands.Get(CommandId.Atape2),
+        BeoCommands.Get(CommandId.Cd2),
+        BeoCommands.Get(CommandId.Phono),
+        BeoCommands.Get(CommandId.Speaker),
+    ];
+
+    private static string LabelFor(BeoCommand command) =>
+        string.IsNullOrWhiteSpace(command.RemoteLabel)
+            ? command.Cmd.ToUpperInvariant().Replace("ATAPE", "A.TAPE")
+            : command.RemoteLabel;
 
 
 

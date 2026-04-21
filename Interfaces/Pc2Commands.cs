@@ -6,18 +6,18 @@ namespace BeoControl.Interfaces;
 /// </summary>
 public static class Pc2Commands
 {
-    public static readonly CommandInfo[] All =
+    public static readonly BeoCommand[] All =
     [
         // ── PC2-only sources (no known Beo4 IR equivalent yet) ────────────
-        new("dvd2",     "DVD 2",          "PC2 Source"),
-        new("on",       "Masterlink on",  "PC2 Source"),
+        BeoCommands.Get(CommandId.Pc2Dvd2),
+        BeoCommands.Get(CommandId.Pc2On),
 
         // ── Incremental tone controls (PC2 hardware mixer only) ───────────
-        new("bass+",    "Bass up",        "PC2 Tone", "[steps]"),
-        new("bass-",    "Bass down",      "PC2 Tone", "[steps]"),
-        new("treble+",  "Treble up",      "PC2 Tone", "[steps]"),
-        new("treble-",  "Treble down",    "PC2 Tone", "[steps]"),
-        new("balance+", "Balance right",  "PC2 Tone", "[steps]"),
-        new("balance-", "Balance left",   "PC2 Tone", "[steps]"),
+        BeoCommands.Get(CommandId.Pc2BassUp),
+        BeoCommands.Get(CommandId.Pc2BassDown),
+        BeoCommands.Get(CommandId.Pc2TrebleUp),
+        BeoCommands.Get(CommandId.Pc2TrebleDown),
+        BeoCommands.Get(CommandId.Pc2BalanceUp),
+        BeoCommands.Get(CommandId.Pc2BalanceDown),
     ];
 }

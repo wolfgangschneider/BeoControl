@@ -25,7 +25,7 @@
                                 <Columns>
                                 <Markup Content="@CmdName(item.Cmd!)" Foreground="@Color.Cyan1" />
                                  <Markup Content="@CmdParam(item.Cmd!)" Foreground="@Color.Grey30" /> 
-                                 <Markup Content="@item.Cmd!.Description" Foreground="@Color.Grey" /> 
+                                 <Markup Content="@AppCommands.DescriptionFor(item.Cmd!)" Foreground="@Color.Grey" /> 
                                 </Columns>
                                
                        
@@ -55,7 +55,7 @@
 
     }
 
-    private record HelpRow(bool IsHeader, string? Category, CommandInfo? Cmd);
+    private record HelpRow(bool IsHeader, string? Category, BeoCommand? Cmd);
 
     private static readonly IReadOnlyList<HelpRow> _rows = BuildRows();
 
@@ -70,22 +70,29 @@
         // Beo4 IR commands grouped by category
         foreach (var group in BeoCommands.All.GroupBy(c => c.Category))
         {
-            list.Add(new HelpRow(true, group.Key, null));
+            list.Add(new HelpRow(true, CategoryLabel(group.Key), null));
             list.AddRange(group.Select(c => new HelpRow(false, null, c)));
         }
 
         // PC2-specific commands grouped by category
         foreach (var group in Pc2Commands.All.GroupBy(c => c.Category))
         {
-            list.Add(new HelpRow(true, group.Key, null));
+            list.Add(new HelpRow(true, CategoryLabel(group.Key), null));
             list.AddRange(group.Select(c => new HelpRow(false, null, c)));
         }
 
         return list;
     }
 
-    private static string CmdName(CommandInfo c)  => $"  {c.Name,-10}";
-    private static string CmdParam(CommandInfo c) => $"{c.ParamHint ?? "",-8}";
+    private static string CmdName(BeoCommand c)  => $"  {c.Cmd,-10}";
+    private static string CmdParam(BeoCommand c) => $"{AppCommands.ParamHintFor(c),-8}";
+    private static string CategoryLabel(CommandCategory category) => category switch
+    {
+        CommandCategory.Pc2Source => "PC2 Source",
+        CommandCategory.Pc2Tone => "PC2 Tone",
+        CommandCategory.AppCommands => "App Commands",
+        _ => category.ToString(),
+    };
 
     protected override void OnInitialized()
     {

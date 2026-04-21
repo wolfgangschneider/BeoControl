@@ -152,11 +152,11 @@ else
     private bool _showDeviceSelect = false;
 
     // ── merged command table for completion & validation ─────────────
-    private static readonly CommandInfo[] _allCommands =
+    private static readonly BeoCommand[] _allCommands =
         [.. BeoCommands.All, .. Pc2Commands.All];
 
     private static readonly HashSet<string> _allNames =
-        new(_allCommands.Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
+        new(_allCommands.Select(c => c.Cmd), StringComparer.OrdinalIgnoreCase);
 
     // ── device helpers ───────────────────────────────────────────────
     private void SubscribeDevice(IDevice device)
@@ -540,7 +540,7 @@ else
     }
 
     private static (string ghost, string param)? CompleteFromList(
-        string input, IEnumerable<CommandInfo> candidates, bool splitOnSpace)
+        string input, IEnumerable<BeoCommand> candidates, bool splitOnSpace)
     {
         if(input == "/")
             return null;
@@ -551,21 +551,21 @@ else
         var hasParam = parts.Length > 1;
 
         var matches = candidates
-            .Where(c => c.Name.StartsWith(cmdPart, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(c => c.Name)
+            .Where(c => c.Cmd.StartsWith(cmdPart, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(c => c.Cmd)
             .ToList();
 
         if (matches.Count == 0) return null;
 
         var exact = matches.FirstOrDefault(
-            c => c.Name.Equals(cmdPart, StringComparison.OrdinalIgnoreCase));
+            c => c.Cmd.Equals(cmdPart, StringComparison.OrdinalIgnoreCase));
 
         var ghost = exact is not null ? ""
-            : matches.Count == 1     ? matches[0].Name[cmdPart.Length..]
-            : CommonSuffix(matches.Select(c => c.Name).ToList(), cmdPart.Length);
+            : matches.Count == 1     ? matches[0].Cmd[cmdPart.Length..]
+            : CommonSuffix(matches.Select(c => c.Cmd).ToList(), cmdPart.Length);
 
         var info  = exact ?? matches[0];
-        var param = hasParam ? "" : (info.ParamHint ?? "");
+        var param = hasParam ? "" : AppCommands.ParamHintFor(info);
 
         if (ghost.Length == 0 && param.Length == 0) return null;
         return (ghost, param);

@@ -1,7 +1,130 @@
 namespace BeoControl.Interfaces;
 
+public enum CommandId
+{
+    Tv,
+    Radio,
+    Cd,
+    Cd2,
+    Phono,
+    Dvd,
+    Sat,
+    Vtape,
+    Pc,
+    Doorcam,
+    Light,
+    AAux,
+    VAux,
+    Atape,
+    Atape2,
+    Link,
+    Text,
+    SpeakerDemo,
+    Digit0,
+    Digit1,
+    Digit2,
+    Digit3,
+    Digit4,
+    Digit5,
+    Digit6,
+    Digit7,
+    Digit8,
+    Digit9,
+    VolumeUp,
+    VolumeDown,
+    Mute,
+    Loudness,
+    Standby,
+    Off,
+    AllStandby,
+    AllOff,
+    Go,
+    Goto,
+    Play,
+    Stop,
+    Record,
+    Up,
+    Down,
+    Left,
+    Right,
+    Menu,
+    Exit,
+    Return,
+    Select,
+    List,
+    Index,
+    Bass,
+    Treble,
+    Balance,
+    Speaker,
+    Red,
+    Green,
+    Blue,
+    Yellow,
+    Store,
+    Clear,
+    Tune,
+    Clock,
+    Format,
+    Picture,
+    Turn,
+    Av,
+    Pc2Dvd2,
+    Pc2On,
+    Pc2BassUp,
+    Pc2BassDown,
+    Pc2TrebleUp,
+    Pc2TrebleDown,
+    Pc2BalanceUp,
+    Pc2BalanceDown,
+    AppHelp,
+    AppClear,
+    AppDebug,
+    AppExit,
+    AppPort,
+    AppPortScan,
+    AppBt,
+    AppBtScan,
+    AppBtLast,
+    AppPc2,
+}
+
+public enum CommandCategory
+{
+    Source,
+    Number,
+    Volume,
+    Power,
+    Transport,
+    Navigation,
+    Sound,
+    Color,
+    Misc,
+    Pc2Source,
+    Pc2Tone,
+    AppCommands,
+}
+
 /// <summary>Describes a single command that a device can execute (used for help + tab completion).</summary>
-public record CommandInfo(string Name, string Description, string Category, string? ParamHint = null);
+public class BeoCommand
+{
+    public BeoCommand(CommandId id, string cmd, string remoteLabel, CommandCategory category)
+    {
+        Id = id;
+        Cmd = cmd;
+        RemoteLabel = remoteLabel;
+        Category = category;
+    }
+
+    public CommandId Id { get; }
+    public string Cmd { get; init; }
+    public string RemoteLabel { get; init; }
+    public CommandCategory Category { get; init; }
+    public string? ParamHint { get; set; }
+    public BeoCommand? ShiftCommand { get; set; }
+    public List<BeoCommand>? SubCommands { get; set; }
+    public string? AddIn { get; set; }
+}
 
 public enum StatusType { Idle, Working, Ok, Source, Error }
 public enum StatusKind { Connection, Discovery, Source, AudioSetup, Transport, Info }

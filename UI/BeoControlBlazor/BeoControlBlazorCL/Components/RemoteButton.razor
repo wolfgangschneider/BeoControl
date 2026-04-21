@@ -1,15 +1,17 @@
-﻿<button @ref="ElementRef" class="@CssClass" @attributes="RenderedAttributes" @onclick="HandleClick">
-    @Caption
+﻿@using BeoControl.Interfaces
+
+<button @ref="ElementRef" class="@CssClass" @attributes="RenderedAttributes" @onclick="HandleClick">
+    @DisplayText
 </button>
 @code {
 
     public static int Zoom { get; set; } = 100;
     public ElementReference ElementRef { get; private set; }
 
-    [Parameter] public EventCallback<string> OnCommand { get; set; } = default!;
+    [Parameter] public EventCallback<BeoCommand> OnCommand { get; set; } = default!;
     [Parameter] public EventCallback OnClick { get; set; }
 
-    [Parameter] public string? Cmd { get; set; }
+    [Parameter] public CommandId? CommandId { get; set; }
     [Parameter] public string? Caption { get; set; }
 
     [Parameter(CaptureUnmatchedValues = true)]
@@ -56,8 +58,16 @@
 
     private static int ScaledHeightPx => 22 * Zoom / 100;
 
+    private BeoCommand? Command => CommandId is { } commandId
+        ? BeoCommands.Get(commandId)
+        : null;
+
+    private string DisplayText => Caption ?? Command?.RemoteLabel ?? string.Empty;
+
     private Task HandleClick() =>
         OnClick.HasDelegate
             ? OnClick.InvokeAsync()
-            : OnCommand.InvokeAsync(Cmd);
+            : Command is not null
+                ? OnCommand.InvokeAsync(Command)
+                : Task.CompletedTask;
 }
