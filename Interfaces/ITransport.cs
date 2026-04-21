@@ -121,7 +121,10 @@ public class BeoCommand
     public string RemoteLabel { get; init; }
     public CommandCategory Category { get; init; }
     public string? ParamHint { get; set; }
-    public BeoCommand? ShiftCommand { get; set; }
+    public string DisplayLabel => !string.IsNullOrWhiteSpace(AddIn)
+        ? AddIn
+        : string.IsNullOrWhiteSpace(RemoteLabel) ? Cmd : RemoteLabel;
+
     public List<BeoCommand>? SubCommands { get; set; }
     public string? AddIn { get; set; }
 }

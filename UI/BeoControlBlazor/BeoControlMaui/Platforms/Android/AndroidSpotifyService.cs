@@ -52,7 +52,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
         return ExecuteAndroidSpotifyCommandAsync(command, preferredDeviceName);
     }
 
-    public Task<string?> GetSpotifyNowPlayingTextAsync(string? preferredDeviceName)
+    public Task<(string Song, string Interpret)?> GetSpotifyNowPlayingTextAsync(string? preferredDeviceName)
     {
         return GetAndroidSpotifyNowPlayingTextAsync();
     }
@@ -179,7 +179,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
         throw new InvalidOperationException($"Spotify device activation failed: {responseBody}");
     }
 
-    private static async Task<string?> GetAndroidSpotifyNowPlayingTextAsync()
+    private static async Task<(string Song, string Interpret)?> GetAndroidSpotifyNowPlayingTextAsync()
     {
         var token = await GetAndroidSpotifyTokenAsync();
 
@@ -188,7 +188,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
 
         using var response = await httpClient.GetAsync("https://api.spotify.com/v1/me/player/currently-playing");
         if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
-            return "Spotify is paused";
+            return ("Spotify is paused", string.Empty);
 
         var responseBody = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
@@ -198,11 +198,11 @@ public sealed class AndroidSpotifyService : ISpotifyService
         if (document.RootElement.TryGetProperty("is_playing", out var isPlayingElement)
             && isPlayingElement.ValueKind is JsonValueKind.False)
         {
-            return "Spotify is paused";
+            return ("Spotify is paused", string.Empty);
         }
 
         if (!document.RootElement.TryGetProperty("item", out var item) || item.ValueKind == JsonValueKind.Null)
-            return "Spotify is paused";
+            return ("Spotify is paused", string.Empty);
 
         var title = item.TryGetProperty("name", out var nameElement) ? nameElement.GetString() : string.Empty;
         var artist = item.TryGetProperty("artists", out var artistsElement)
@@ -211,7 +211,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
                 .FirstOrDefault(artistName => !string.IsNullOrWhiteSpace(artistName))
             : null;
 
-        return $"{title ?? string.Empty} \n {artist ?? string.Empty}";
+        return (title ?? string.Empty, artist ?? string.Empty);
     }
 
     private static async Task<SpotifyTokenCache> GetAndroidSpotifyTokenAsync()

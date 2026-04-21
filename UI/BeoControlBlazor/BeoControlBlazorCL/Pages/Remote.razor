@@ -40,7 +40,7 @@
     }
     else
     {
-        <Beo4 OnCommand="SendCommand" DeviceStatus="@_status.Text" Info="@DisplayedInfo()" />
+        <Beo4 OnCommand="SendCommand" DeviceStatus="@_status.Text" Song="@DisplayedSong()" Info="@DisplayedInterpret()" />
     }
     
     <div style="width:var(--remote-width); margin:0 auto;">
@@ -70,17 +70,17 @@
 
     private RemoteType Selected;
     private StatusMessage _status = new(StatusType.Idle, "");
-    private string _info = string.Empty;
-    private string? _spotifyConnectedDeviceName;
     private BeoCommand? _currentSource;
+    private SpotifyBridge? _spotify;
+    private SpotifyBridge Spotify => _spotify ??= new(this);
 
     protected override void OnInitialized()
     {
         Selected = DeviceService.Settings.LastRemote;
         RemoteButton.Zoom = NormalizeZoom(DeviceService.Settings.RemoteButtonZoom);
-        SyncSpotifySourceAddIn();
+        Spotify.SyncSourceAddIn();
         DeviceService.OnStatusChanged += OnStatusChanged;
-        _ = EnsureSpotifyConnectionStateAsync();
+        _ = Spotify.EnsureConnectionStateAsync();
     }
 
     private async void OnStatusChanged(StatusMessage msg)
@@ -96,13 +96,8 @@
 
             if (sourceChanged)
             {
-                if (DeviceService.Settings.SpotifyEnabled && IsSpotifySourceSelected())
-                {
-                    _spotifyConnectedDeviceName = await LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(
-                        DeviceService.Settings.SpotifyPreferredDeviceName);
-                    _info = await LaunchSpotifyService.GetSpotifyNowPlayingTextAsync(
-                        DeviceService.Settings.SpotifyPreferredDeviceName) ?? _info;
-                }
+                if (DeviceService.Settings.SpotifyEnabled && Spotify.IsSourceSelected())
+                    await Spotify.RefreshPlaybackAsync();
             }
         }
         await InvokeAsync(StateHasChanged);
@@ -125,87 +120,17 @@
         if (command.Category == CommandCategory.Source)
             _currentSource = command;
 
-        if (command.Id == CommandId.Menu && IsSpotifySourceSelected())
+        if (await Spotify.HandleCommandAsync(command))
         {
-            await OpenSpotifyAsync();
+            await InvokeAsync(StateHasChanged);
             return;
         }
+
         DeviceService.SendCommand(command.Cmd);
-
-        var spotifyCommand = TryMapSpotifyCommand(command);
-        if (spotifyCommand is null || !DeviceService.Settings.SpotifyEnabled || !IsSpotifySourceSelected())
-            return;
-
-        var executed = await LaunchSpotifyService.ExecuteSpotifyCommandAsync(
-            spotifyCommand,
-            DeviceService.Settings.SpotifyPreferredDeviceName);
-        if (!executed)
-            return;
-
-        _spotifyConnectedDeviceName = await LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(
-            DeviceService.Settings.SpotifyPreferredDeviceName);
-        _info = await LaunchSpotifyService.GetSpotifyNowPlayingTextAsync(
-            DeviceService.Settings.SpotifyPreferredDeviceName) ?? _info;
-        await InvokeAsync(StateHasChanged);
     }
 
-    private Task OpenSpotifyAsync()
-    {
-        return LaunchSpotifyService.OpenAsync(DeviceService.Settings.SpotifyLaunchMode);
-    }
-
-    private async Task EnsureSpotifyConnectionStateAsync()
-    {
-        try
-        {
-            if (!DeviceService.Settings.SpotifyEnabled)
-            {
-                _spotifyConnectedDeviceName = null;
-                await InvokeAsync(StateHasChanged);
-                return;
-            }
-
-            _spotifyConnectedDeviceName = await LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(
-                DeviceService.Settings.SpotifyPreferredDeviceName);
-            await InvokeAsync(StateHasChanged);
-        }
-        catch
-        {
-            _spotifyConnectedDeviceName = null;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private bool IsSpotifySourceSelected()
-    {
-        return string.Equals(_currentSource?.AddIn, SpotifyAddInName, StringComparison.Ordinal);
-    }
-
-    private void SyncSpotifySourceAddIn()
-    {
-        foreach (var sourceCommand in SourceCommands)
-            sourceCommand.AddIn = null;
-
-        if (!DeviceService.Settings.SpotifyEnabled)
-            return;
-
-        var triggerCommand = BeoCommands.Find(DeviceService.Settings.SpotifyTriggerCommand);
-        if (triggerCommand?.Category == CommandCategory.Source)
-            triggerCommand.AddIn = SpotifyAddInName;
-    }
-
-    private static string? TryMapSpotifyCommand(BeoCommand command) => command.Id switch
-    {
-        CommandId.Left => "Previous",
-        CommandId.Right => "Next",
-        CommandId.Stop => "Pause",
-        CommandId.Play => "Play",
-        CommandId.Go => "Play",
-
-        _ => null
-    };
-
-    private string DisplayedInfo() => IsSpotifySourceSelected() ? _info : string.Empty;
+    private string DisplayedSong() => Spotify.IsSourceSelected() ? Spotify.Song : string.Empty;
+    private string DisplayedInterpret() => Spotify.IsSourceSelected() ? Spotify.Interpret : string.Empty;
 
     private string ConnectionLabel()
     {
@@ -228,8 +153,8 @@
         if (!DeviceService.Settings.SpotifyEnabled)
             return "SPOTIFY DISABLED";
 
-        if (!string.IsNullOrWhiteSpace(_spotifyConnectedDeviceName))
-            return $"{_spotifyConnectedDeviceName}  |  SPOTIFY";
+        if (!string.IsNullOrWhiteSpace(Spotify.ConnectedDeviceName))
+            return $"{Spotify.ConnectedDeviceName}  |  SPOTIFY";
 
         if (!string.IsNullOrWhiteSpace(DeviceService.Settings.SpotifyPreferredDeviceName))
             return $"{DeviceService.Settings.SpotifyPreferredDeviceName}  |  SPOTIFY";
@@ -242,7 +167,7 @@
         if (!DeviceService.Settings.SpotifyEnabled)
             return "disconnected";
 
-        return !string.IsNullOrWhiteSpace(_spotifyConnectedDeviceName)
+        return !string.IsNullOrWhiteSpace(Spotify.ConnectedDeviceName)
             ? "connected"
             : "disconnected";
     }
@@ -272,4 +197,5 @@
         100 or 150 or 200 => zoom,
         _ => 100
     };
+
 }

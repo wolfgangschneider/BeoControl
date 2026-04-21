@@ -7,7 +7,7 @@ public abstract class SpotifyServiceBase : ISpotifyService
     private const string SpotifyClientId = "d241779ec817475db4bf6b5bd0a457c7";
     private const string SpotifyRedirectUri = "http://127.0.0.1:5543/callback";
     private string _preferredDeviceName = string.Empty;
-    private string? _nowPlayingText;
+    private (string Song, string Interpret)? _nowPlayingText;
     private Task<SpotifyController?>? _spotifyControllerTask;
 
     public bool SupportsSpotifyConnectionState => true;
@@ -51,7 +51,7 @@ public abstract class SpotifyServiceBase : ISpotifyService
         return true;
     }
 
-    public async Task<string?> GetSpotifyNowPlayingTextAsync(string? preferredDeviceName)
+    public async Task<(string Song, string Interpret)?> GetSpotifyNowPlayingTextAsync(string? preferredDeviceName)
     {
         var controller = await GetSpotifyControllerAsync(preferredDeviceName);
         if (controller is null)
@@ -110,7 +110,7 @@ public abstract class SpotifyServiceBase : ISpotifyService
     private void OnSpotifyNowPlayingChanged(SpotifyNowPlaying? nowPlaying)
     {
         _nowPlayingText = nowPlaying?.IsPlaying == true
-            ? $"{nowPlaying.Title ?? string.Empty} \n {nowPlaying.Artist ?? string.Empty}"
-            : "Spotify is paused";
+            ? (nowPlaying.Title ?? string.Empty, nowPlaying.Artist ?? string.Empty)
+            : ("Spotify is paused", string.Empty);
     }
 }

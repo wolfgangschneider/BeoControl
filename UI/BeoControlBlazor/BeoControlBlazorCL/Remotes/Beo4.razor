@@ -4,8 +4,9 @@
 
 <div class="beo4">
 
-    <div class="beo4-display-frame">
+        <div class="beo4-display-frame">
         <div class="beo4-display">
+            <span class="beo4-display-song">@Song</span>
             <span class="beo4-display-source">@DisplayText</span>
             <span class="beo4-display-info">@Info</span>
         </div>
@@ -84,6 +85,7 @@
 @code {
     [Parameter, EditorRequired] public EventCallback<BeoCommand> OnCommand { get; set; }
     [Parameter] public string? DeviceStatus { get; set; }
+    [Parameter] public string? Song { get; set; }
     [Parameter] public string? Info { get; set; }
 
     private static string ExtractSource(string? status)

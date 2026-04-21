@@ -13,5 +13,5 @@ public interface ISpotifyService
     Task<IReadOnlyList<string>> GetSpotifyDeviceNamesAsync();
     Task<string?> GetSpotifyConnectedDeviceNameAsync(string? preferredDeviceName);
     Task<bool> ExecuteSpotifyCommandAsync(string command, string? preferredDeviceName);
-    Task<string?> GetSpotifyNowPlayingTextAsync(string? preferredDeviceName);
+    Task<(string Song, string Interpret)?> GetSpotifyNowPlayingTextAsync(string? preferredDeviceName);
 }
