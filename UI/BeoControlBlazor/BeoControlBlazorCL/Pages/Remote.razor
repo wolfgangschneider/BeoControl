@@ -131,6 +131,7 @@
 
     private string DisplayedSong() => Spotify.IsSourceSelected() ? Spotify.Song : string.Empty;
     private string DisplayedInterpret() => Spotify.IsSourceSelected() ? Spotify.Interpret : string.Empty;
+    private string DisplayedSource() => _currentSource?.DisplayLabel
 
     private string ConnectionLabel()
     {
