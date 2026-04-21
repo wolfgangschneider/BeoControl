@@ -62,7 +62,7 @@
         ? BeoCommands.Get(commandId)
         : null;
 
-    private string DisplayText => Caption ?? Command?.RemoteLabel ?? string.Empty;
+    private string DisplayText => Caption ?? Command?.DisplayLabel ?? string.Empty;
 
     private Task HandleClick() =>
         OnClick.HasDelegate

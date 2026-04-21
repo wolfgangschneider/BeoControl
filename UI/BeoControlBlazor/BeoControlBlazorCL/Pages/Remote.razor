@@ -40,7 +40,7 @@
     }
     else
     {
-        <Beo4 OnCommand="SendCommand" DeviceStatus="@_status.Text" Song="@DisplayedSong()" Info="@DisplayedInterpret()" />
+        <Beo4 OnCommand="SendCommand" DeviceStatus="@DisplayedSource()" Song="@DisplayedSong()" Info="@DisplayedInterpret()" />
     }
     
     <div style="width:var(--remote-width); margin:0 auto;">
@@ -132,6 +132,8 @@
     private string DisplayedSong() => Spotify.IsSourceSelected() ? Spotify.Song : string.Empty;
     private string DisplayedInterpret() => Spotify.IsSourceSelected() ? Spotify.Interpret : string.Empty;
     private string DisplayedSource() => _currentSource?.DisplayLabel
+        ?? BeoCommands.ResolveSourceCommand(_status.Text)?.DisplayLabel
+        ?? _status.Text;
 
     private string ConnectionLabel()
     {

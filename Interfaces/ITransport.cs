@@ -87,6 +87,7 @@ public enum CommandId
     AppBtScan,
     AppBtLast,
     AppPc2,
+    ASetup,
 }
 
 public enum CommandCategory
@@ -124,6 +125,18 @@ public class BeoCommand
     public string DisplayLabel => !string.IsNullOrWhiteSpace(AddIn)
         ? AddIn
         : string.IsNullOrWhiteSpace(RemoteLabel) ? Cmd : RemoteLabel;
+
+    public void AddSubcommand(BeoCommand subCommand)
+    {
+        SubCommands ??= [];
+        SubCommands.Add(subCommand);
+    }
+
+    public void AddSubcommands(params BeoCommand[] subCommands)
+    {
+        foreach (var subCommand in subCommands)
+            AddSubcommand(subCommand);
+    }
 
     public List<BeoCommand>? SubCommands { get; set; }
     public string? AddIn { get; set; }
