@@ -24,3 +24,4 @@ TestResults/
 Thumbs.db
 .DS_Store
 /Hardware/esp32_beo4/logs
+/UI/BeoControlBlazor/BeoControlBlazorServer/spotify-token.json

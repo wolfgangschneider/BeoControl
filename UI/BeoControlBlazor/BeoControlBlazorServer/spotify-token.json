@@ -1,9 +1,0 @@
-{
-  "AccessToken": "BQC0q4B3GGoguDzA7pwbPzzSbQQ6qBJ-oKj0lfzDw7C2ORnTz7w9vWMxp_EbhuCmSGRA0poiRHagSDTd_RtzGaSVQgIU54tZ7UHdp7GVoD0N47_m2oKk7ZSWmnAjpWY8Uz3hVptfSXylNa-rwFgZnnqsxziuiBY5Swc5yTyXqnEyv5iDocUe4DT3D5fagd0LwXIFdiGf20ZtLFMFvJLc6K9lVKBP0VNkzzYt8xqRHCKVbLLu-3lcXkTx3Sqi2b-DCJyjIwE",
-  "TokenType": "Bearer",
-  "ExpiresIn": 3600,
-  "Scope": "user-modify-playback-state user-read-playback-state user-read-currently-playing user-read-private",
-  "RefreshToken": "AQDcRiRWOt4360ZCWbDNNZuOH8CkhSlTg2Lv1qMZgwuNwftzAzlG14Yy2pe1rtFKAYwCiHYB9ZF1hetKCWg8CYNglUMLqSPfm9fautTWoudoh9l5vPMQyP_8YKRcGQdaNv2mzA",
-  "CreatedAt": "2026-04-21T13:31:09.8570425Z",
-  "IsExpired": false
-}
