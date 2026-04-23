@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
+using Microsoft.Win32;
 using Beoported.Logging;
 using Beoported.Masterlink;
 using LibUsbDotNet;
 using LibUsbDotNet.Main;
+using LibUsbDotNet.WinUsb;
 
 namespace Beoported.Pc2;
 
@@ -15,7 +17,7 @@ public sealed class Pc2Device : IDisposable
     private const int ProductId = 0x0101;
     private const byte EndpointIn  = 0x81; // LIBUSB_ENDPOINT_IN | 1
     private const byte EndpointOut = 0x01; // OUT endpoint
-
+ 
     private UsbDevice? _usbDevice;
     private UsbEndpointReader? _reader;
     private UsbEndpointWriter? _writer;
@@ -33,9 +35,9 @@ public sealed class Pc2Device : IDisposable
     public void Open()
     {
         var finder = new UsbDeviceFinder(VendorId, ProductId);
-        _usbDevice = UsbDevice.OpenUsbDevice(finder)
+        _usbDevice = UsbDevice.OpenUsbDevice(finder) ?? TryOpenWinUsbDeviceBySymbolicName()
             ?? throw new InvalidOperationException("PC2 device not found (VID=0x0CD4, PID=0x0101)");
-
+ 
         // For Linux libusb: claim interface 0
         if (_usbDevice is IUsbDevice wholeDevice)
         {
@@ -49,6 +51,32 @@ public sealed class Pc2Device : IDisposable
         // Start background read thread
         var readThread = new Thread(ReadLoop) { IsBackground = true, Name = "PC2-USB-Read" };
         readThread.Start();
+    }
+
+    private UsbDevice? TryOpenWinUsbDeviceBySymbolicName()
+    {
+        if (!OperatingSystem.IsWindows())
+            return null;
+
+        using var vidPidKey = Registry.LocalMachine.OpenSubKey($@"SYSTEM\CurrentControlSet\Enum\USB\VID_{VendorId:X4}&PID_{ProductId:X4}");
+        if (vidPidKey is null)
+            return null;
+
+        foreach (var instanceName in vidPidKey.GetSubKeyNames())
+        {
+            using var deviceParametersKey = vidPidKey.OpenSubKey($@"{instanceName}\Device Parameters");
+            var symbolicName = deviceParametersKey?.GetValue("SymbolicName") as string;
+            if (string.IsNullOrWhiteSpace(symbolicName))
+                continue;
+
+            if (WinUsbDevice.Open(symbolicName, out WinUsbDevice winUsbDevice))
+            {
+                DebugLog?.Invoke($"PC2: opened via WinUSB symbolic name fallback ({symbolicName}).");
+                return winUsbDevice;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>Send a raw PC2 message (will be wrapped in 0x60..0x61 frame).</summary>

@@ -1,11 +1,12 @@
 @using BeoControl.Interfaces
 @using BeoControlBlazorCL.Components
+@using Microsoft.AspNetCore.Components.Forms
 
 
 <div class="beo4">
 
         <div class="beo4-display-frame">
-        <div class="beo4-display">
+        <div style="min-height:6rem" class="beo4-display">
             <span class="beo4-display-song">@Song</span>
             <span class="beo4-display-source">@DisplayText</span>
             <span class="beo4-display-info">@Info</span>
@@ -65,14 +66,25 @@
             </div>
         </div>
 
-        <div class="beo4-section">
-            <RemoteButton OnClick="OnListPressed" Caption="LIST" />
-            <RemoteButton CommandId="@CommandId.VolumeUp" OnCommand="SendCommand" Caption="▲" />
-            <RemoteButton OnClick="OnGoExit" Caption="EXIT" />
+        <div class="beo4-section-volume">
+            <RemoteButton style="grid-row:1; grid-column:1" OnClick="OnListPressed" Caption="LIST" />
+            <div class="upBtn" style="grid-row:1; grid-column:2" >
+                <RemoteButton style="border-radius: 3px 3px 0 0" CommandId="@CommandId.VolumeUp" OnCommand="SendCommand" Caption="▲" />
+            </div>
+            <RemoteButton style="grid-row:1; grid-column:3" OnClick="OnGoExit" Caption="EXIT" />
+            <div class="muteBtn" style="grid-row:2;grid-column:2">
+                <RemoteButton class="muteButtom" style=" border-radius:0; height:16px" CommandId="@CommandId.Mute" OnCommand="SendCommand" Caption="" />
+            </div>
 
-            <RemoteButton CommandId="@CommandId.Stop" OnCommand="SendCommand" />
-            <RemoteButton CommandId="@CommandId.VolumeDown" OnCommand="SendCommand" Caption="▼" />
-            <StandbyButton OnCommand="SendCommand" />
+            <RemoteButton style="grid-row:3; grid-column:1" CommandId="@CommandId.Stop" OnCommand="SendCommand" />
+            <div class="downBtn" style="grid-row:3; grid-column:2 ">
+                <RemoteButton  style=" border-radius: 0 0 3px 3px  " CommandId="@CommandId.VolumeDown" OnCommand="SendCommand" Caption="▼" />
+
+            </div>
+            
+            <div style="grid-row:3; grid-column:3 ">
+                <StandbyButton  OnCommand="SendCommand" />
+            </div>
         </div>
     </div>
 
@@ -185,26 +197,26 @@
     {
         get
         {
-            var speakerCommand = BeoCommands.Get(CommandId.ASetup);
-            speakerCommand.AddSubcommands(
-                BeoCommands.Get(CommandId.Speaker),
-                BeoCommands.Get(CommandId.Balance),
-                BeoCommands.Get(CommandId.Bass),
-                BeoCommands.Get(CommandId.Treble),
-                BeoCommands.Get(CommandId.Loudness),
+            // var speakerCommand = BeoCommands.Get(CommandId.ASetup);
+            // speakerCommand.AddSubcommands(
+            //     BeoCommands.Get(CommandId.Speaker),
+            //     BeoCommands.Get(CommandId.Balance),
+            //     BeoCommands.Get(CommandId.Bass),
+            //     BeoCommands.Get(CommandId.Treble),
+            //     BeoCommands.Get(CommandId.Loudness),
               
 
                 
 
-                BeoCommands.Get(CommandId.Store));
+            //     BeoCommands.Get(CommandId.Store));
             return
             [
-                speakerCommand,
+               // speakerCommand,
                 BeoCommands.Get(CommandId.Mute),
+                BeoCommands.Get(CommandId.Phono),
                 BeoCommands.Get(CommandId.Pc),
                 BeoCommands.Get(CommandId.Atape2),
                 BeoCommands.Get(CommandId.Cd2),
-                BeoCommands.Get(CommandId.Phono),
             ];
         }
     }

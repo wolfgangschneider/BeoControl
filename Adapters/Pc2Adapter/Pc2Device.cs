@@ -57,7 +57,10 @@ public sealed class Pc2Device : IDevice
             _cts = new CancellationTokenSource();
             _core.Start(_cts.Token);
             IsConnected = true;
-            // OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, $"● PC2 connected  {FormatAudioStatus(_core.AudioSetup)}"));
+            OnStatusChanged?.Invoke(new StatusMessage(
+                StatusType.Ok,
+                $"● PC2 connected  {FormatAudioStatus(_core.AudioSetup)}",
+                StatusKind.Connection));
 
         }
         catch (Exception ex)

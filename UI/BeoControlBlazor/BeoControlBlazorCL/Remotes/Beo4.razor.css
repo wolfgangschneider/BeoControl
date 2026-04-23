@@ -65,21 +65,26 @@
 
 /* ── Button sections ──────────────────────────── */
 
-.beo4-section {
+.beo4-section,
+.beo4-section-volume {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 3px;
+    grid-column-gap: 3px;
+    grid-row-gap: 3px;
     margin: 8px 2px;
 }
-
+.beo4-section-volume {
+    
+    grid-template-rows: auto auto auro;
+   grid-row-gap:0;
+   
+}
 /* ── Navigation diamond ───────────────────────── */
-
 .beo4-nav-area {
     /*margin: 8px 10px;
     margin: 14px 14px;*/
-    margin: 14px auto ;
+    margin: 14px auto;
     width: 135px;
-    
     /* background: #c8c8c8;*/
     overflow: clip;
 }
@@ -103,7 +108,23 @@
     color: #ffffff;
 }
 
-.beo4-nav-btn:hover  { filter: brightness(1.3); }
+.muteBtn ::deep .remoteBtn,
+.upBtn ::deep .remoteBtn,
+.downBtn ::deep .remoteBtn {
+  
+    width: 100%;
+}
+    .muteBtn ::deep .remoteBtn:active,
+    .upBtn ::deep .remoteBtn:active,
+    .downBtn ::deep .remoteBtn:active {
+     
+        transform: none;
+        
+    }
+
+.beo4-nav-btn:hover {
+    filter: brightness(1.3);
+}
 .beo4-nav-btn:active { filter: brightness(0.75); }
 
 .beo4-nav-up    { background: #1a1a1a; clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
