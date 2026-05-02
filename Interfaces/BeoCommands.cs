@@ -89,36 +89,19 @@ public static class BeoCommands
         Get(CommandId.Turn),
         Get(CommandId.Av),
     ];
-    public static readonly Dictionary<string, BeoCommand> ByCmd =
-        All.ToDictionary(c => c.Cmd, StringComparer.OrdinalIgnoreCase);
-    public static readonly HashSet<string> Names =
-        new(All.Select(c => c.Cmd), StringComparer.OrdinalIgnoreCase);
 
-    public static BeoCommand? Find(string cmd) =>
-        ByCmd.TryGetValue(cmd, out var command) ? command : null;
+
+    //public static readonly Dictionary<string, BeoCommand> ByCmd =
+    //    All.ToDictionary(c => c.Cmd, StringComparer.OrdinalIgnoreCase);
+
+    //public static readonly HashSet<string> Names =
+    //    new(All.Select(c => c.Cmd), StringComparer.OrdinalIgnoreCase);
+
+
 
     public static BeoCommand Get(CommandId id) => Definitions[id];
 
-    public static BeoCommand? ResolveSourceCommand(string? statusText)
-    {
-        var statusKey = string.IsNullOrWhiteSpace(statusText)
-            ? string.Empty
-            : new string(statusText.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
-        if (string.IsNullOrEmpty(statusKey))
-            return null;
-
-        return All.FirstOrDefault(command =>
-            command.Category == CommandCategory.Source &&
-            statusKey == (
-                string.IsNullOrWhiteSpace(command.Cmd)
-                    ? string.Empty
-                    : new string(command.Cmd.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant()));
-    }
-
-    /// <summary>Returns matching command names for a partial input.</summary>
-    public static IEnumerable<string> Hints(string partial) =>
-        Names.Where(n => n.StartsWith(partial, StringComparison.OrdinalIgnoreCase))
-             .Order();
+    public static BeoCommand? Get(string? statusText) => All.FirstOrDefault(c => c.Category == CommandCategory.Source && c.Cmd == statusText);
 
     private static Dictionary<CommandId, BeoCommand> CreateDefinitions()
     {

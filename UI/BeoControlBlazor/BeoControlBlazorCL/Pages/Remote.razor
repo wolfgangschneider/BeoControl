@@ -40,7 +40,12 @@
     }
     else
     {
-        <Beo4 OnCommand="SendCommand" DeviceStatus="@DisplayedSource()" Song="@DisplayedSong()" Info="@DisplayedInterpret()" />
+         string  song = Spotify.IsSourceSelected() ? Spotify.Song : string.Empty;
+         string interpret = Spotify.IsSourceSelected() ? Spotify.Interpret : string.Empty;
+         string source = _currentSource?.DisplayLabel ?? BeoCommands.Get(_status.Text)?.DisplayLabel ?? _status.Text;
+
+
+        <Beo4 OnCommand="SendCommand" DeviceStatus="@source" Song="@song" Info="@interpret" />
     }
     
     <div style="width:var(--remote-width); margin:0 auto;">
@@ -52,9 +57,10 @@
                 </div>
                 @if (DeviceService.Settings.SpotifyEnabled)
                 {
-                    <div style="display:flex; align-items:center; gap:6px;" class="conn-row--@(SpotifyConnectionStateClass())">
-                        <span class="conn-dot conn-row-dot--@(SpotifyConnectionStateClass())"></span>
-                        <span class="conn-text">@SpotifyConnectionLabel()</span>
+                    var spotyCss = Spotify.IsSpotifyConnected() ? "connected" : "disconnected";
+                    <div style="display:flex; align-items:center; gap:6px;" class="conn-row--@spotyCss">
+                        <span class="conn-dot conn-row-dot--@spotyCss"></span>
+                        <span class="conn-text">@Spotify.SpotifyConnectionLabel()</span>
                     </div>
                 }
             </div>
@@ -71,8 +77,13 @@
     private RemoteType Selected;
     private StatusMessage _status = new(StatusType.Idle, "");
     private BeoCommand? _currentSource;
-    private SpotifyBridge? _spotify;
-    private SpotifyBridge Spotify => _spotify ??= new(this);
+
+
+    private SpotifyBridge Spotify =>  field ??= new(this);
+
+
+
+
 
     protected override void OnInitialized()
     {
@@ -85,14 +96,11 @@
 
     private async void OnStatusChanged(StatusMessage msg)
     {
-        if (msg.Kind == StatusKind.AudioSetup)
-            return;
-
         if (msg.Kind == StatusKind.Source)
         {
             var sourceChanged = !string.Equals(_status.Text, msg.Text, StringComparison.Ordinal);
             _status = msg;
-            _currentSource = BeoCommands.ResolveSourceCommand(msg.Text) ?? _currentSource;
+            _currentSource = BeoCommands.Get(msg.Text) ?? _currentSource;
 
             if (sourceChanged)
             {
@@ -117,24 +125,15 @@
 
     private async Task SendCommand(BeoCommand command)
     {
-        if (command.Category == CommandCategory.Source)
-            _currentSource = command;
-
-        if (await Spotify.HandleCommandAsync(command))
-        {
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        DeviceService.SendCommand(command.Cmd);
+        var commandCaptured = await Spotify.HandleCommandAsync2(command);
+        
+        if (!commandCaptured)
+            DeviceService.SendCommand(command.Cmd);
+        
+        await InvokeAsync(StateHasChanged);
     }
 
-    private string DisplayedSong() => Spotify.IsSourceSelected() ? Spotify.Song : string.Empty;
-    private string DisplayedInterpret() => Spotify.IsSourceSelected() ? Spotify.Interpret : string.Empty;
-    private string DisplayedSource() => _currentSource?.DisplayLabel
-        ?? BeoCommands.ResolveSourceCommand(_status.Text)?.DisplayLabel
-        ?? _status.Text;
-
+   
     private string ConnectionLabel()
     {
         var dev = DeviceService.CurrentDevice;
@@ -151,29 +150,8 @@
         return $"{detail}";
     }
 
-    private string SpotifyConnectionLabel()
-    {
-        if (!DeviceService.Settings.SpotifyEnabled)
-            return "SPOTIFY DISABLED";
-
-        if (!string.IsNullOrWhiteSpace(Spotify.ConnectedDeviceName))
-            return $"{Spotify.ConnectedDeviceName}  |  SPOTIFY";
-
-        if (!string.IsNullOrWhiteSpace(DeviceService.Settings.SpotifyPreferredDeviceName))
-            return $"{DeviceService.Settings.SpotifyPreferredDeviceName}  |  SPOTIFY";
-
-        return "SPOTIFY DISCONNECTED";
-    }
-
-    private string SpotifyConnectionStateClass()
-    {
-        if (!DeviceService.Settings.SpotifyEnabled)
-            return "disconnected";
-
-        return !string.IsNullOrWhiteSpace(Spotify.ConnectedDeviceName)
-            ? "connected"
-            : "disconnected";
-    }
+   
+    
 
     private static string RemoteLabel(RemoteType r) => r switch
     {

@@ -197,6 +197,14 @@ dotnet run --project UI/BeoControlTUI --framework net10.0
 
 # Grant serial port access (one-time, requires re-login)
 sudo usermod -aG dialout $USER
+
+# Grant non-root access to the PC2 USB device (VID=0x0CD4, PID=0x0101)
+sudo sh -c 'printf "%s\n" \
+"SUBSYSTEM==\"usb\", ATTR{idVendor}==\"0cd4\", ATTR{idProduct}==\"0101\", MODE=\"0666\"" \
+> /etc/udev/rules.d/99-beocontrol-pc2.rules'
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+# Unplug and reconnect the PC2 after reloading the rules
 ```
 
 ### TUI Commands

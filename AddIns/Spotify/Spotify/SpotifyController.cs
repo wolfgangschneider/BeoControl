@@ -74,7 +74,8 @@ public sealed class SpotifyController : IDisposable
         {
             var wait = ex.RetryAfter;
             Console.WriteLine($"Rate limit hit. Waiting {wait} seconds...");
-            return null;
+            throw new InvalidOperationException($"Rate limit hit. Waiting {wait.TotalHours} hours...", ex);
+            //return null;
 
         }
         catch (APIException ex)

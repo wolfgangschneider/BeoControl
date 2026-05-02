@@ -6,6 +6,7 @@ public partial class Remote
 {
     private sealed class SpotifyBridge(Remote owner)
     {
+        public string Error { get; private set; } = string.Empty;
         public string Song { get; private set; } = string.Empty;
         public string Interpret { get; private set; } = string.Empty;
         public string? ConnectedDeviceName { get; private set; }
@@ -13,10 +14,17 @@ public partial class Remote
         public bool IsSourceSelected() =>
             string.Equals(owner._currentSource?.AddIn, SpotifyAddInName, StringComparison.Ordinal);
 
-        public async Task<bool> HandleCommandAsync(BeoCommand command)
+
+        public async Task<bool> HandleCommandAsync2(BeoCommand command)
         {
+
+            if (command.Cmd == owner.DeviceService.Settings.SpotifyTriggerCommand)
+                _ = ExecuteAsync("Play");
+
+
             if (!owner.DeviceService.Settings.SpotifyEnabled || !IsSourceSelected())
                 return false;
+
 
             if (command.Id == CommandId.Menu)
             {
@@ -24,16 +32,30 @@ public partial class Remote
                 return true;
             }
 
-            var spotifyCommand = TryMapCommand(command);
-            if (spotifyCommand is null)
-                return false;
+            if (command.Id == CommandId.AllOff)
+                _ = ExecuteAsync("Pause");
 
-            var executed = await ExecuteAsync(spotifyCommand);
-            if (!executed)
-                return false;
+            if (command.Category == CommandCategory.Source)
+            {
+                if (command.Cmd != owner.DeviceService.Settings.SpotifyTriggerCommand)
+                    _ = ExecuteAsync("Pause");
+            }
+
+            var spotifyCommand = TryMapCommand(command);
+            if (spotifyCommand is not null)
+            {
+
+                var executed = await ExecuteAsync(spotifyCommand);
+                //if (!executed)
+                return true;
+
+            }
 
             await RefreshPlaybackAsync();
-            return true;
+            return false;
+
+
+
         }
 
         private static string? TryMapCommand(BeoCommand command) => command.Id switch
@@ -49,10 +71,9 @@ public partial class Remote
         private Task OpenAsync() =>
             owner.LaunchSpotifyService.OpenAsync(owner.DeviceService.Settings.SpotifyLaunchMode);
 
+
         private Task<bool> ExecuteAsync(string command) =>
-            owner.LaunchSpotifyService.ExecuteSpotifyCommandAsync(
-                command,
-                owner.DeviceService.Settings.SpotifyPreferredDeviceName);
+            owner.LaunchSpotifyService.ExecuteSpotifyCommandAsync(command, owner.DeviceService.Settings.SpotifyPreferredDeviceName);
 
         public async Task RefreshPlaybackAsync()
         {
@@ -67,8 +88,30 @@ public partial class Remote
             Interpret = nowPlaying.Value.Interpret;
         }
 
+        public string SpotifyConnectionLabel()
+        {
+            if (!owner.DeviceService.Settings.SpotifyEnabled)
+                return "SPOTIFY DISABLED";
+
+            if (!string.IsNullOrWhiteSpace(Error))
+                return Error;
+
+            if (!string.IsNullOrWhiteSpace(ConnectedDeviceName))
+                return $"{ConnectedDeviceName}  |  SPOTIFY";
+
+            if (!string.IsNullOrWhiteSpace(owner.DeviceService.Settings.SpotifyPreferredDeviceName))
+                return $"{owner.DeviceService.Settings.SpotifyPreferredDeviceName}  |  SPOTIFY";
+
+            return "SPOTIFY DISCONNECTED";
+        }
+
+        public bool IsSpotifyConnected() =>
+            owner.DeviceService.Settings.SpotifyEnabled &&
+            !string.IsNullOrWhiteSpace(ConnectedDeviceName);
+
         public async Task EnsureConnectionStateAsync()
         {
+            Error = string.Empty;
             try
             {
                 if (!owner.DeviceService.Settings.SpotifyEnabled)
@@ -82,9 +125,10 @@ public partial class Remote
                     owner.DeviceService.Settings.SpotifyPreferredDeviceName);
                 await owner.InvokeAsync(owner.StateHasChanged);
             }
-            catch
+            catch (Exception ex)
             {
-                ConnectedDeviceName = null;
+                Error = ex.Message;
+                // ConnectedDeviceName = ex.Message;
                 await owner.InvokeAsync(owner.StateHasChanged);
             }
         }
@@ -97,7 +141,8 @@ public partial class Remote
             if (!owner.DeviceService.Settings.SpotifyEnabled)
                 return;
 
-            var triggerCommand = BeoCommands.Find(owner.DeviceService.Settings.SpotifyTriggerCommand);
+            //var triggerCommand = BeoCommands.Find(owner.DeviceService.Settings.SpotifyTriggerCommand);
+            var triggerCommand = BeoCommands.Get(owner.DeviceService.Settings.SpotifyTriggerCommand);
             if (triggerCommand?.Category == CommandCategory.Source)
                 triggerCommand.AddIn = SpotifyAddInName;
         }
