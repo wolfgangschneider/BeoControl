@@ -11,14 +11,21 @@ using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Velopack;
+using Velopack.Sources;
+
 using WebKitGtk;
 
 [UnsupportedOSPlatform("OSX")]
 [UnsupportedOSPlatform("Windows")]
 internal class Program : IHostedService
 {
+    private const string RepositoryUrl = "https://github.com/wolfgangschneider/BeoControl";
+
     private static async Task Main(string[] args)
     {
+        VelopackApp.Build().Run();
+
         var builder = Host.CreateApplicationBuilder(args);
         builder.Logging.AddSimpleConsole(
             options =>
@@ -101,6 +108,7 @@ internal class Program : IHostedService
         {
             Task.Run(() =>
             {
+                _ = CheckForUpdatesAsync();
                 _ = _deviceService.AutoConnectAsync();
                 Environment.ExitCode = _app.Run(0, []);
             });
@@ -114,6 +122,28 @@ internal class Program : IHostedService
 
             _deviceService.Disconnect(silent: true);
         });
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var manager = new UpdateManager(new GithubSource(RepositoryUrl, null, false));
+            if (!manager.IsInstalled)
+                return;
+
+            var update = await manager.CheckForUpdatesAsync();
+            if (update is null)
+                return;
+
+            await manager.DownloadUpdatesAsync(update);
+            manager.WaitExitThenApplyUpdates(update.TargetFullRelease);
+            _app.Quit();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Velopack update check failed: {ex}");
+        }
     }
 
     bool _gtkExited;

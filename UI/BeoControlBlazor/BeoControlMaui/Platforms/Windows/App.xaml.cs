@@ -1,13 +1,18 @@
-﻿using BeoControlBlazor.Services;
+using BeoControlBlazor.Services;
 
 using BeoControlBlazorServices;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using System.Threading.Tasks;
 
+using Velopack;
+using Velopack.Sources;
 using Windows.Graphics;
 
 using WinForms = System.Windows.Forms;
@@ -16,6 +21,7 @@ namespace BeoControlMaui.WinUI
 {
     public partial class App : MauiWinUIApplication
     {
+        private const string RepositoryUrl = "https://github.com/wolfgangschneider/BeoControl";
         private const string MutexName = "BeoControl_SingleInstance_Mutex";
         private const string EventName = "BeoControl_SingleInstance_Event";
         private static Mutex? _instanceMutex;
@@ -56,6 +62,7 @@ namespace BeoControlMaui.WinUI
 
         public App()
         {
+            VelopackApp.Build().Run();
 
             _instanceMutex = new Mutex(true, MutexName, out bool isNewInstance);
             if (!isNewInstance)
@@ -121,6 +128,7 @@ namespace BeoControlMaui.WinUI
                 StartTrayThread();
                 StartSingleInstanceListener();
                 _ = _deviceService.AutoConnectAsync();
+                _ = CheckForUpdatesAsync();
 
 
             }
@@ -130,6 +138,32 @@ namespace BeoControlMaui.WinUI
         {
             return Environment.GetCommandLineArgs()
                 .Any(argument => string.Equals(argument, "/silent", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private async Task CheckForUpdatesAsync()
+        {
+            var logger = MauiProgram.Services?
+                .GetService<ILoggerFactory>()?
+                .CreateLogger(typeof(App).FullName ?? nameof(App));
+
+            try
+            {
+                var manager = new UpdateManager(new GithubSource(RepositoryUrl, null, false));
+                if (!manager.IsInstalled)
+                    return;
+
+                var update = await manager.CheckForUpdatesAsync();
+                if (update is null)
+                    return;
+
+                await manager.DownloadUpdatesAsync(update);
+                manager.WaitExitThenApplyUpdates(update.TargetFullRelease);
+                _dispatcher?.TryEnqueue(ExitApp);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Velopack update check failed.");
+            }
         }
 
         private void StartSingleInstanceListener()

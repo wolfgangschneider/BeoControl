@@ -3,6 +3,7 @@
 @using BeoControl.Interfaces
 @using BeoControlBlazorCL.Components
 @using BeoControlBlazorServices
+@using System.Reflection
 @using Microsoft.AspNetCore.Components.Forms
 @inject DeviceService DeviceService
 @inject IAutostartRegistrationService AutostartRegistrationService
@@ -17,7 +18,13 @@
 
     <div class="setup-header">
         <button class="setup-back" @onclick='() => Nav.NavigateTo("/")'>&#8592;</button>
-        <span class="setup-title">DEVICE SETUP</span>
+        <div>
+            <span class="setup-title">DEVICE SETUP</span>
+            @if (!string.IsNullOrEmpty(AppVersionDisplay))
+            {
+                <div class="setup-hint">@AppVersionDisplay</div>
+            }
+        </div>
     </div>
 
     <div class="setup-scroll">
@@ -344,6 +351,8 @@
     private string DisplayStatusText =>
         DeviceService.IsConnected ? "Connected" : "Disconnected";
 
+    private static string AppVersionDisplay => GetAppVersionDisplay();
+
     private string DisplayStatusClass =>
         DeviceService.IsConnected ? StatusClass : "status-disconnected";
 
@@ -522,6 +531,24 @@
         100 or 150 or 200 => zoom,
         _ => 100
     };
+
+    private static string GetAppVersionDisplay()
+    {
+        var entryAssembly = Assembly.GetEntryAssembly();
+        var informationalVersion = entryAssembly?
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion?
+            .Split('+', 2)[0];
+
+        var version = string.IsNullOrWhiteSpace(informationalVersion)
+            ? entryAssembly?.GetName().Version?.ToString(3)
+            : informationalVersion;
+
+        if (string.IsNullOrWhiteSpace(version))
+            return string.Empty;
+
+        return $"v{version.TrimStart('v', 'V')}";
+    }
 
     private static string GetBluetoothEmptyScanMessage()
     {

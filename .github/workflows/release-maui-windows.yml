@@ -24,6 +24,7 @@ env:
   WEBKIT_PROJECT_PATH: UI\BeoControlBlazor\BeoControlWebKit\BeoControlWebKit\BeoControlWebKit.csproj
   TARGET_FRAMEWORK: net10.0-windows10.0.19041.0
   CONFIGURATION: Release
+  VELOPACK_VERSION: 0.0.1298
 
 jobs:
   prepare-release:
@@ -31,6 +32,7 @@ jobs:
     runs-on: windows-latest
     outputs:
       release_tag: ${{ steps.meta.outputs.release_tag }}
+      release_version: ${{ steps.meta.outputs.release_version }}
       prerelease: ${{ steps.meta.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +56,15 @@ jobs:
             throw 'Release tag is required.'
           }
 
+          if ($tag -match '^[vV](.+)$') {
+            $version = $Matches[1]
+          }
+          else {
+            $version = $tag
+          }
+
           "release_tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "release_version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "prerelease=$prerelease" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Create or update GitHub release
@@ -121,6 +131,7 @@ jobs:
             -f $env:TARGET_FRAMEWORK `
             -r ${{ matrix.runtime }} `
             --self-contained ${{ matrix.self_contained }} `
+            -p:Version=${{ needs.prepare-release.outputs.release_version }} `
             -p:WindowsAppSDKSelfContained=${{ matrix.self_contained }} `
             -p:WindowsAppSdkSelfContained=${{ matrix.self_contained }} `
             -p:PublishTrimmed=false `
@@ -199,6 +210,7 @@ jobs:
             -c $env:CONFIGURATION `
             -r ${{ matrix.runtime }} `
             --self-contained ${{ matrix.self_contained }} `
+            -p:Version=${{ needs.prepare-release.outputs.release_version }} `
             -o $publishDir
 
       - name: Package published output
@@ -234,3 +246,142 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload '${{ needs.prepare-release.outputs.release_tag }}' '${{ steps.package.outputs.asset_path }}' --clobber
+
+  publish-velopack-maui:
+    name: Publish Velopack MAUI win-x64
+    needs: prepare-release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install MAUI Windows workload
+        run: dotnet workload install maui-windows
+
+      - name: Install vpk
+        shell: pwsh
+        run: |
+          dotnet tool install --global vpk --version $env:VELOPACK_VERSION
+          $toolPath = Join-Path $HOME ".dotnet\tools"
+          $toolPath | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Publish MAUI Windows app for Velopack
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish\velopack\maui\win-x64"
+
+          dotnet publish $env:PROJECT_PATH `
+            -c $env:CONFIGURATION `
+            -f $env:TARGET_FRAMEWORK `
+            -r win-x64 `
+            --self-contained true `
+            -p:Version=${{ needs.prepare-release.outputs.release_version }} `
+            -p:WindowsPackageType=None `
+            -p:WindowsAppSDKSelfContained=true `
+            -p:WindowsAppSdkSelfContained=true `
+            -o $publishDir
+
+      - name: Pack MAUI Windows with Velopack
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish\velopack\maui\win-x64"
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases\velopack-maui-win-x64"
+
+          vpk pack `
+            --packId wolfgangschneider.BeoControlMaui `
+            --packVersion "${{ needs.prepare-release.outputs.release_version }}" `
+            --packDir $publishDir `
+            --mainExe BeoControlMaui.exe `
+            --packAuthors "wolfgangschneider" `
+            --packTitle "BeoControlMaui" `
+            --runtime win-x64 `
+            --outputDir $releaseDir
+
+      - name: Upload Velopack workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: velopack-maui-win-x64
+          path: ${{ runner.temp }}\releases\velopack-maui-win-x64
+          if-no-files-found: error
+
+      - name: Upload Velopack assets to GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases\velopack-maui-win-x64"
+          Get-ChildItem -Path $releaseDir -File | ForEach-Object {
+            gh release upload '${{ needs.prepare-release.outputs.release_tag }}' $_.FullName --clobber
+          }
+
+  publish-velopack-webkit:
+    name: Publish Velopack WebKit linux-x64
+    needs: prepare-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install vpk
+        shell: pwsh
+        run: |
+          dotnet tool install --global vpk --version $env:VELOPACK_VERSION
+          $toolPath = Join-Path $HOME ".dotnet/tools"
+          $toolPath | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Publish BeoControlWebKit for Velopack
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish/velopack/webkit/linux-x64"
+
+          dotnet publish ./UI/BeoControlBlazor/BeoControlWebKit/BeoControlWebKit/BeoControlWebKit.csproj `
+            -c $env:CONFIGURATION `
+            -r linux-x64 `
+            --self-contained true `
+            -p:Version=${{ needs.prepare-release.outputs.release_version }} `
+            -o $publishDir
+
+      - name: Pack BeoControlWebKit with Velopack
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish/velopack/webkit/linux-x64"
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-linux-x64"
+
+          vpk pack `
+            --packId wolfgangschneider.BeoControlWebKit `
+            --packVersion "${{ needs.prepare-release.outputs.release_version }}" `
+            --packDir $publishDir `
+            --mainExe BeoControlWebKit `
+            --packAuthors "wolfgangschneider" `
+            --packTitle "BeoControlWebKit" `
+            --runtime linux-x64 `
+            --outputDir $releaseDir
+
+      - name: Upload Velopack workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: velopack-webkit-linux-x64
+          path: ${{ runner.temp }}/releases/velopack-webkit-linux-x64
+          if-no-files-found: error
+
+      - name: Upload Velopack assets to GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-linux-x64"
+          Get-ChildItem -Path $releaseDir -File | ForEach-Object {
+            gh release upload '${{ needs.prepare-release.outputs.release_tag }}' $_.FullName --clobber
+          }
