@@ -1,0 +1,45 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Adapters/">
+    <Project Path="Adapters/Beo4Adapter/Beo4Adapter.csproj" />
+    <Project Path="Adapters/Pc2Adapter/Pc2Adapter.csproj" />
+  </Folder>
+  <Folder Name="/AddIns/" />
+  <Folder Name="/AddIns/Spotify/">
+    <Project Path="AddIns/Spotify/Spotify/Spotify.csproj" />
+    <Project Path="AddIns/Spotify/SpotifyBase/SpotifyBase.csproj" />
+    <Project Path="AddIns/Spotify/SpotifyHost/SpotifyHost.csproj" />
+  </Folder>
+  <Folder Name="/Hardware/">
+    <Project Path="Hardware/dotnet_pc2/dotnet_pc2.csproj" />
+  </Folder>
+  <Folder Name="/Interfaces/">
+    <Project Path="Interfaces/BeoControlInterfaces.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/UI/">
+    <Project Path="UI/BeoControlTUI/BeoControlTUI.csproj" />
+    <Project Path="UI/PC2ControlExample/PC2ControlExample.csproj" />
+  </Folder>
+  <Folder Name="/UI/BeoContrlBlazor/">
+    <Project Path="UI/BeoControlBlazor/BeoControlBlazorCL/BeoControlBlazorCL.csproj" />
+    <Project Path="UI/BeoControlBlazor/BeoControlBlazorServer/BeoControlBlazor.csproj" />
+    <Project Path="UI/BeoControlBlazor/BeoControlBlazorServices/BeoControlBlazorServices.csproj" />
+    <Project Path="UI/BeoControlBlazor/BeoControlMaui/BeoControlMaui.csproj">
+      <Deploy Solution="*|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/UI/BeoContrlBlazor/BeoControlWebKit/">
+    <Project Path="UI/BeoControlBlazor/BeoControlWebKit/BeoControlWebKit/BeoControlWebKit.csproj" />
+    <Project Path="UI/BeoControlBlazor/BeoControlWebKit/WebKitGtk/WebKitGtk.csproj" />
+  </Folder>
+  <Folder Name="/_solutionFolder/">
+    <File Path=".github/workflows/release-maui-windows.yml" />
+  </Folder>
+</Solution>
