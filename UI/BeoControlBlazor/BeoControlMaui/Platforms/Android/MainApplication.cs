@@ -12,5 +12,6 @@ namespace BeoControlMaui
         }
 
         protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
+
     }
 }
