@@ -104,8 +104,13 @@
 
             if (sourceChanged)
             {
-                if (DeviceService.Settings.SpotifyEnabled && Spotify.IsSourceSelected())
-                    await Spotify.RefreshPlaybackAsync();
+                if (DeviceService.Settings.SpotifyEnabled)
+                {
+                    if (Spotify.IsSourceSelected())
+                        await Spotify.RefreshPlaybackAsync();
+                    else
+                        await Spotify.EnsureConnectionStateAsync();
+                }
             }
         }
         await InvokeAsync(StateHasChanged);

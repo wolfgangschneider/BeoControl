@@ -75,8 +75,20 @@ public partial class Remote
         private Task<bool> ExecuteAsync(string command) =>
             owner.LaunchSpotifyService.ExecuteSpotifyCommandAsync(command, owner.DeviceService.Settings.SpotifyPreferredDeviceName);
 
+        private Task StopPlaybackPollingAsync() =>
+            owner.LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(null);
+
         public async Task RefreshPlaybackAsync()
         {
+            if (!IsSourceSelected())
+            {
+                await StopPlaybackPollingAsync();
+                ConnectedDeviceName = null;
+                Song = string.Empty;
+                Interpret = string.Empty;
+                return;
+            }
+
             ConnectedDeviceName = await owner.LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(
                 owner.DeviceService.Settings.SpotifyPreferredDeviceName);
             var nowPlaying = await owner.LaunchSpotifyService.GetSpotifyNowPlayingTextAsync(
@@ -114,9 +126,12 @@ public partial class Remote
             Error = string.Empty;
             try
             {
-                if (!owner.DeviceService.Settings.SpotifyEnabled)
+                if (!owner.DeviceService.Settings.SpotifyEnabled || !IsSourceSelected())
                 {
+                    await StopPlaybackPollingAsync();
                     ConnectedDeviceName = null;
+                    Song = string.Empty;
+                    Interpret = string.Empty;
                     await owner.InvokeAsync(owner.StateHasChanged);
                     return;
                 }
