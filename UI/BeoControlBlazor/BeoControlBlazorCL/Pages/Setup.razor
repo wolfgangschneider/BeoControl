@@ -581,7 +581,10 @@
     private async Task LoadSpotifyDevicesAsync()
     {
         IsLoadingSpotifyDevices = true;
-        SpotifyDevicesStatus = "Loading Spotify devices…";
+        SpotifyDevicesStatus = "Stage 1/3: starting Spotify device load…";
+        await InvokeAsync(StateHasChanged);
+
+        SpotifyDevicesStatus = "Stage 2/3: waiting for Spotify login or cached token…";
         await InvokeAsync(StateHasChanged);
 
         try
@@ -592,8 +595,8 @@
                 .ToList();
 
             SpotifyDevicesStatus = SpotifyDevices.Count == 0
-                ? "No Spotify playback devices available."
-                : string.Empty;
+                ? "Stage 3/3: Spotify device request returned 0 devices."
+                : $"Stage 3/3: Spotify device request returned {SpotifyDevices.Count} device(s).";
         }
         catch (Exception ex)
         {

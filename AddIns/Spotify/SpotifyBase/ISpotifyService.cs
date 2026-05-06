@@ -13,8 +13,6 @@ public enum SpotifyLaunchMode
 
 public interface ISpotifyService
 {
-    bool SupportsSpotifyConnectionState { get; }
-    bool SupportsSpotifyNowPlayingNotifications { get; }
     event EventHandler<SpotifyNowPlayingChangedEventArgs>? NowPlayingChanged;
     Task OpenAsync(SpotifyLaunchMode launchMode);
     Task<IReadOnlyList<string>> GetSpotifyDeviceNamesAsync();

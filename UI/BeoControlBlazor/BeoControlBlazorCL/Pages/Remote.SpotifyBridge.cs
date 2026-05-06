@@ -81,17 +81,11 @@ public partial class Remote
 
         public void SubscribeNowPlayingChanged()
         {
-            if (!owner.LaunchSpotifyService.SupportsSpotifyNowPlayingNotifications)
-                return;
-
             owner.LaunchSpotifyService.NowPlayingChanged += OnNowPlayingChanged;
         }
 
         public void UnsubscribeNowPlayingChanged()
         {
-            if (!owner.LaunchSpotifyService.SupportsSpotifyNowPlayingNotifications)
-                return;
-
             owner.LaunchSpotifyService.NowPlayingChanged -= OnNowPlayingChanged;
         }
 

@@ -8,8 +8,6 @@ public abstract class SpotifyServiceBase : ISpotifyService
     private (string Song, string Interpret)? _nowPlayingText;
     private Task<SpotifyController?>? _spotifyControllerTask;
 
-    public bool SupportsSpotifyConnectionState => true;
-    public bool SupportsSpotifyNowPlayingNotifications => true;
     public event EventHandler<SpotifyNowPlayingChangedEventArgs>? NowPlayingChanged;
 
     public abstract Task OpenAsync(SpotifyLaunchMode launchMode);
