@@ -12,7 +12,6 @@ using System.Windows.Forms;
 using System.Threading.Tasks;
 
 using Velopack;
-using Velopack.Sources;
 using Windows.Graphics;
 
 using WinForms = System.Windows.Forms;
@@ -21,7 +20,7 @@ namespace BeoControlMaui.WinUI
 {
     public partial class App : MauiWinUIApplication
     {
-        private const string RepositoryUrl = "https://github.com/wolfgangschneider/BeoControl";
+        private const string UpdateFeedUrl = "https://wolfgangschneider.github.io/BeoControl/updates";
         private const string MutexName = "BeoControl_SingleInstance_Mutex";
         private const string EventName = "BeoControl_SingleInstance_Event";
         private static Mutex? _instanceMutex;
@@ -148,7 +147,7 @@ namespace BeoControlMaui.WinUI
 
             try
             {
-                var manager = new UpdateManager(new GithubSource(RepositoryUrl, null, false));
+                var manager = new UpdateManager(UpdateFeedUrl);
                 if (!manager.IsInstalled)
                     return;
 

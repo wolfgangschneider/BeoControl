@@ -198,7 +198,7 @@ jobs:
           $runtime = '${{ matrix.runtime }}'
           $packageMode = '${{ matrix.package_mode }}'
           $releaseDir = Join-Path $env:RUNNER_TEMP "releases\velopack-maui-$runtime-$packageMode"
-          Get-ChildItem -Path $releaseDir -File | ForEach-Object {
+          Get-ChildItem -Path $releaseDir -File -Filter "*-Setup.exe" | ForEach-Object {
             gh release upload '${{ needs.prepare-release.outputs.release_tag }}' $_.FullName --clobber
           }
 
@@ -300,6 +300,61 @@ jobs:
           $runtime = '${{ matrix.runtime }}'
           $packageMode = '${{ matrix.package_mode }}'
           $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-$runtime-$packageMode"
-          Get-ChildItem -Path $releaseDir -File | ForEach-Object {
+          Get-ChildItem -Path $releaseDir -File -Filter "*.AppImage" | ForEach-Object {
             gh release upload '${{ needs.prepare-release.outputs.release_tag }}' $_.FullName --clobber
           }
+
+  build-pages-feed:
+    name: Build Pages feed
+    needs:
+      - publish-velopack-maui
+      - publish-velopack-webkit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Download Velopack artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: velopack-*
+          path: site/updates
+          merge-multiple: true
+
+      - name: Keep update feed files only
+        shell: bash
+        run: |
+          find site/updates -maxdepth 1 -type f ! \( -name '*.nupkg' -o -name 'releases.*.json' -o -name 'assets.*.json' \) -delete
+          cat > site/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <title>BeoControl Updates</title>
+          </head>
+          <body>
+            <p>BeoControl Velopack update feed.</p>
+          </body>
+          </html>
+          EOF
+          touch site/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  deploy-pages-feed:
+    name: Deploy Pages feed
+    needs: build-pages-feed
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Velopack;
-using Velopack.Sources;
 
 using WebKitGtk;
 
@@ -20,7 +19,7 @@ using WebKitGtk;
 [UnsupportedOSPlatform("Windows")]
 internal class Program : IHostedService
 {
-    private const string RepositoryUrl = "https://github.com/wolfgangschneider/BeoControl";
+    private const string UpdateFeedUrl = "https://wolfgangschneider.github.io/BeoControl/updates";
 
     private static async Task Main(string[] args)
     {
@@ -133,7 +132,8 @@ internal class Program : IHostedService
             Console.WriteLine($"Velopack: CurrentDirectory = {Environment.CurrentDirectory}");
             Console.WriteLine($"Velopack: ProcessPath = {Environment.ProcessPath}");
 
-            var manager = new UpdateManager(new GithubSource(RepositoryUrl, null, false));
+            Console.WriteLine($"Velopack: UpdateFeedUrl = {UpdateFeedUrl}");
+            var manager = new UpdateManager(UpdateFeedUrl);
             Console.WriteLine($"Velopack: IsInstalled = {manager.IsInstalled}");
             if (!manager.IsInstalled)
             {
@@ -141,7 +141,7 @@ internal class Program : IHostedService
                 return;
             }
 
-            Console.WriteLine("Velopack: checking GitHub for updates");
+            Console.WriteLine("Velopack: checking update feed");
             var update = await manager.CheckForUpdatesAsync();
             if (update is null)
             {

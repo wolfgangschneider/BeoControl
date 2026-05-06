@@ -147,7 +147,8 @@ The repository includes a GitHub Actions workflow at `.github/workflows/release-
 - The MAUI app publishes Velopack installers for `win-x64` and `win-arm64`, each in `self-contained` and `framework-dependent` variants.
 - BeoControlWebKit publishes Velopack packages for `linux-x64` and `linux-arm64`, each in `self-contained` and `framework-dependent` variants.
 - Windows installer assets are uploaded as `BeoControl-<runtime>-<package-mode>-Setup.exe`.
-- WebKit release assets are produced by `vpk pack` and should be used for installation and auto-update scenarios instead of raw publish ZIPs.
+- Linux AppImages are uploaded as `BeoControl-<runtime>-<package-mode>.AppImage`.
+- Velopack update feed files (`.nupkg`, `releases.*.json`, `assets.*.json`) are published to GitHub Pages under `/updates`.
 
 The workflow creates the GitHub release automatically if it does not already exist.
 
