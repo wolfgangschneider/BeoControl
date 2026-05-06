@@ -161,7 +161,7 @@ jobs:
           $channel = '${{ matrix.channel }}'
 
           & vpk pack `
-            --packId wolfgangschneider.BeoControlMaui `
+            --packId BeoControl `
             --packVersion "${{ needs.prepare-release.outputs.release_version }}" `
             --packDir $publishDir `
             --mainExe BeoControlMaui.exe `
@@ -175,27 +175,13 @@ jobs:
             exit $LASTEXITCODE
           }
 
-      - name: Normalize MAUI download file names
+      - name: Remove legacy Velopack feed
         shell: pwsh
         run: |
           $runtime = '${{ matrix.runtime }}'
           $packageMode = '${{ matrix.package_mode }}'
-          $channel = '${{ matrix.channel }}'
           $releaseDir = Join-Path $env:RUNNER_TEMP "releases\velopack-maui-$runtime-$packageMode"
-          $oldSetupName = "wolfgangschneider.BeoControlMaui-$channel-Setup.exe"
-          $newSetupName = "BeoControlMaui-$runtime-$packageMode-Setup.exe"
-          $oldSetupPath = Join-Path $releaseDir $oldSetupName
-          $newSetupPath = Join-Path $releaseDir $newSetupName
-
-          if (Test-Path $oldSetupPath) {
-            Move-Item -Path $oldSetupPath -Destination $newSetupPath -Force
-          }
-
-          Get-ChildItem -Path $releaseDir -Filter "assets*.json" | ForEach-Object {
-            $content = Get-Content -Path $_.FullName -Raw
-            $updated = $content.Replace($oldSetupName, $newSetupName)
-            Set-Content -Path $_.FullName -Value $updated -NoNewline
-          }
+          Get-ChildItem -Path $releaseDir -File -Filter "RELEASES*" | Remove-Item -Force
 
       - name: Upload Velopack workflow artifact
         uses: actions/upload-artifact@v4
@@ -217,15 +203,29 @@ jobs:
           }
 
   publish-velopack-webkit:
-    name: Publish Velopack WebKit ${{ matrix.runtime }}
+    name: Publish Velopack WebKit ${{ matrix.runtime }} (${{ matrix.package_mode }})
     needs: prepare-release
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        runtime:
-          - linux-x64
-          - linux-arm64
+        include:
+          - runtime: linux-x64
+            self_contained: "true"
+            package_mode: self-contained
+            channel: linux-x64-self-contained
+          - runtime: linux-x64
+            self_contained: "false"
+            package_mode: framework-dependent
+            channel: linux-x64-framework-dependent
+          - runtime: linux-arm64
+            self_contained: "true"
+            package_mode: self-contained
+            channel: linux-arm64-self-contained
+          - runtime: linux-arm64
+            self_contained: "false"
+            package_mode: framework-dependent
+            channel: linux-arm64-framework-dependent
     steps:
       - uses: actions/checkout@v4
         with:
@@ -247,12 +247,13 @@ jobs:
         shell: pwsh
         run: |
           $runtime = '${{ matrix.runtime }}'
-          $publishDir = Join-Path $env:RUNNER_TEMP "publish/velopack/webkit/$runtime"
+          $packageMode = '${{ matrix.package_mode }}'
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish/velopack/webkit/$runtime/$packageMode"
 
           dotnet publish $env:WEBKIT_PROJECT_PATH `
             -c $env:CONFIGURATION `
             -r $runtime `
-            --self-contained true `
+            --self-contained ${{ matrix.self_contained }} `
             -p:Version=${{ needs.prepare-release.outputs.release_version }} `
             -o $publishDir
 
@@ -260,45 +261,35 @@ jobs:
         shell: pwsh
         run: |
           $runtime = '${{ matrix.runtime }}'
-          $publishDir = Join-Path $env:RUNNER_TEMP "publish/velopack/webkit/$runtime"
-          $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-$runtime"
+          $packageMode = '${{ matrix.package_mode }}'
+          $channel = '${{ matrix.channel }}'
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish/velopack/webkit/$runtime/$packageMode"
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-$runtime-$packageMode"
 
           vpk pack `
-            --packId wolfgangschneider.BeoControlWebKit `
+            --packId BeoControl `
             --packVersion "${{ needs.prepare-release.outputs.release_version }}" `
             --packDir $publishDir `
             --mainExe BeoControlWebKit `
             --packAuthors "wolfgangschneider" `
             --packTitle "BeoControlWebKit" `
-            --channel $runtime `
+            --channel $channel `
             --runtime $runtime `
             --outputDir $releaseDir
 
-      - name: Normalize WebKit download file names
+      - name: Remove legacy Velopack feed
         shell: pwsh
         run: |
           $runtime = '${{ matrix.runtime }}'
-          $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-$runtime"
-          $oldAppImageName = "wolfgangschneider.BeoControlWebKit-$runtime.AppImage"
-          $newAppImageName = "BeoControlWebKit-$runtime.AppImage"
-          $oldAppImagePath = Join-Path $releaseDir $oldAppImageName
-          $newAppImagePath = Join-Path $releaseDir $newAppImageName
-
-          if (Test-Path $oldAppImagePath) {
-            Move-Item -Path $oldAppImagePath -Destination $newAppImagePath -Force
-          }
-
-          Get-ChildItem -Path $releaseDir -Filter "assets*.json" | ForEach-Object {
-            $content = Get-Content -Path $_.FullName -Raw
-            $updated = $content.Replace($oldAppImageName, $newAppImageName)
-            Set-Content -Path $_.FullName -Value $updated -NoNewline
-          }
+          $packageMode = '${{ matrix.package_mode }}'
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-$runtime-$packageMode"
+          Get-ChildItem -Path $releaseDir -File -Filter "RELEASES*" | Remove-Item -Force
 
       - name: Upload Velopack workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: velopack-webkit-${{ matrix.runtime }}
-          path: ${{ runner.temp }}/releases/velopack-webkit-${{ matrix.runtime }}
+          name: velopack-webkit-${{ matrix.runtime }}-${{ matrix.package_mode }}
+          path: ${{ runner.temp }}/releases/velopack-webkit-${{ matrix.runtime }}-${{ matrix.package_mode }}
           if-no-files-found: error
 
       - name: Upload Velopack assets to GitHub release
@@ -307,7 +298,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $runtime = '${{ matrix.runtime }}'
-          $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-$runtime"
+          $packageMode = '${{ matrix.package_mode }}'
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-$runtime-$packageMode"
           Get-ChildItem -Path $releaseDir -File | ForEach-Object {
             gh release upload '${{ needs.prepare-release.outputs.release_tag }}' $_.FullName --clobber
           }
