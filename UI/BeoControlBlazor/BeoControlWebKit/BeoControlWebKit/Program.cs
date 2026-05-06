@@ -128,16 +128,35 @@ internal class Program : IHostedService
     {
         try
         {
-            var manager = new UpdateManager(new GithubSource(RepositoryUrl, null, false));
-            if (!manager.IsInstalled)
-                return;
+            Console.WriteLine("Velopack: starting update check");
+            Console.WriteLine($"Velopack: AppContext.BaseDirectory = {AppContext.BaseDirectory}");
+            Console.WriteLine($"Velopack: CurrentDirectory = {Environment.CurrentDirectory}");
+            Console.WriteLine($"Velopack: ProcessPath = {Environment.ProcessPath}");
 
+            var manager = new UpdateManager(new GithubSource(RepositoryUrl, null, false));
+            Console.WriteLine($"Velopack: IsInstalled = {manager.IsInstalled}");
+            if (!manager.IsInstalled)
+            {
+                Console.WriteLine("Velopack: skipping update check because app is not running from an installed Velopack location");
+                return;
+            }
+
+            Console.WriteLine("Velopack: checking GitHub for updates");
             var update = await manager.CheckForUpdatesAsync();
             if (update is null)
+            {
+                Console.WriteLine("Velopack: no update available");
                 return;
+            }
 
+            Console.WriteLine($"Velopack: update found -> {update.TargetFullRelease.Version}");
+            Console.WriteLine("Velopack: downloading update package");
             await manager.DownloadUpdatesAsync(update);
+            Console.WriteLine("Velopack: download finished");
+
+            Console.WriteLine("Velopack: scheduling apply on exit");
             manager.WaitExitThenApplyUpdates(update.TargetFullRelease);
+            Console.WriteLine("Velopack: quitting app so update can be applied");
             _app.Quit();
         }
         catch (Exception ex)
