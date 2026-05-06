@@ -287,13 +287,7 @@ public sealed class SpotifyController : IDisposable
         {
             CodeChallenge = challenge,
             CodeChallengeMethod = "S256",
-            Scope =
-            [
-                "user-read-private",
-                "user-read-playback-state",
-                "user-read-currently-playing",
-                "user-modify-playback-state"
-            ]
+            Scope = SpotifyDefaults.Scopes
         };
 
         var loginUri = request.ToUri();

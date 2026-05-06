@@ -13,22 +13,10 @@ public sealed class AndroidSpotifyService : ISpotifyService
 {
     private const string SpotifyWebUri = "https://open.spotify.com/";
     private const string SpotifyAppUri = "spotify:";
-    private const string SpotifyApiDevicesUri = "https://api.spotify.com/v1/me/player/devices";
-    private const string SpotifyAuthorizeUri = "https://accounts.spotify.com/authorize";
-    private const string SpotifyTokenUri = "https://accounts.spotify.com/api/token";
-    private const string SpotifyClientId = "d241779ec817475db4bf6b5bd0a457c7";
     private const string SpotifyAndroidRedirectUri = "beocontrolspotify://callbac";
     private const string SpotifyTokenCacheFileName = "spotify-mobile-token.json";
 
     private static readonly SemaphoreSlim SpotifyTokenLock = new(1, 1);
-    private static readonly string[] SpotifyScopes =
-    [
-        "user-read-private",
-        "user-read-playback-state",
-        "user-read-currently-playing",
-        "user-modify-playback-state"
-    ];
-
     private static SpotifyTokenCache? _cachedSpotifyToken;
     private readonly object _pollSync = new();
     private CancellationTokenSource? _pollCancellation;
@@ -83,7 +71,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
         using var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
 
-        using var response = await httpClient.GetAsync(SpotifyApiDevicesUri);
+        using var response = await httpClient.GetAsync(SpotifyDefaults.PlayerDevicesUri);
         var responseBody = await response.Content.ReadAsStringAsync();
 
         if (!response.IsSuccessStatusCode)
@@ -138,10 +126,10 @@ public sealed class AndroidSpotifyService : ISpotifyService
         var encodedDeviceId = Uri.EscapeDataString(selectedDevice.Id);
         using var request = command switch
         {
-            "Play" => new HttpRequestMessage(HttpMethod.Put, $"https://api.spotify.com/v1/me/player/play?device_id={encodedDeviceId}"),
-            "Pause" => new HttpRequestMessage(HttpMethod.Put, $"https://api.spotify.com/v1/me/player/pause?device_id={encodedDeviceId}"),
-            "Next" => new HttpRequestMessage(HttpMethod.Post, $"https://api.spotify.com/v1/me/player/next?device_id={encodedDeviceId}"),
-            "Previous" => new HttpRequestMessage(HttpMethod.Post, $"https://api.spotify.com/v1/me/player/previous?device_id={encodedDeviceId}"),
+            "Play" => new HttpRequestMessage(HttpMethod.Put, $"{SpotifyDefaults.PlayerApiRootUri}/play?device_id={encodedDeviceId}"),
+            "Pause" => new HttpRequestMessage(HttpMethod.Put, $"{SpotifyDefaults.PlayerApiRootUri}/pause?device_id={encodedDeviceId}"),
+            "Next" => new HttpRequestMessage(HttpMethod.Post, $"{SpotifyDefaults.PlayerApiRootUri}/next?device_id={encodedDeviceId}"),
+            "Previous" => new HttpRequestMessage(HttpMethod.Post, $"{SpotifyDefaults.PlayerApiRootUri}/previous?device_id={encodedDeviceId}"),
             _ => throw new InvalidOperationException($"Unsupported Spotify command '{command}'.")
         };
 
@@ -155,7 +143,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
 
     private static async Task<AndroidSpotifyDevice?> GetAndroidPreferredDeviceAsync(HttpClient httpClient, string preferredDeviceName)
     {
-        using var response = await httpClient.GetAsync(SpotifyApiDevicesUri);
+        using var response = await httpClient.GetAsync(SpotifyDefaults.PlayerDevicesUri);
         var responseBody = await response.Content.ReadAsStringAsync();
 
         if (!response.IsSuccessStatusCode)
@@ -194,7 +182,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
             Encoding.UTF8,
             "application/json");
 
-        using var response = await httpClient.PutAsync("https://api.spotify.com/v1/me/player", content);
+        using var response = await httpClient.PutAsync(SpotifyDefaults.PlayerApiRootUri, content);
         if (response.IsSuccessStatusCode)
             return true;
 
@@ -209,7 +197,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
         using var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
 
-        using var response = await httpClient.GetAsync("https://api.spotify.com/v1/me/player/currently-playing");
+        using var response = await httpClient.GetAsync(SpotifyDefaults.PlayerCurrentlyPlayingUri);
         if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
             return ("Spotify is paused", string.Empty);
 
@@ -299,15 +287,15 @@ public sealed class AndroidSpotifyService : ISpotifyService
     {
         var query = string.Join("&",
         [
-            $"client_id={Uri.EscapeDataString(SpotifyClientId)}",
+            $"client_id={Uri.EscapeDataString(SpotifyDefaults.ClientId)}",
             "response_type=code",
             $"redirect_uri={Uri.EscapeDataString(SpotifyAndroidRedirectUri)}",
-            $"scope={Uri.EscapeDataString(string.Join(" ", SpotifyScopes))}",
+            $"scope={Uri.EscapeDataString(string.Join(" ", SpotifyDefaults.Scopes))}",
             "code_challenge_method=S256",
             $"code_challenge={Uri.EscapeDataString(challenge)}"
         ]);
 
-        return new Uri($"{SpotifyAuthorizeUri}?{query}");
+        return new Uri($"{SpotifyDefaults.AccountsAuthorizeUri}?{query}");
     }
 
     private static async Task<SpotifyTokenCache> ExchangeSpotifyCodeAsync(string code, string verifier)
@@ -315,7 +303,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
         using var httpClient = new HttpClient();
         using var content = new FormUrlEncodedContent(
         [
-            new KeyValuePair<string, string>("client_id", SpotifyClientId),
+            new KeyValuePair<string, string>("client_id", SpotifyDefaults.ClientId),
             new KeyValuePair<string, string>("grant_type", "authorization_code"),
             new KeyValuePair<string, string>("code", code),
             new KeyValuePair<string, string>("redirect_uri", SpotifyAndroidRedirectUri),
@@ -330,7 +318,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
         using var httpClient = new HttpClient();
         using var content = new FormUrlEncodedContent(
         [
-            new KeyValuePair<string, string>("client_id", SpotifyClientId),
+            new KeyValuePair<string, string>("client_id", SpotifyDefaults.ClientId),
             new KeyValuePair<string, string>("grant_type", "refresh_token"),
             new KeyValuePair<string, string>("refresh_token", refreshToken)
         ]);
@@ -344,7 +332,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
 
     private static async Task<SpotifyTokenCache> SendSpotifyTokenRequestAsync(HttpClient httpClient, FormUrlEncodedContent content)
     {
-        using var response = await httpClient.PostAsync(SpotifyTokenUri, content);
+        using var response = await httpClient.PostAsync(SpotifyDefaults.AccountsTokenUri, content);
         var responseBody = await response.Content.ReadAsStringAsync();
 
         if (!response.IsSuccessStatusCode)
