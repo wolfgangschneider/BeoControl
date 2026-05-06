@@ -390,14 +390,14 @@ jobs:
           path: ${{ runner.temp }}\releases\android\*.apk
           if-no-files-found: error
 
-      - name: Upload signed Android APK to GitHub release
-        if: ${{ env.HAS_ANDROID_SIGNING == 'true' }}
+      - name: Upload Android APK to GitHub release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $apkPath = Join-Path $env:RUNNER_TEMP "releases\android\BeoControl-android.apk"
-          gh release upload '${{ needs.prepare-release.outputs.release_tag }}' $apkPath --clobber
+          Get-ChildItem -Path (Join-Path $env:RUNNER_TEMP "releases\android") -File -Filter "*.apk" | ForEach-Object {
+            gh release upload '${{ needs.prepare-release.outputs.release_tag }}' $_.FullName --clobber
+          }
 
   build-pages-feed:
     name: Build Pages feed

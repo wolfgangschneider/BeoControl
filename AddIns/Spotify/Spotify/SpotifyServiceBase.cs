@@ -106,7 +106,16 @@ public abstract class SpotifyServiceBase : ISpotifyService
         if (_spotifyControllerTask is null)
             return;
 
-        var controller = await _spotifyControllerTask;
+        SpotifyController? controller;
+        try
+        {
+            controller = await _spotifyControllerTask;
+        }
+        catch
+        {
+            controller = null;
+        }
+
         controller?.Dispose();
     }
 
