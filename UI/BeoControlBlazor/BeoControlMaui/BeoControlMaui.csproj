@@ -20,8 +20,8 @@
 		<!-- Oder wenn explizit ein Android-RID (z.B. -r android-arm64) gesetzt ist -->
 		<TargetFrameworks Condition="'$(RuntimeIdentifier)' == '' or $(RuntimeIdentifier.StartsWith('android'))">$(TargetFrameworks);net10.0-android</TargetFrameworks>
 
-		<!-- 3. iOS/Catalyst nur auf Nicht-Linux-Systemen und ohne Windows-RID -->
-		<TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux')) and !$(RuntimeIdentifier.StartsWith('win'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+		<!-- 3. iOS/Catalyst nur lokal auf Nicht-Linux-Systemen und ohne Windows-RID -->
+		<TargetFrameworks Condition="'$(GITHUB_ACTIONS)' != 'true' and !$([MSBuild]::IsOSPlatform('linux')) and !$(RuntimeIdentifier.StartsWith('win'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
 	</PropertyGroup>
 
 	<PropertyGroup>
