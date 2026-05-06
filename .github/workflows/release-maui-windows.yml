@@ -171,82 +171,6 @@ jobs:
         run: |
           gh release upload '${{ needs.prepare-release.outputs.release_tag }}' '${{ steps.package.outputs.asset_path }}' --clobber
 
-  publish-webkit:
-    name: Publish WebKit ${{ matrix.runtime }} (${{ matrix.package_mode }})
-    needs: prepare-release
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runtime: linux-x64
-            self_contained: "true"
-            package_mode: self-contained
-          - runtime: linux-x64
-            self_contained: "false"
-            package_mode: framework-dependent
-          - runtime: linux-arm64
-            self_contained: "true"
-            package_mode: self-contained
-          - runtime: linux-arm64
-            self_contained: "false"
-            package_mode: framework-dependent
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up .NET 10
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Publish BeoControlWebKit
-        shell: pwsh
-        run: |
-          $publishDir = Join-Path $env:RUNNER_TEMP "publish\webkit\${{ matrix.runtime }}\${{ matrix.package_mode }}"
-
-          dotnet publish $env:WEBKIT_PROJECT_PATH `
-            -c $env:CONFIGURATION `
-            -r ${{ matrix.runtime }} `
-            --self-contained ${{ matrix.self_contained }} `
-            -p:Version=${{ needs.prepare-release.outputs.release_version }} `
-            -o $publishDir
-
-      - name: Package published output
-        id: package
-        shell: pwsh
-        run: |
-          $tag = '${{ needs.prepare-release.outputs.release_tag }}'
-          $runtime = '${{ matrix.runtime }}'
-          $packageMode = '${{ matrix.package_mode }}'
-          $publishDir = Join-Path $env:RUNNER_TEMP "publish\webkit\$runtime\$packageMode"
-          $assetName = "BeoControlWebKit-$tag-$runtime-$packageMode.zip"
-          $assetPath = Join-Path $env:RUNNER_TEMP $assetName
-
-          if (Test-Path $assetPath) {
-            Remove-Item $assetPath -Force
-          }
-
-          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $assetPath
-
-          "asset_name=$assetName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "asset_path=$assetPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.package.outputs.asset_name }}
-          path: ${{ steps.package.outputs.asset_path }}
-          if-no-files-found: error
-
-      - name: Upload asset to GitHub release
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload '${{ needs.prepare-release.outputs.release_tag }}' '${{ steps.package.outputs.asset_path }}' --clobber
-
   publish-velopack-maui:
     name: Publish Velopack MAUI win-x64
     needs: prepare-release
@@ -321,9 +245,15 @@ jobs:
           }
 
   publish-velopack-webkit:
-    name: Publish Velopack WebKit linux-x64
+    name: Publish Velopack WebKit ${{ matrix.runtime }}
     needs: prepare-release
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime:
+          - linux-x64
+          - linux-arm64
     steps:
       - uses: actions/checkout@v4
         with:
@@ -344,11 +274,12 @@ jobs:
       - name: Publish BeoControlWebKit for Velopack
         shell: pwsh
         run: |
-          $publishDir = Join-Path $env:RUNNER_TEMP "publish/velopack/webkit/linux-x64"
+          $runtime = '${{ matrix.runtime }}'
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish/velopack/webkit/$runtime"
 
-          dotnet publish ./UI/BeoControlBlazor/BeoControlWebKit/BeoControlWebKit/BeoControlWebKit.csproj `
+          dotnet publish $env:WEBKIT_PROJECT_PATH `
             -c $env:CONFIGURATION `
-            -r linux-x64 `
+            -r $runtime `
             --self-contained true `
             -p:Version=${{ needs.prepare-release.outputs.release_version }} `
             -o $publishDir
@@ -356,8 +287,9 @@ jobs:
       - name: Pack BeoControlWebKit with Velopack
         shell: pwsh
         run: |
-          $publishDir = Join-Path $env:RUNNER_TEMP "publish/velopack/webkit/linux-x64"
-          $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-linux-x64"
+          $runtime = '${{ matrix.runtime }}'
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish/velopack/webkit/$runtime"
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-$runtime"
 
           vpk pack `
             --packId wolfgangschneider.BeoControlWebKit `
@@ -366,14 +298,14 @@ jobs:
             --mainExe BeoControlWebKit `
             --packAuthors "wolfgangschneider" `
             --packTitle "BeoControlWebKit" `
-            --runtime linux-x64 `
+            --runtime $runtime `
             --outputDir $releaseDir
 
       - name: Upload Velopack workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: velopack-webkit-linux-x64
-          path: ${{ runner.temp }}/releases/velopack-webkit-linux-x64
+          name: velopack-webkit-${{ matrix.runtime }}
+          path: ${{ runner.temp }}/releases/velopack-webkit-${{ matrix.runtime }}
           if-no-files-found: error
 
       - name: Upload Velopack assets to GitHub release
@@ -381,7 +313,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-linux-x64"
+          $runtime = '${{ matrix.runtime }}'
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-$runtime"
           Get-ChildItem -Path $releaseDir -File | ForEach-Object {
             gh release upload '${{ needs.prepare-release.outputs.release_tag }}' $_.FullName --clobber
           }

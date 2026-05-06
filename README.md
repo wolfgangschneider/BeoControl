@@ -138,18 +138,56 @@ dotnet publish -f net10.0-windows10.0.19041.0 -c Release -r win-arm64 --self-con
 
 Copy the `publish\` folder to any Windows machine — no installer or runtime install needed.
 
-### GitHub Release (MAUI Windows)
+### GitHub Release Assets
 
-The repository includes a GitHub Actions workflow at `.github/workflows/release-maui-windows.yml` that builds release zips and attaches them to a GitHub release.
+The repository includes a GitHub Actions workflow at `.github/workflows/release-maui-windows.yml` that builds release assets and attaches them to a GitHub release.
 
 - Push a tag like `v1.0.0` to trigger the workflow automatically.
 - Or run the `Release MAUI Windows` workflow manually and provide a tag such as `v1.0.0`.
 - The MAUI app publishes `win-x64` and `win-arm64` builds in both `self-contained` and `framework-dependent` variants.
-- BeoControlWebKit publishes `linux-x64` and `linux-arm64` builds in both `self-contained` and `framework-dependent` variants.
+- BeoControlWebKit publishes Velopack packages for `linux-x64` and `linux-arm64`.
 - MAUI assets are uploaded as `BeoControlMaui-<tag>-<runtime>-<package-mode>.zip`.
-- WebKit assets are uploaded as `BeoControlWebKit-<tag>-<runtime>-<package-mode>.zip`.
+- WebKit release assets are produced by `vpk pack` and should be used for installation and auto-update scenarios instead of raw publish ZIPs.
 
 The workflow creates the GitHub release automatically if it does not already exist.
+
+## Installation
+
+### Windows (MAUI)
+
+Download and run the Windows Velopack installer from the GitHub release.
+
+1. Download `BeoControlMaui-Setup.exe`.
+2. Run the installer.
+3. Velopack installs the app to `%LocalAppData%\wolfgangschneider.BeoControlMaui`.
+4. The installer creates Start menu and Desktop shortcuts and launches the app.
+
+Windows auto-update is supported through Velopack.
+
+### Linux (BeoControlWebKit)
+
+Download the Linux `.AppImage` from the GitHub release.
+
+1. Download the `BeoControlWebKit` AppImage for your architecture (`linux-x64` or `linux-arm64`).
+2. Make it executable with `chmod +x <file>.AppImage`.
+3. Start it directly or from a `.desktop` launcher that points to the AppImage.
+
+The AppImage runs from its current location; it is not installed to a fixed system directory by default. Linux auto-update is supported when the user keeps launching the Velopack-produced AppImage.
+
+### Android (MAUI)
+
+The MAUI project includes an Android target, but the current repository workflow does not publish Android release assets.
+
+Android installation is therefore currently a developer or manual distribution scenario:
+
+1. Build an Android package (`apk` or `aab`) from the MAUI project.
+2. Install it on the device by sideloading or through an app store / MDM workflow.
+
+Velopack auto-update does not apply to Android. Android updates need the normal Android distribution path, such as Play Store updates, managed device deployment, or installing a newer APK manually.
+
+### iOS / MacCatalyst
+
+The MAUI project also contains iOS and MacCatalyst targets, but this repository does not currently publish installable release assets for those platforms.
 
 ### Run PC2 Example
 
