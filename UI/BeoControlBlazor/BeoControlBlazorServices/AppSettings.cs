@@ -45,6 +45,7 @@ public class AppSettings
     public string SpotifyPreferredDeviceName { get; set; } = string.Empty;
     public string SpotifyTriggerCommand { get; set; } = "atape";
     public SpotifyLaunchMode SpotifyLaunchMode { get; set; } = SpotifyLaunchMode.Web;
+    public string Pc2TriggerCommand { get; set; } = string.Empty;
 
     public static AppSettings Load()
     {
@@ -56,6 +57,7 @@ public class AppSettings
             settings.SpotifyEnabled = settings.SpotifyEnabled;
             settings.SpotifyPreferredDeviceName ??= string.Empty;
             settings.SpotifyTriggerCommand ??= "atape";
+            settings.Pc2TriggerCommand ??= string.Empty;
             if (!Enum.IsDefined(settings.SpotifyLaunchMode))
                 settings.SpotifyLaunchMode = SpotifyLaunchMode.Web;
             return settings;

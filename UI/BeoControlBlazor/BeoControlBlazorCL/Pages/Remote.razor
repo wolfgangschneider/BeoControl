@@ -90,7 +90,7 @@
     {
         Selected = DeviceService.Settings.LastRemote;
         RemoteButton.Zoom = NormalizeZoom(DeviceService.Settings.RemoteButtonZoom);
-        Spotify.SyncSourceAddIn();
+        SyncSourceAddIns();
         DeviceService.OnStatusChanged += OnStatusChanged;
         _ = Spotify.EnsureConnectionStateAsync();
         _ = RunSpotifyUiRefreshAsync(_spotifyUiRefreshCancellation.Token);
@@ -115,6 +115,8 @@
                 }
             }
         }
+
+        SyncSourceAddIns();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -156,9 +158,44 @@
         var commandCaptured = await Spotify.HandleCommandAsync2(command);
         
         if (!commandCaptured)
-            DeviceService.SendCommand(command.Cmd);
+            DeviceService.SendCommand(MapPc2TriggerCommand(command).Cmd);
         
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void SyncSourceAddIns()
+    {
+        foreach (var sourceCommand in SourceCommands)
+            sourceCommand.AddIn = null;
+
+        Spotify.ApplySourceAddIn();
+        ApplyPc2SourceAddIn();
+    }
+
+    private void ApplyPc2SourceAddIn()
+    {
+        if (DeviceService.CurrentDevice?.Type != DeviceType.PC2)
+            return;
+
+        var triggerCommand = BeoCommands.Get(DeviceService.Settings.Pc2TriggerCommand);
+        if (triggerCommand?.Category != CommandCategory.Source)
+            return;
+
+        triggerCommand.AddIn = $"{triggerCommand.RemoteLabel} PC";
+    }
+
+    private BeoCommand MapPc2TriggerCommand(BeoCommand command)
+    {
+        if (DeviceService.CurrentDevice?.Type != DeviceType.PC2)
+            return command;
+
+        if (command.Category != CommandCategory.Source)
+            return command;
+
+        if (!string.Equals(command.Cmd, DeviceService.Settings.Pc2TriggerCommand, StringComparison.Ordinal))
+            return command;
+
+        return BeoCommands.Get(CommandId.Pc);
     }
 
    

@@ -154,15 +154,11 @@ public partial class Remote
             }
         }
 
-        public void SyncSourceAddIn()
+        public void ApplySourceAddIn()
         {
-            foreach (var sourceCommand in SourceCommands)
-                sourceCommand.AddIn = null;
-
             if (!owner.DeviceService.Settings.SpotifyEnabled)
                 return;
 
-            //var triggerCommand = BeoCommands.Find(owner.DeviceService.Settings.SpotifyTriggerCommand);
             var triggerCommand = BeoCommands.Get(owner.DeviceService.Settings.SpotifyTriggerCommand);
             if (triggerCommand?.Category == CommandCategory.Source)
                 triggerCommand.AddIn = SpotifyAddInName;

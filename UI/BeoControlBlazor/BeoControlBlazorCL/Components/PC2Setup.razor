@@ -1,3 +1,4 @@
+﻿@using BeoControl.Interfaces
 @using Microsoft.AspNetCore.Components.Forms
 @inject BeoControlBlazorServices.DeviceService DeviceService
 @implements IDisposable
@@ -85,10 +86,32 @@
             </div>
         </InputRadioGroup>
     </section>
+
+    <section class="pc2-card">
+        <div class="pc2-card-header">
+            <div>
+                <h3 class="pc2-card-title">Remote trigger</h3>
+                <p class="pc2-card-subtitle">Choose which Beo4 source button should act as PC while connected to PC2.</p>
+            </div>
+        </div>
+
+        <label class="setup-field">
+            <span class="setup-field-label">Trigger command</span>
+            <InputSelect class="setup-text-input" @bind-Value="Pc2TriggerCommand">
+                <option value="">Off</option>
+                @foreach (var source in Pc2TriggerSources)
+                {
+                    <option value="@source.Cmd">@source.RemoteLabel</option>
+                }
+            </InputSelect>
+        </label>
+    </section>
 </div>
 
 @code {
     private static readonly int[] OptionValues = [0, 2, 4, 6];
+    private static readonly BeoCommand[] Pc2TriggerSources =
+        BeoCommands.All.Where(command => command.Category == CommandCategory.Source).ToArray();
 
     private static readonly (Beoported.Pc2.Pc2DefaultSource Value, string Label)[] DefaultSources =
     [
@@ -99,6 +122,20 @@
 
     public int Option { get; set; }
     private BeoControl.Interfaces.StatusMessage? _lastPc2AudioStatus;
+
+    private string Pc2TriggerCommand
+    {
+        get => DeviceService.Settings.Pc2TriggerCommand;
+        set
+        {
+            var normalized = value?.Trim() ?? string.Empty;
+            if (DeviceService.Settings.Pc2TriggerCommand == normalized)
+                return;
+
+            DeviceService.Settings.Pc2TriggerCommand = normalized;
+            DeviceService.Settings.Save();
+        }
+    }
 
     public Beoported.Pc2.Pc2DefaultSource DefaultSource
     {
