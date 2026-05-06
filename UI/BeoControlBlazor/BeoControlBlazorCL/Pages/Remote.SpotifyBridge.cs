@@ -73,8 +73,21 @@ public partial class Remote
             owner.LaunchSpotifyService.OpenAsync(owner.DeviceService.Settings.SpotifyLaunchMode);
 
 
-        private Task<bool> ExecuteAsync(string command) =>
-            owner.LaunchSpotifyService.ExecuteSpotifyCommandAsync(command, owner.DeviceService.Settings.SpotifyPreferredDeviceName);
+        private async Task<bool> ExecuteAsync(string command)
+        {
+            try
+            {
+                Error = string.Empty;
+                return await owner.LaunchSpotifyService.ExecuteSpotifyCommandAsync(
+                    command,
+                    owner.DeviceService.Settings.SpotifyPreferredDeviceName);
+            }
+            catch (Exception ex)
+            {
+                await SetErrorStateAsync(ex.Message);
+                return false;
+            }
+        }
 
         private Task StopPlaybackPollingAsync() =>
             owner.LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(null);
@@ -91,6 +104,7 @@ public partial class Remote
 
         public async Task RefreshPlaybackAsync()
         {
+            Error = string.Empty;
             if (!IsSourceSelected())
             {
                 await StopPlaybackPollingAsync();
@@ -100,11 +114,18 @@ public partial class Remote
                 return;
             }
 
-            ConnectedDeviceName = await owner.LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(
-                owner.DeviceService.Settings.SpotifyPreferredDeviceName);
-            var nowPlaying = await owner.LaunchSpotifyService.GetSpotifyNowPlayingTextAsync(
-                owner.DeviceService.Settings.SpotifyPreferredDeviceName);
-            ApplyNowPlaying(nowPlaying);
+            try
+            {
+                ConnectedDeviceName = await owner.LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(
+                    owner.DeviceService.Settings.SpotifyPreferredDeviceName);
+                var nowPlaying = await owner.LaunchSpotifyService.GetSpotifyNowPlayingTextAsync(
+                    owner.DeviceService.Settings.SpotifyPreferredDeviceName);
+                ApplyNowPlaying(nowPlaying);
+            }
+            catch (Exception ex)
+            {
+                await SetErrorStateAsync(ex.Message);
+            }
         }
 
         public string SpotifyConnectionLabel()
@@ -118,42 +139,50 @@ public partial class Remote
             if (!string.IsNullOrWhiteSpace(ConnectedDeviceName))
                 return $"{ConnectedDeviceName}  |  SPOTIFY";
 
-            if (!string.IsNullOrWhiteSpace(owner.DeviceService.Settings.SpotifyPreferredDeviceName))
-                return $"{owner.DeviceService.Settings.SpotifyPreferredDeviceName}  |  SPOTIFY";
-
             return "SPOTIFY DISCONNECTED";
         }
 
         public bool IsSpotifyConnected() =>
             owner.DeviceService.Settings.SpotifyEnabled &&
-            (!string.IsNullOrWhiteSpace(ConnectedDeviceName)
-                || (!IsSourceSelected()
-                    && !string.IsNullOrWhiteSpace(owner.DeviceService.Settings.SpotifyPreferredDeviceName)));
+            string.IsNullOrWhiteSpace(Error) &&
+            !string.IsNullOrWhiteSpace(ConnectedDeviceName);
 
         public async Task EnsureConnectionStateAsync()
         {
             Error = string.Empty;
+            if (!owner.DeviceService.Settings.SpotifyEnabled)
+            {
+                await StopPlaybackPollingAsync();
+                ConnectedDeviceName = null;
+                Song = string.Empty;
+                Interpret = string.Empty;
+                await owner.InvokeAsync(owner.StateHasChanged);
+                return;
+            }
+
+            if (!IsSourceSelected())
+            {
+                await StopPlaybackPollingAsync();
+                Song = string.Empty;
+                Interpret = string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(owner.DeviceService.Settings.SpotifyPreferredDeviceName))
+            {
+                ConnectedDeviceName = null;
+                await owner.InvokeAsync(owner.StateHasChanged);
+                return;
+            }
+
             try
             {
-                if (!owner.DeviceService.Settings.SpotifyEnabled || !IsSourceSelected())
-                {
-                    await StopPlaybackPollingAsync();
-                    ConnectedDeviceName = null;
-                    Song = string.Empty;
-                    Interpret = string.Empty;
-                    await owner.InvokeAsync(owner.StateHasChanged);
-                    return;
-                }
-
                 ConnectedDeviceName = await owner.LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(
                     owner.DeviceService.Settings.SpotifyPreferredDeviceName);
                 await owner.InvokeAsync(owner.StateHasChanged);
             }
             catch (Exception ex)
             {
-                Error = ex.Message;
-                // ConnectedDeviceName = ex.Message;
-                await owner.InvokeAsync(owner.StateHasChanged);
+                await SetErrorStateAsync(ex.Message);
             }
         }
 
@@ -187,6 +216,15 @@ public partial class Remote
 
             Song = nowPlaying.Value.Song;
             Interpret = nowPlaying.Value.Interpret;
+        }
+
+        private async Task SetErrorStateAsync(string message)
+        {
+            await StopPlaybackPollingAsync();
+            ConnectedDeviceName = null;
+            Song = string.Empty;
+            Interpret = string.Empty;
+            Error = message;
         }
     }
 }

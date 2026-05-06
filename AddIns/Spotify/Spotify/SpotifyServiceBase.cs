@@ -17,6 +17,7 @@ public abstract class SpotifyServiceBase : ISpotifyService
     protected virtual Task<SpotifyConnection> ConnectAsync()
     {
         return SpotifyController.ConnectAsync(SpotifyDefaults.ClientId, RedirectUri);
+
     }
 
     public async Task<IReadOnlyList<string>> GetSpotifyDeviceNamesAsync()
@@ -33,8 +34,23 @@ public abstract class SpotifyServiceBase : ISpotifyService
 
     public async Task<string?> GetSpotifyConnectedDeviceNameAsync(string? preferredDeviceName)
     {
-        var controller = await GetSpotifyControllerAsync(preferredDeviceName);
-        return controller?.SelectedDevice.Name;
+        var normalizedDeviceName = preferredDeviceName?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedDeviceName))
+        {
+            await DisposeSpotifyControllerAsync();
+            _spotifyControllerTask = null;
+            _preferredDeviceName = normalizedDeviceName;
+            SetNowPlayingText(null);
+            return null;
+        }
+
+        var connection = await ConnectAsync()
+            ?? throw new InvalidOperationException("Spotify connection failed.");
+
+        var selectedDevice = connection.Devices.FirstOrDefault(device =>
+            string.Equals(device.Name, normalizedDeviceName, StringComparison.OrdinalIgnoreCase));
+
+        return selectedDevice?.Name;
     }
 
     public async Task<bool> ExecuteSpotifyCommandAsync(string command, string? preferredDeviceName)

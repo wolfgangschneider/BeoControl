@@ -1,6 +1,7 @@
+using BeoControlBlazorServices;
+
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
-using BeoControlBlazorServices;
 
 using System.ComponentModel;
 using System.Text.Json;
@@ -76,6 +77,7 @@ public sealed class SpotifyController : IDisposable
             var wait = ex.RetryAfter;
             Console.WriteLine($"Rate limit hit. Waiting {wait} seconds...");
             throw new InvalidOperationException($"Rate limit hit. Waiting {wait.TotalHours} hours...", ex);
+
             //return null;
 
         }
