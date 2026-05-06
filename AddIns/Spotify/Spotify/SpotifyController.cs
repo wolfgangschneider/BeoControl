@@ -1,5 +1,6 @@
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
+using BeoControlBlazorServices;
 
 using System.ComponentModel;
 using System.Text.Json;
@@ -202,7 +203,7 @@ public sealed class SpotifyController : IDisposable
 
     private async Task PollNowPlayingAsync()
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        using var timer = new PeriodicTimer(SpotifyDefaults.NowPlayingPollInterval);
         try
         {
             while (await timer.WaitForNextTickAsync(_pollCancellation.Token))

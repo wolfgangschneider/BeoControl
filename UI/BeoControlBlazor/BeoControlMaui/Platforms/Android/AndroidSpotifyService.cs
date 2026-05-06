@@ -7,20 +7,22 @@ using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Authentication;
 using Microsoft.Maui.Storage;
 
+using Spotify;
+using SpotifyAPI.Web;
+using SpotifyAPI.Web.Auth;
+
 namespace BeoControlBlazorServices;
 
-public sealed class AndroidSpotifyService : ISpotifyService
+public sealed class AndroidSpotifyService : SpotifyServiceBase
 {
     private const string SpotifyWebUri = "https://open.spotify.com/";
     private const string SpotifyAppUri = "spotify:";
-    private const string SpotifyApiDevicesUri = "https://api.spotify.com/v1/me/player/devices";
     private const string SpotifyAuthorizeUri = "https://accounts.spotify.com/authorize";
     private const string SpotifyTokenUri = "https://accounts.spotify.com/api/token";
-    private const string SpotifyClientId = "d241779ec817475db4bf6b5bd0a457c7";
     private const string SpotifyAndroidRedirectUri = "beocontrolspotify://callbac";
     private const string SpotifyTokenCacheFileName = "spotify-mobile-token.json";
+
     private static readonly SemaphoreSlim SpotifyTokenLock = new(1, 1);
-    private static SpotifyTokenCache? _cachedSpotifyToken;
     private static readonly string[] SpotifyScopes =
     [
         "user-read-private",
@@ -28,190 +30,70 @@ public sealed class AndroidSpotifyService : ISpotifyService
         "user-read-currently-playing",
         "user-modify-playback-state"
     ];
-    public bool SupportsSpotifyConnectionState => true;
 
-    // maui kann im browser nicht tab recyclen
-    public Task OpenAsync(SpotifyLaunchMode launchMode)
+    private static SpotifyTokenCache? _cachedSpotifyToken;
+
+    protected override string RedirectUri => SpotifyAndroidRedirectUri;
+
+    public override Task OpenAsync(SpotifyLaunchMode launchMode)
     {
         var uri = launchMode == SpotifyLaunchMode.App ? SpotifyAppUri : SpotifyWebUri;
         return Launcher.Default.OpenAsync(uri);
     }
 
-    public Task<IReadOnlyList<string>> GetSpotifyDeviceNamesAsync()
+    protected override async Task<SpotifyConnection> ConnectAsync()
     {
-        return GetAndroidSpotifyDeviceNamesAsync();
-    }
-
-    public Task<string?> GetSpotifyConnectedDeviceNameAsync(string? preferredDeviceName)
-    {
-        return GetAndroidSpotifyConnectedDeviceNameAsync(preferredDeviceName);
-    }
-
-    public Task<bool> ExecuteSpotifyCommandAsync(string command, string? preferredDeviceName)
-    {
-        return ExecuteAndroidSpotifyCommandAsync(command, preferredDeviceName);
-    }
-
-    public Task<(string Song, string Interpret)?> GetSpotifyNowPlayingTextAsync(string? preferredDeviceName)
-    {
-        return GetAndroidSpotifyNowPlayingTextAsync();
-    }
-
-    private static async Task<IReadOnlyList<string>> GetAndroidSpotifyDeviceNamesAsync()
-    {
-        var token = await GetAndroidSpotifyTokenAsync();
-
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
-
-        using var response = await httpClient.GetAsync(SpotifyApiDevicesUri);
-        var responseBody = await response.Content.ReadAsStringAsync();
-
-        if (!response.IsSuccessStatusCode)
-            throw new InvalidOperationException($"Spotify device request failed: {responseBody}");
-
-        using var document = JsonDocument.Parse(responseBody);
-        return document.RootElement.GetProperty("devices")
-            .EnumerateArray()
-            .Select(device => device.TryGetProperty("name", out var name) ? name.GetString() : null)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static async Task<string?> GetAndroidSpotifyConnectedDeviceNameAsync(string? preferredDeviceName)
-    {
-        if (string.IsNullOrWhiteSpace(preferredDeviceName))
-            return null;
-
-        var token = await GetAndroidSpotifyTokenAsync();
-
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
-        var selectedDevice = await GetAndroidPreferredDeviceAsync(httpClient, preferredDeviceName);
-        if (selectedDevice is null)
-            return null;
-
-        var activated = await EnsureAndroidSpotifyDeviceActiveAsync(httpClient, selectedDevice);
-        return activated ? selectedDevice.Name : null;
-    }
-
-    private static async Task<bool> ExecuteAndroidSpotifyCommandAsync(string command, string? preferredDeviceName)
-    {
-        if (string.IsNullOrWhiteSpace(preferredDeviceName))
-            return false;
-
-        var token = await GetAndroidSpotifyTokenAsync();
-
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
-        var selectedDevice = await GetAndroidPreferredDeviceAsync(httpClient, preferredDeviceName);
-        if (selectedDevice is null)
-            return false;
-
-        var activated = await EnsureAndroidSpotifyDeviceActiveAsync(httpClient, selectedDevice);
-        if (!activated)
-            return false;
-
-        var encodedDeviceId = Uri.EscapeDataString(selectedDevice.Id);
-        using var request = command switch
+        var token = await GetAndroidSpotifyTokenResponseAsync();
+        var authenticator = new PKCEAuthenticator(SpotifyDefaults.ClientId, token);
+        authenticator.TokenRefreshed += (_, refreshedToken) =>
         {
-            "Play" => new HttpRequestMessage(HttpMethod.Put, $"https://api.spotify.com/v1/me/player/play?device_id={encodedDeviceId}"),
-            "Pause" => new HttpRequestMessage(HttpMethod.Put, $"https://api.spotify.com/v1/me/player/pause?device_id={encodedDeviceId}"),
-            "Next" => new HttpRequestMessage(HttpMethod.Post, $"https://api.spotify.com/v1/me/player/next?device_id={encodedDeviceId}"),
-            "Previous" => new HttpRequestMessage(HttpMethod.Post, $"https://api.spotify.com/v1/me/player/previous?device_id={encodedDeviceId}"),
-            _ => throw new InvalidOperationException($"Unsupported Spotify command '{command}'.")
+            _ = SaveSpotifyTokenCacheAsync(ToSpotifyTokenCache(refreshedToken, token.RefreshToken));
         };
 
-        using var response = await httpClient.SendAsync(request);
-        if (response.IsSuccessStatusCode)
-            return true;
+        var spotify = new SpotifyClient(SpotifyClientConfig.CreateDefault().WithAuthenticator(authenticator));
 
-        var responseBody = await response.Content.ReadAsStringAsync();
-        throw new InvalidOperationException($"Spotify command failed: {responseBody}");
-    }
-
-    private static async Task<AndroidSpotifyDevice?> GetAndroidPreferredDeviceAsync(HttpClient httpClient, string preferredDeviceName)
-    {
-        using var response = await httpClient.GetAsync(SpotifyApiDevicesUri);
-        var responseBody = await response.Content.ReadAsStringAsync();
-
-        if (!response.IsSuccessStatusCode)
-            throw new InvalidOperationException($"Spotify device request failed: {responseBody}");
-
-        using var document = JsonDocument.Parse(responseBody);
-        foreach (var device in document.RootElement.GetProperty("devices").EnumerateArray())
+        try
         {
-            var deviceName = device.TryGetProperty("name", out var nameElement) ? nameElement.GetString() : null;
-            if (!string.Equals(deviceName, preferredDeviceName, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            var deviceId = device.TryGetProperty("id", out var idElement) ? idElement.GetString() : null;
-            if (string.IsNullOrWhiteSpace(deviceId) || string.IsNullOrWhiteSpace(deviceName))
-                return null;
-
-            var isActive = device.TryGetProperty("is_active", out var isActiveElement) && isActiveElement.ValueKind == JsonValueKind.True;
-            return new AndroidSpotifyDevice(deviceId, deviceName, isActive);
+            var me = await spotify.UserProfile.Current();
+            var devicesResponse = await spotify.Player.GetAvailableDevices();
+            var devices = devicesResponse.Devices ?? [];
+            return new SpotifyConnection(spotify, me.DisplayName ?? me.Id, devices);
         }
-
-        return null;
+        catch (APITooManyRequestsException ex)
+        {
+            throw new InvalidOperationException($"Rate limit hit. Waiting {ex.RetryAfter.TotalHours} hours...", ex);
+        }
+        catch (APIException ex)
+        {
+            throw new InvalidOperationException($"Spotify API error: {ex.Message}", ex);
+        }
     }
 
-    private static async Task<bool> EnsureAndroidSpotifyDeviceActiveAsync(HttpClient httpClient, AndroidSpotifyDevice device)
-    {
-        if (device.IsActive)
-            return true;
-
-        using var content = new StringContent(
-            JsonSerializer.Serialize(new
-            {
-                device_ids = new[] { device.Id },
-                play = false
-            }),
-            Encoding.UTF8,
-            "application/json");
-        using var response = await httpClient.PutAsync("https://api.spotify.com/v1/me/player", content);
-        if (response.IsSuccessStatusCode)
-            return true;
-
-        var responseBody = await response.Content.ReadAsStringAsync();
-        throw new InvalidOperationException($"Spotify device activation failed: {responseBody}");
-    }
-
-    private static async Task<(string Song, string Interpret)?> GetAndroidSpotifyNowPlayingTextAsync()
+    private static async Task<PKCETokenResponse> GetAndroidSpotifyTokenResponseAsync()
     {
         var token = await GetAndroidSpotifyTokenAsync();
+        return ToPkceTokenResponse(token);
+    }
 
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
-
-        using var response = await httpClient.GetAsync("https://api.spotify.com/v1/me/player/currently-playing");
-        if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
-            return ("Spotify is paused", string.Empty);
-
-        var responseBody = await response.Content.ReadAsStringAsync();
-        if (!response.IsSuccessStatusCode)
-            throw new InvalidOperationException($"Spotify now playing request failed: {responseBody}");
-
-        using var document = JsonDocument.Parse(responseBody);
-        if (document.RootElement.TryGetProperty("is_playing", out var isPlayingElement)
-            && isPlayingElement.ValueKind is JsonValueKind.False)
+    private static PKCETokenResponse ToPkceTokenResponse(SpotifyTokenCache token)
+    {
+        return new PKCETokenResponse
         {
-            return ("Spotify is paused", string.Empty);
-        }
+            AccessToken = token.AccessToken,
+            RefreshToken = token.RefreshToken ?? string.Empty,
+            TokenType = "Bearer",
+            Scope = string.Join(" ", SpotifyScopes),
+            ExpiresIn = Math.Max(1, (int)Math.Ceiling((token.ExpiresAtUtc - DateTimeOffset.UtcNow).TotalSeconds)),
+            CreatedAt = DateTime.UtcNow
+        };
+    }
 
-        if (!document.RootElement.TryGetProperty("item", out var item) || item.ValueKind == JsonValueKind.Null)
-            return ("Spotify is paused", string.Empty);
-
-        var title = item.TryGetProperty("name", out var nameElement) ? nameElement.GetString() : string.Empty;
-        var artist = item.TryGetProperty("artists", out var artistsElement)
-            ? artistsElement.EnumerateArray()
-                .Select(artistElement => artistElement.TryGetProperty("name", out var artistName) ? artistName.GetString() : null)
-                .FirstOrDefault(artistName => !string.IsNullOrWhiteSpace(artistName))
-            : null;
-
-        return (title ?? string.Empty, artist ?? string.Empty);
+    private static SpotifyTokenCache ToSpotifyTokenCache(PKCETokenResponse token, string? fallbackRefreshToken = null)
+    {
+        return new SpotifyTokenCache(
+            token.AccessToken,
+            string.IsNullOrWhiteSpace(token.RefreshToken) ? fallbackRefreshToken : token.RefreshToken,
+            DateTimeOffset.UtcNow.AddSeconds(token.ExpiresIn));
     }
 
     private static async Task<SpotifyTokenCache> GetAndroidSpotifyTokenAsync()
@@ -276,7 +158,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
     {
         var query = string.Join("&",
         [
-            $"client_id={Uri.EscapeDataString(SpotifyClientId)}",
+            $"client_id={Uri.EscapeDataString(SpotifyDefaults.ClientId)}",
             "response_type=code",
             $"redirect_uri={Uri.EscapeDataString(SpotifyAndroidRedirectUri)}",
             $"scope={Uri.EscapeDataString(string.Join(" ", SpotifyScopes))}",
@@ -292,7 +174,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
         using var httpClient = new HttpClient();
         using var content = new FormUrlEncodedContent(
         [
-            new KeyValuePair<string, string>("client_id", SpotifyClientId),
+            new KeyValuePair<string, string>("client_id", SpotifyDefaults.ClientId),
             new KeyValuePair<string, string>("grant_type", "authorization_code"),
             new KeyValuePair<string, string>("code", code),
             new KeyValuePair<string, string>("redirect_uri", SpotifyAndroidRedirectUri),
@@ -307,7 +189,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
         using var httpClient = new HttpClient();
         using var content = new FormUrlEncodedContent(
         [
-            new KeyValuePair<string, string>("client_id", SpotifyClientId),
+            new KeyValuePair<string, string>("client_id", SpotifyDefaults.ClientId),
             new KeyValuePair<string, string>("grant_type", "refresh_token"),
             new KeyValuePair<string, string>("refresh_token", refreshToken)
         ]);
@@ -388,5 +270,4 @@ public sealed class AndroidSpotifyService : ISpotifyService
     }
 
     private sealed record SpotifyTokenCache(string AccessToken, string? RefreshToken, DateTimeOffset ExpiresAtUtc);
-    private sealed record AndroidSpotifyDevice(string Id, string Name, bool IsActive);
 }

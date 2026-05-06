@@ -1,4 +1,5 @@
 using BeoControl.Interfaces;
+using BeoControlBlazorServices;
 
 namespace BeoControlBlazorCL.Pages;
 
@@ -78,6 +79,22 @@ public partial class Remote
         private Task StopPlaybackPollingAsync() =>
             owner.LaunchSpotifyService.GetSpotifyConnectedDeviceNameAsync(null);
 
+        public void SubscribeNowPlayingChanged()
+        {
+            if (!owner.LaunchSpotifyService.SupportsSpotifyNowPlayingNotifications)
+                return;
+
+            owner.LaunchSpotifyService.NowPlayingChanged += OnNowPlayingChanged;
+        }
+
+        public void UnsubscribeNowPlayingChanged()
+        {
+            if (!owner.LaunchSpotifyService.SupportsSpotifyNowPlayingNotifications)
+                return;
+
+            owner.LaunchSpotifyService.NowPlayingChanged -= OnNowPlayingChanged;
+        }
+
         public async Task RefreshPlaybackAsync()
         {
             if (!IsSourceSelected())
@@ -93,15 +110,7 @@ public partial class Remote
                 owner.DeviceService.Settings.SpotifyPreferredDeviceName);
             var nowPlaying = await owner.LaunchSpotifyService.GetSpotifyNowPlayingTextAsync(
                 owner.DeviceService.Settings.SpotifyPreferredDeviceName);
-            if (nowPlaying is null)
-            {
-                Song = string.Empty;
-                Interpret = string.Empty;
-                return;
-            }
-
-            Song = nowPlaying.Value.Song;
-            Interpret = nowPlaying.Value.Interpret;
+            ApplyNowPlaying(nowPlaying);
         }
 
         public string SpotifyConnectionLabel()
@@ -162,6 +171,28 @@ public partial class Remote
             var triggerCommand = BeoCommands.Get(owner.DeviceService.Settings.SpotifyTriggerCommand);
             if (triggerCommand?.Category == CommandCategory.Source)
                 triggerCommand.AddIn = SpotifyAddInName;
+        }
+
+        private async void OnNowPlayingChanged(object? sender, SpotifyNowPlayingChangedEventArgs e)
+        {
+            if (!owner.DeviceService.Settings.SpotifyEnabled || !IsSourceSelected())
+                return;
+
+            ApplyNowPlaying(e.NowPlayingText);
+            await owner.InvokeAsync(owner.StateHasChanged);
+        }
+
+        private void ApplyNowPlaying((string Song, string Interpret)? nowPlaying)
+        {
+            if (nowPlaying is null)
+            {
+                Song = string.Empty;
+                Interpret = string.Empty;
+                return;
+            }
+
+            Song = nowPlaying.Value.Song;
+            Interpret = nowPlaying.Value.Interpret;
         }
     }
 }

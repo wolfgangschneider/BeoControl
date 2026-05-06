@@ -185,14 +185,14 @@ The AppImage runs from its current location; it is not installed to a fixed syst
 
 ### Android (MAUI)
 
-The MAUI project includes an Android target, but the current repository workflow does not publish Android release assets.
+The MAUI project includes an Android target, and the release workflow now builds an Android APK.
 
-Android installation is therefore currently a developer or manual distribution scenario:
+Android installation remains a manual distribution scenario:
 
-1. Build an Android package (`apk` or `aab`) from the MAUI project.
+1. Download the Android APK from the workflow artifacts, or from GitHub Releases when Android signing secrets are configured.
 2. Install it on the device by sideloading or through an app store / MDM workflow.
 
-Velopack auto-update does not apply to Android. Android updates need the normal Android distribution path, such as Play Store updates, managed device deployment, or installing a newer APK manually.
+Velopack auto-update does not apply to Android. Android updates need the normal Android distribution path, such as Play Store updates, managed device deployment, or installing a newer APK manually. A stable signing key is required if newer APKs should install as upgrades over older ones.
 
 ### iOS / MacCatalyst
 

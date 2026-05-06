@@ -23,6 +23,7 @@ env:
   PROJECT_PATH: UI\BeoControlBlazor\BeoControlMaui\BeoControlMaui.csproj
   WEBKIT_PROJECT_PATH: UI\BeoControlBlazor\BeoControlWebKit\BeoControlWebKit\BeoControlWebKit.csproj
   TARGET_FRAMEWORK: net10.0-windows10.0.19041.0
+  ANDROID_TARGET_FRAMEWORK: net10.0-android
   CONFIGURATION: Release
   VELOPACK_VERSION: 0.0.1298
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -304,6 +305,97 @@ jobs:
           Get-ChildItem -Path $releaseDir -File -Filter "*.AppImage" | ForEach-Object {
             gh release upload '${{ needs.prepare-release.outputs.release_tag }}' $_.FullName --clobber
           }
+
+  publish-android-apk:
+    name: Publish Android APK
+    needs: prepare-release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install MAUI Android workload
+        run: dotnet workload install maui-android
+
+      - name: Restore Android signing keystore
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_SIGNING_KEY_ALIAS != '' && secrets.ANDROID_SIGNING_KEY_PASS != '' && secrets.ANDROID_SIGNING_STORE_PASS != '' }}
+        shell: pwsh
+        run: |
+          $keystorePath = Join-Path $env:RUNNER_TEMP "android-release.keystore"
+          [IO.File]::WriteAllBytes($keystorePath, [Convert]::FromBase64String('${{ secrets.ANDROID_KEYSTORE_BASE64 }}'))
+          "ANDROID_KEYSTORE_PATH=$keystorePath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Publish MAUI Android APK
+        shell: pwsh
+        env:
+          HAS_ANDROID_SIGNING: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_SIGNING_KEY_ALIAS != '' && secrets.ANDROID_SIGNING_KEY_PASS != '' && secrets.ANDROID_SIGNING_STORE_PASS != '' }}
+          ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
+          ANDROID_SIGNING_KEY_PASS: ${{ secrets.ANDROID_SIGNING_KEY_PASS }}
+          ANDROID_SIGNING_STORE_PASS: ${{ secrets.ANDROID_SIGNING_STORE_PASS }}
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish\android"
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases\android"
+
+          $publishArgs = @(
+            'publish',
+            $env:PROJECT_PATH,
+            '-c', $env:CONFIGURATION,
+            '-f', $env:ANDROID_TARGET_FRAMEWORK,
+            '-p:Version=${{ needs.prepare-release.outputs.release_version }}',
+            '-p:AndroidPackageFormats=apk',
+            '-p:AndroidCreatePackagePerAbi=false',
+            '-p:PublishTrimmed=false',
+            '-o', $publishDir
+          )
+
+          if ($env:HAS_ANDROID_SIGNING -eq 'true') {
+            $publishArgs += @(
+              '-p:AndroidKeyStore=true',
+              "-p:AndroidSigningKeyStore=$env:ANDROID_KEYSTORE_PATH",
+              "-p:AndroidSigningKeyAlias=$env:ANDROID_SIGNING_KEY_ALIAS",
+              '-p:AndroidSigningKeyPass=env:ANDROID_SIGNING_KEY_PASS',
+              '-p:AndroidSigningStorePass=env:ANDROID_SIGNING_STORE_PASS'
+            )
+          }
+
+          dotnet @publishArgs
+
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+          New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
+
+          $apk = Get-ChildItem -Path $publishDir -Recurse -File -Filter '*-Signed.apk' | Select-Object -First 1
+
+          if ($null -eq $apk) {
+            throw "Android APK not found in '$publishDir'."
+          }
+
+          $apkName = if ($env:HAS_ANDROID_SIGNING -eq 'true') { 'BeoControl-android.apk' } else { 'BeoControl-android-debug.apk' }
+          Copy-Item -Path $apk.FullName -Destination (Join-Path $releaseDir $apkName)
+
+      - name: Upload Android APK workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: ${{ runner.temp }}\releases\android\*.apk
+          if-no-files-found: error
+
+      - name: Upload signed Android APK to GitHub release
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_SIGNING_KEY_ALIAS != '' && secrets.ANDROID_SIGNING_KEY_PASS != '' && secrets.ANDROID_SIGNING_STORE_PASS != '' }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $apkPath = Join-Path $env:RUNNER_TEMP "releases\android\BeoControl-android.apk"
+          gh release upload '${{ needs.prepare-release.outputs.release_tag }}' $apkPath --clobber
 
   build-pages-feed:
     name: Build Pages feed

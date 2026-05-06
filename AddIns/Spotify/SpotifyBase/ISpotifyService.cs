@@ -1,5 +1,10 @@
 namespace BeoControlBlazorServices;
 
+public sealed class SpotifyNowPlayingChangedEventArgs((string Song, string Interpret)? nowPlayingText) : EventArgs
+{
+    public (string Song, string Interpret)? NowPlayingText { get; } = nowPlayingText;
+}
+
 public enum SpotifyLaunchMode
 {
     Web,
@@ -9,6 +14,8 @@ public enum SpotifyLaunchMode
 public interface ISpotifyService
 {
     bool SupportsSpotifyConnectionState { get; }
+    bool SupportsSpotifyNowPlayingNotifications { get; }
+    event EventHandler<SpotifyNowPlayingChangedEventArgs>? NowPlayingChanged;
     Task OpenAsync(SpotifyLaunchMode launchMode);
     Task<IReadOnlyList<string>> GetSpotifyDeviceNamesAsync();
     Task<string?> GetSpotifyConnectedDeviceNameAsync(string? preferredDeviceName);

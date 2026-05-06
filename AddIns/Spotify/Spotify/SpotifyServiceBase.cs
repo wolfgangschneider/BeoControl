@@ -4,19 +4,26 @@ namespace Spotify;
 
 public abstract class SpotifyServiceBase : ISpotifyService
 {
-    private const string SpotifyClientId = "d241779ec817475db4bf6b5bd0a457c7";
-    private const string SpotifyRedirectUri = "http://127.0.0.1:5543/callback";
     private string _preferredDeviceName = string.Empty;
     private (string Song, string Interpret)? _nowPlayingText;
     private Task<SpotifyController?>? _spotifyControllerTask;
 
     public bool SupportsSpotifyConnectionState => true;
+    public bool SupportsSpotifyNowPlayingNotifications => true;
+    public event EventHandler<SpotifyNowPlayingChangedEventArgs>? NowPlayingChanged;
 
     public abstract Task OpenAsync(SpotifyLaunchMode launchMode);
 
+    protected virtual string RedirectUri => "http://127.0.0.1:5543/callback";
+
+    protected virtual Task<SpotifyConnection> ConnectAsync()
+    {
+        return SpotifyController.ConnectAsync(SpotifyDefaults.ClientId, RedirectUri);
+    }
+
     public async Task<IReadOnlyList<string>> GetSpotifyDeviceNamesAsync()
     {
-        var connection = await SpotifyController.ConnectAsync(SpotifyClientId, SpotifyRedirectUri)
+        var connection = await ConnectAsync()
             ?? throw new InvalidOperationException("Spotify connection failed.");
 
         return connection.Devices
@@ -55,7 +62,10 @@ public abstract class SpotifyServiceBase : ISpotifyService
     {
         var controller = await GetSpotifyControllerAsync(preferredDeviceName);
         if (controller is null)
+        {
+            SetNowPlayingText(null);
             return null;
+        }
 
         if (_nowPlayingText is null)
             await controller.RefreshNowPlayingAsync();
@@ -71,7 +81,7 @@ public abstract class SpotifyServiceBase : ISpotifyService
             await DisposeSpotifyControllerAsync();
             _spotifyControllerTask = null;
             _preferredDeviceName = normalizedDeviceName;
-            _nowPlayingText = null;
+            SetNowPlayingText(null);
         }
 
         return await (_spotifyControllerTask ??= ConnectSpotifyAsync(normalizedDeviceName));
@@ -91,7 +101,7 @@ public abstract class SpotifyServiceBase : ISpotifyService
         if (string.IsNullOrWhiteSpace(preferredDeviceName))
             return null;
 
-        var connection = await SpotifyController.ConnectAsync(SpotifyClientId, SpotifyRedirectUri)
+        var connection = await ConnectAsync()
             ?? throw new InvalidOperationException("Spotify connection failed.");
 
         var selectedDevice = connection.Devices.FirstOrDefault(device =>
@@ -111,8 +121,17 @@ public abstract class SpotifyServiceBase : ISpotifyService
 
     private void OnSpotifyNowPlayingChanged(SpotifyNowPlaying? nowPlaying)
     {
-        _nowPlayingText = nowPlaying?.IsPlaying == true
+        SetNowPlayingText(nowPlaying?.IsPlaying == true
             ? (nowPlaying.Title ?? string.Empty, nowPlaying.Artist ?? string.Empty)
-            : ("Spotify is paused", string.Empty);
+            : ("Spotify is paused", string.Empty));
+    }
+
+    private void SetNowPlayingText((string Song, string Interpret)? nowPlayingText)
+    {
+        if (_nowPlayingText == nowPlayingText)
+            return;
+
+        _nowPlayingText = nowPlayingText;
+        NowPlayingChanged?.Invoke(this, new SpotifyNowPlayingChangedEventArgs(nowPlayingText));
     }
 }
