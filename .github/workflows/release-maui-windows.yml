@@ -25,6 +25,7 @@ env:
   TARGET_FRAMEWORK: net10.0-windows10.0.19041.0
   CONFIGURATION: Release
   VELOPACK_VERSION: 0.0.1298
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   prepare-release:
@@ -307,6 +308,7 @@ jobs:
   build-pages-feed:
     name: Build Pages feed
     needs:
+      - prepare-release
       - publish-velopack-maui
       - publish-velopack-webkit
     runs-on: ubuntu-latest
@@ -325,6 +327,51 @@ jobs:
         shell: bash
         run: |
           find site/updates -maxdepth 1 -type f ! \( -name '*.nupkg' -o -name 'releases.*.json' -o -name 'assets.*.json' \) -delete
+
+      - name: Generate Velopack release feeds
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.prepare-release.outputs.release_version }}
+        run: |
+          python - <<'PY'
+          import glob
+          import hashlib
+          import json
+          import os
+
+          release_version = os.environ["RELEASE_VERSION"]
+          updates_dir = os.path.join("site", "updates")
+
+          for assets_path in glob.glob(os.path.join(updates_dir, "assets.*.json")):
+              channel = os.path.basename(assets_path)[len("assets."):-len(".json")]
+              with open(assets_path, "r", encoding="utf-8") as handle:
+                  assets = json.load(handle)
+
+              release_assets = []
+              for asset in assets:
+                  asset_type = asset["Type"]
+                  if asset_type not in ("Full", "Delta"):
+                      continue
+
+                  file_name = asset["RelativeFileName"]
+                  file_path = os.path.join(updates_dir, file_name)
+                  with open(file_path, "rb") as package_file:
+                      sha1 = hashlib.sha1(package_file.read()).hexdigest().upper()
+
+                  release_assets.append({
+                      "PackageId": "BeoControl",
+                      "Version": release_version,
+                      "Type": asset_type,
+                      "FileName": file_name,
+                      "SHA1": sha1,
+                      "Size": os.path.getsize(file_path)
+                  })
+
+              release_path = os.path.join(updates_dir, f"releases.{channel}.json")
+              with open(release_path, "w", encoding="utf-8") as handle:
+                  json.dump({"Assets": release_assets}, handle, separators=(",", ":"))
+          PY
+
           cat > site/index.html <<'EOF'
           <!DOCTYPE html>
           <html lang="en">
