@@ -44,11 +44,11 @@ public partial class Remote
             var spotifyCommand = TryMapCommand(command);
             if (spotifyCommand is not null)
             {
-
                 var executed = await ExecuteAsync(spotifyCommand);
-                //if (!executed)
-                return true;
+                if (executed)
+                    await RefreshPlaybackAsync();
 
+                return true;
             }
 
             await RefreshPlaybackAsync();
@@ -94,7 +94,11 @@ public partial class Remote
             var nowPlaying = await owner.LaunchSpotifyService.GetSpotifyNowPlayingTextAsync(
                 owner.DeviceService.Settings.SpotifyPreferredDeviceName);
             if (nowPlaying is null)
+            {
+                Song = string.Empty;
+                Interpret = string.Empty;
                 return;
+            }
 
             Song = nowPlaying.Value.Song;
             Interpret = nowPlaying.Value.Interpret;
@@ -119,7 +123,9 @@ public partial class Remote
 
         public bool IsSpotifyConnected() =>
             owner.DeviceService.Settings.SpotifyEnabled &&
-            !string.IsNullOrWhiteSpace(ConnectedDeviceName);
+            (!string.IsNullOrWhiteSpace(ConnectedDeviceName)
+                || (!IsSourceSelected()
+                    && !string.IsNullOrWhiteSpace(owner.DeviceService.Settings.SpotifyPreferredDeviceName)));
 
         public async Task EnsureConnectionStateAsync()
         {

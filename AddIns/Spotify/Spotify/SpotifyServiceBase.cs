@@ -57,7 +57,9 @@ public abstract class SpotifyServiceBase : ISpotifyService
         if (controller is null)
             return null;
 
-        await controller.RefreshNowPlayingAsync();
+        if (_nowPlayingText is null)
+            await controller.RefreshNowPlayingAsync();
+
         return _nowPlayingText;
     }
 

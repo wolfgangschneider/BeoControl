@@ -77,6 +77,7 @@
     private RemoteType Selected;
     private StatusMessage _status = new(StatusType.Idle, "");
     private BeoCommand? _currentSource;
+    private readonly CancellationTokenSource _spotifyUiRefreshCancellation = new();
 
 
     private SpotifyBridge Spotify =>  field ??= new(this);
@@ -92,6 +93,7 @@
         Spotify.SyncSourceAddIn();
         DeviceService.OnStatusChanged += OnStatusChanged;
         _ = Spotify.EnsureConnectionStateAsync();
+        _ = RunSpotifyUiRefreshAsync(_spotifyUiRefreshCancellation.Token);
     }
 
     private async void OnStatusChanged(StatusMessage msg)
@@ -118,7 +120,28 @@
 
     public void Dispose()
     {
+        _spotifyUiRefreshCancellation.Cancel();
+        _spotifyUiRefreshCancellation.Dispose();
         DeviceService.OnStatusChanged -= OnStatusChanged;
+    }
+
+    private async Task RunSpotifyUiRefreshAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                if (!DeviceService.Settings.SpotifyEnabled || !Spotify.IsSourceSelected())
+                    continue;
+
+                await Spotify.RefreshPlaybackAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
     }
 
     private void SelectRemote(RemoteType r)
