@@ -144,9 +144,9 @@ The repository includes a GitHub Actions workflow at `.github/workflows/release-
 
 - Push a tag like `v1.0.0` to trigger the workflow automatically.
 - Or run the `Release MAUI Windows` workflow manually and provide a tag such as `v1.0.0`.
-- The MAUI app publishes `win-x64` and `win-arm64` builds in both `self-contained` and `framework-dependent` variants.
+- The MAUI app publishes Velopack installers for `win-x64` and `win-arm64`, each in `self-contained` and `framework-dependent` variants.
 - BeoControlWebKit publishes Velopack packages for `linux-x64` and `linux-arm64`.
-- MAUI assets are uploaded as `BeoControlMaui-<tag>-<runtime>-<package-mode>.zip`.
+- Windows installer assets are uploaded as `BeoControlMaui-<runtime>-<package-mode>-Setup.exe`.
 - WebKit release assets are produced by `vpk pack` and should be used for installation and auto-update scenarios instead of raw publish ZIPs.
 
 The workflow creates the GitHub release automatically if it does not already exist.
@@ -157,22 +157,28 @@ The workflow creates the GitHub release automatically if it does not already exi
 
 Download and run the Windows Velopack installer from the GitHub release.
 
-1. Download `BeoControlMaui-Setup.exe`.
+1. Download the Windows installer for your architecture:
+   - `BeoControlMaui-win-x64-self-contained-Setup.exe`
+   - `BeoControlMaui-win-x64-framework-dependent-Setup.exe`
+   - `BeoControlMaui-win-arm64-self-contained-Setup.exe`
+   - `BeoControlMaui-win-arm64-framework-dependent-Setup.exe`
 2. Run the installer.
 3. Velopack installs the app to `%LocalAppData%\wolfgangschneider.BeoControlMaui`.
 4. The installer creates Start menu and Desktop shortcuts and launches the app.
 
-Windows auto-update is supported through Velopack.
+Windows auto-update is supported through Velopack. Choose `self-contained` when the target machine should not need a preinstalled .NET runtime, or `framework-dependent` when the required runtime is already managed separately.
 
 ### Linux (BeoControlWebKit)
 
 Download the Linux `.AppImage` from the GitHub release.
 
-1. Download the `BeoControlWebKit` AppImage for your architecture (`linux-x64` or `linux-arm64`).
+1. Download the AppImage for your architecture:
+   - `BeoControlWebKit-linux-x64.AppImage`
+   - `BeoControlWebKit-linux-arm64.AppImage`
 2. Make it executable with `chmod +x <file>.AppImage`.
 3. Start it directly or from a `.desktop` launcher that points to the AppImage.
 
-The AppImage runs from its current location; it is not installed to a fixed system directory by default. Linux auto-update is supported when the user keeps launching the Velopack-produced AppImage.
+The AppImage runs from its current location; it is not installed to a fixed system directory by default. Linux auto-update is supported when the user keeps launching the Velopack-produced AppImage for that same architecture.
 
 ### Android (MAUI)
 

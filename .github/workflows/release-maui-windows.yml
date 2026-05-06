@@ -88,8 +88,8 @@ jobs:
 
           gh @args
 
-  publish:
-    name: Publish MAUI ${{ matrix.runtime }} (${{ matrix.package_mode }})
+  publish-velopack-maui:
+    name: Publish Velopack MAUI ${{ matrix.runtime }} (${{ matrix.package_mode }})
     needs: prepare-release
     runs-on: windows-latest
     strategy:
@@ -99,82 +99,19 @@ jobs:
           - runtime: win-x64
             self_contained: "true"
             package_mode: self-contained
+            channel: win-x64-self-contained
           - runtime: win-x64
             self_contained: "false"
             package_mode: framework-dependent
+            channel: win-x64-framework-dependent
           - runtime: win-arm64
             self_contained: "true"
             package_mode: self-contained
+            channel: win-arm64-self-contained
           - runtime: win-arm64
             self_contained: "false"
             package_mode: framework-dependent
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up .NET 10
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Install MAUI Windows workload
-        run: dotnet workload install maui-windows
-
-      - name: Publish MAUI Windows app
-        shell: pwsh
-        run: |
-          $publishDir = Join-Path $env:RUNNER_TEMP "publish\maui\${{ matrix.runtime }}\${{ matrix.package_mode }}"
-
-          dotnet publish $env:PROJECT_PATH `
-            -c $env:CONFIGURATION `
-            -f $env:TARGET_FRAMEWORK `
-            -r ${{ matrix.runtime }} `
-            --self-contained ${{ matrix.self_contained }} `
-            -p:Version=${{ needs.prepare-release.outputs.release_version }} `
-            -p:WindowsAppSDKSelfContained=${{ matrix.self_contained }} `
-            -p:WindowsAppSdkSelfContained=${{ matrix.self_contained }} `
-            -p:PublishTrimmed=false `
-            -o $publishDir
-
-      - name: Package published output
-        id: package
-        shell: pwsh
-        run: |
-          $tag = '${{ needs.prepare-release.outputs.release_tag }}'
-          $runtime = '${{ matrix.runtime }}'
-          $packageMode = '${{ matrix.package_mode }}'
-          $publishDir = Join-Path $env:RUNNER_TEMP "publish\maui\$runtime\$packageMode"
-          $assetName = "BeoControlMaui-$tag-$runtime-$packageMode.zip"
-          $assetPath = Join-Path $env:RUNNER_TEMP $assetName
-
-          if (Test-Path $assetPath) {
-            Remove-Item $assetPath -Force
-          }
-
-          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $assetPath
-
-          "asset_name=$assetName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "asset_path=$assetPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.package.outputs.asset_name }}
-          path: ${{ steps.package.outputs.asset_path }}
-          if-no-files-found: error
-
-      - name: Upload asset to GitHub release
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload '${{ needs.prepare-release.outputs.release_tag }}' '${{ steps.package.outputs.asset_path }}' --clobber
-
-  publish-velopack-maui:
-    name: Publish Velopack MAUI win-x64
-    needs: prepare-release
-    runs-on: windows-latest
+            channel: win-arm64-framework-dependent
     steps:
       - uses: actions/checkout@v4
         with:
@@ -198,40 +135,73 @@ jobs:
       - name: Publish MAUI Windows app for Velopack
         shell: pwsh
         run: |
-          $publishDir = Join-Path $env:RUNNER_TEMP "publish\velopack\maui\win-x64"
+          $runtime = '${{ matrix.runtime }}'
+          $packageMode = '${{ matrix.package_mode }}'
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish\velopack\maui\$runtime\$packageMode"
 
           dotnet publish $env:PROJECT_PATH `
             -c $env:CONFIGURATION `
             -f $env:TARGET_FRAMEWORK `
-            -r win-x64 `
-            --self-contained true `
+            -r $runtime `
+            --self-contained ${{ matrix.self_contained }} `
             -p:Version=${{ needs.prepare-release.outputs.release_version }} `
             -p:WindowsPackageType=None `
-            -p:WindowsAppSDKSelfContained=true `
-            -p:WindowsAppSdkSelfContained=true `
+            -p:WindowsAppSDKSelfContained=${{ matrix.self_contained }} `
+            -p:WindowsAppSdkSelfContained=${{ matrix.self_contained }} `
+            -p:PublishTrimmed=false `
             -o $publishDir
 
       - name: Pack MAUI Windows with Velopack
         shell: pwsh
         run: |
-          $publishDir = Join-Path $env:RUNNER_TEMP "publish\velopack\maui\win-x64"
-          $releaseDir = Join-Path $env:RUNNER_TEMP "releases\velopack-maui-win-x64"
+          $runtime = '${{ matrix.runtime }}'
+          $packageMode = '${{ matrix.package_mode }}'
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish\velopack\maui\$runtime\$packageMode"
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases\velopack-maui-$runtime-$packageMode"
+          $channel = '${{ matrix.channel }}'
 
-          vpk pack `
+          & vpk pack `
             --packId wolfgangschneider.BeoControlMaui `
             --packVersion "${{ needs.prepare-release.outputs.release_version }}" `
             --packDir $publishDir `
             --mainExe BeoControlMaui.exe `
             --packAuthors "wolfgangschneider" `
             --packTitle "BeoControlMaui" `
-            --runtime win-x64 `
+            --channel $channel `
+            --runtime $runtime `
             --outputDir $releaseDir
+
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Normalize MAUI download file names
+        shell: pwsh
+        run: |
+          $runtime = '${{ matrix.runtime }}'
+          $packageMode = '${{ matrix.package_mode }}'
+          $channel = '${{ matrix.channel }}'
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases\velopack-maui-$runtime-$packageMode"
+          $oldSetupName = "wolfgangschneider.BeoControlMaui-$channel-Setup.exe"
+          $newSetupName = "BeoControlMaui-$runtime-$packageMode-Setup.exe"
+          $oldSetupPath = Join-Path $releaseDir $oldSetupName
+          $newSetupPath = Join-Path $releaseDir $newSetupName
+
+          if (Test-Path $oldSetupPath) {
+            Move-Item -Path $oldSetupPath -Destination $newSetupPath -Force
+          }
+
+          Get-ChildItem -Path $releaseDir -Filter "assets*.json" | ForEach-Object {
+            $content = Get-Content -Path $_.FullName -Raw
+            $updated = $content.Replace($oldSetupName, $newSetupName)
+            Set-Content -Path $_.FullName -Value $updated -NoNewline
+          }
 
       - name: Upload Velopack workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: velopack-maui-win-x64
-          path: ${{ runner.temp }}\releases\velopack-maui-win-x64
+          name: velopack-maui-${{ matrix.runtime }}-${{ matrix.package_mode }}
+          path: ${{ runner.temp }}\releases\velopack-maui-${{ matrix.runtime }}-${{ matrix.package_mode }}
           if-no-files-found: error
 
       - name: Upload Velopack assets to GitHub release
@@ -239,7 +209,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $releaseDir = Join-Path $env:RUNNER_TEMP "releases\velopack-maui-win-x64"
+          $runtime = '${{ matrix.runtime }}'
+          $packageMode = '${{ matrix.package_mode }}'
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases\velopack-maui-$runtime-$packageMode"
           Get-ChildItem -Path $releaseDir -File | ForEach-Object {
             gh release upload '${{ needs.prepare-release.outputs.release_tag }}' $_.FullName --clobber
           }
@@ -298,8 +270,29 @@ jobs:
             --mainExe BeoControlWebKit `
             --packAuthors "wolfgangschneider" `
             --packTitle "BeoControlWebKit" `
+            --channel $runtime `
             --runtime $runtime `
             --outputDir $releaseDir
+
+      - name: Normalize WebKit download file names
+        shell: pwsh
+        run: |
+          $runtime = '${{ matrix.runtime }}'
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-$runtime"
+          $oldAppImageName = "wolfgangschneider.BeoControlWebKit-$runtime.AppImage"
+          $newAppImageName = "BeoControlWebKit-$runtime.AppImage"
+          $oldAppImagePath = Join-Path $releaseDir $oldAppImageName
+          $newAppImagePath = Join-Path $releaseDir $newAppImageName
+
+          if (Test-Path $oldAppImagePath) {
+            Move-Item -Path $oldAppImagePath -Destination $newAppImagePath -Force
+          }
+
+          Get-ChildItem -Path $releaseDir -Filter "assets*.json" | ForEach-Object {
+            $content = Get-Content -Path $_.FullName -Raw
+            $updated = $content.Replace($oldAppImageName, $newAppImageName)
+            Set-Content -Path $_.FullName -Value $updated -NoNewline
+          }
 
       - name: Upload Velopack workflow artifact
         uses: actions/upload-artifact@v4
