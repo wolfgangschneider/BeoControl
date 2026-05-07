@@ -478,6 +478,18 @@ jobs:
           </body>
           </html>
           EOF
+          cat > site/updates/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <title>BeoControl Updates</title>
+          </head>
+          <body>
+            <p>BeoControl Velopack update feed.</p>
+          </body>
+          </html>
+          EOF
           touch site/.nojekyll
 
       - name: Upload Pages artifact

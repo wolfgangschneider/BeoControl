@@ -20,7 +20,7 @@ namespace BeoControlMaui.WinUI
 {
     public partial class App : MauiWinUIApplication
     {
-        private const string UpdateFeedUrl = "https://wolfgangschneider.github.io/BeoControl/updates";
+        private const string UpdateFeedUrl = "https://wolfgangschneider.github.io/BeoControl/updates/";
         private const string MutexName = "BeoControl_SingleInstance_Mutex";
         private const string EventName = "BeoControl_SingleInstance_Event";
         private static Mutex? _instanceMutex;

@@ -19,7 +19,7 @@ using WebKitGtk;
 [UnsupportedOSPlatform("Windows")]
 internal class Program : IHostedService
 {
-    private const string UpdateFeedUrl = "https://wolfgangschneider.github.io/BeoControl/updates";
+    private const string UpdateFeedUrl = "https://wolfgangschneider.github.io/BeoControl/updates/";
 
     private static async Task Main(string[] args)
     {
