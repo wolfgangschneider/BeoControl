@@ -8,6 +8,13 @@ namespace Beoported.Pc2;
 /// </summary>
 public sealed class Pc2Core : IDisposable
 {
+    private static readonly IReadOnlyDictionary<string, string> PC2ToBeo4MarkIISource =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["A.MEM"] = "A.TAPE",
+            ["V_MEM"] = "V.TAPE"
+        };
+
     public Pc2Device Device { get; }
     public Pc2Mixer Mixer { get; }
     public Beolink Beolink { get; }
@@ -325,9 +332,11 @@ public sealed class Pc2Core : IDisposable
                         if (mlt.Payload.Length > 1)
                         {
                             string source = SourceNames.GetName(mlt.Payload[1]);
+                            if (PC2ToBeo4MarkIISource.TryGetValue(source, out var translated))
+                                source = translated;
                             if (mlt.Payload.Length > 2 && mlt.Payload[2] > 0 && mlt.Payload[2] != 255)
                                 source = $"{source} {mlt.Payload[2]}";
-                            OnStatusChanged?.Invoke($"SRC:{source}");
+                            OnStatusChanged?.Invoke($"{source}");
                         }
                     }
                 }
