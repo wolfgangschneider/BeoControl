@@ -48,6 +48,9 @@ public sealed class Pc2Device : IDevice
         };
         _core.OnSourceChanged = (sourceId, channel) =>
         {
+            if (_core.Mixer.TransmittingLocally && !_core.Mixer.TransmittingFromMl)
+                return;
+
             var command = SourceNames.CommandFromId(sourceId);
             if (string.IsNullOrWhiteSpace(command))
             {
@@ -100,6 +103,9 @@ public sealed class Pc2Device : IDevice
             OnLog?.Invoke(new LogMessage(LogLevel.Warning, $"PC2: unknown command '{cmd}'"));
             return;
         }
+
+        if (string.Equals(cmd, "pc", StringComparison.OrdinalIgnoreCase))
+            OnStatusChanged?.Invoke(new SourceStatusMessage("pc"));
 
         if (!string.Equals(cmd, "store", StringComparison.OrdinalIgnoreCase) && !_core.RunCommand("store", 0))
             OnLog?.Invoke(new LogMessage(LogLevel.Warning, "PC2: automatic store command failed"));
