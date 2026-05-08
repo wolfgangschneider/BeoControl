@@ -44,14 +44,14 @@ public class SerialTransport : ITransport
 
             if (_forcedPortName is null)
             {
-                OnStatusChanged?.Invoke(new StatusMessage(StatusType.Working, "○ Scanning serial ports...", StatusKind.Discovery));
+                OnStatusChanged?.Invoke(new DeviceStatusMessage(DeviceStatus.Discovering, "○ Scanning serial ports..."));
                 (portName, firmwareName) = AutoDetect(ct,
                     msg => OnStatusChanged?.Invoke(msg));
             }
             else
             {
                 portName = _forcedPortName;
-                OnStatusChanged?.Invoke(new StatusMessage(StatusType.Working, $"○ Connecting to {portName}...", StatusKind.Connection));
+                OnStatusChanged?.Invoke(new DeviceStatusMessage(DeviceStatus.Connecting, $"○ Connecting to {portName}..."));
             }
 
             ct.ThrowIfCancellationRequested();
@@ -95,7 +95,7 @@ public class SerialTransport : ITransport
 
             _port.DiscardInBuffer();           // discard any leftover bytes
             _port.ReadTimeout = 200;
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, "Connected", StatusKind.Connection));
+            OnStatusChanged?.Invoke(new DeviceStatusMessage(DeviceStatus.Connected, "Connected"));
 
             StartReadLoop();
 
@@ -113,7 +113,7 @@ public class SerialTransport : ITransport
         catch (Exception ex)
         {
             var msg = ex.Message;
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Error, $"✗ {msg}", StatusKind.Connection));
+            OnStatusChanged?.Invoke(new DeviceStatusMessage(DeviceStatus.Error, $"✗ {msg}"));
             OnLog?.Invoke(new LogMessage(LogLevel.Error, msg));
             return null;
         }
@@ -130,7 +130,7 @@ public class SerialTransport : ITransport
         _port?.Close();
         _port?.Dispose();
         _port = null;
-        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Idle, "not connected", StatusKind.Connection));
+        OnStatusChanged?.Invoke(new DeviceStatusMessage(DeviceStatus.Disconnected, "not connected"));
     }
 
     public void SendLine(string line)
@@ -153,7 +153,7 @@ public class SerialTransport : ITransport
             if (line.Length > 0)
             {
                 if (ProtocolStatusParser.TryParseSourceStatus(line, out var sourceStatus))
-                    OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, sourceStatus, StatusKind.Source));
+                    OnStatusChanged?.Invoke(new SourceStatusMessage(sourceStatus));
                 else
                     OnLog?.Invoke(new LogMessage(LogLevel.Debug, line));
             }
@@ -252,7 +252,7 @@ public class SerialTransport : ITransport
         foreach (var port in candidates)
         {
             if (ct.IsCancellationRequested) break;
-            status?.Invoke(new StatusMessage(StatusType.Working, $"○ Probing {port}...", StatusKind.Discovery));
+            status?.Invoke(new DeviceStatusMessage(DeviceStatus.Discovering, $"○ Probing {port}..."));
             var result = ProbePort(port);
             if (result is not null)
                 found.Add(new DeviceInfo(DeviceType.USB, result.Value.Name ?? port, result.Value.Port));
@@ -290,7 +290,7 @@ public class SerialTransport : ITransport
         foreach (var port in candidates)
         {
             ct.ThrowIfCancellationRequested();
-            status?.Invoke(new StatusMessage(StatusType.Working, $"○ Probing {port}...", StatusKind.Discovery));
+            status?.Invoke(new DeviceStatusMessage(DeviceStatus.Discovering, $"○ Probing {port}..."));
             confirmed = ProbePort(port);
             if (confirmed is not null)
                 break;

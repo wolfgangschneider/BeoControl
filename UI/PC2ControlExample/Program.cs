@@ -1,4 +1,5 @@
-﻿using Pc2Adapter;
+﻿using BeoControl.Interfaces;
+using Pc2Adapter;
 
 //Console.WriteLine("=== PC2 Control Example ===");
 //Console.WriteLine("Connecting to PC2...");
@@ -6,7 +7,11 @@
 using var device = new Pc2Device();
 
 device.OnLog += msg => Console.WriteLine($"[{msg.Level}] {msg.Text}");
-device.OnStatusChanged += msg => Console.WriteLine($"  {msg.Text}");
+device.OnStatusChanged += msg => Console.WriteLine(msg switch
+{
+    SourceStatusMessage source => $"  {(source.Index is int index ? $"{source.Command} {index}" : source.Command)}",
+    _ => $"  {msg.Text}"
+});
 
 await device.Connect();
 

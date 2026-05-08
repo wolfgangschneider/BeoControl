@@ -272,7 +272,7 @@
     private List<string> SpotifyDevices = [];
     private string _spotifyPreferredDeviceName = string.Empty;
 
-    private StatusType _statusType = StatusType.Idle;
+    private DeviceStatus _deviceStatus = DeviceStatus.Disconnected;
     private bool Pc2Available;
 
     private bool IsPc2Connected =>
@@ -359,19 +359,19 @@
     private string DisplayDotClass =>
         DeviceService.IsConnected ? DotClass : "dot-disconnected";
 
-    private string StatusClass => _statusType switch
+    private string StatusClass => _deviceStatus switch
     {
-        StatusType.Ok      => "status-ok",
-        StatusType.Error   => "status-error",
-        StatusType.Working => "status-working",
+        DeviceStatus.Connected => "status-ok",
+        DeviceStatus.Error => "status-error",
+        DeviceStatus.Connecting or DeviceStatus.Discovering => "status-working",
         _                  => "status-idle",
     };
 
-    private string DotClass => _statusType switch
+    private string DotClass => _deviceStatus switch
     {
-        StatusType.Ok      => "dot-ok",
-        StatusType.Error   => "dot-error",
-        StatusType.Working => "dot-working",
+        DeviceStatus.Connected => "dot-ok",
+        DeviceStatus.Error => "dot-error",
+        DeviceStatus.Connecting or DeviceStatus.Discovering => "dot-working",
         _                  => "dot-idle",
     };
 
@@ -390,13 +390,15 @@
 
     private async void OnServiceStatusChanged(StatusMessage msg)
     {
-        if (msg.Kind is StatusKind.Source or StatusKind.AudioSetup)
+        if (msg is SourceStatusMessage or AudioSetupMessage)
         {
             await InvokeAsync(StateHasChanged);
             return;
         }
 
-        _statusType = msg.Type;
+        if (msg is DeviceStatusMessage status)
+            _deviceStatus = status.Status;
+
         await InvokeAsync(StateHasChanged);
     }
 

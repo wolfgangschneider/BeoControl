@@ -19,7 +19,7 @@ internal sealed class DefaultBluetoothDiscovery : IBluetoothDiscovery
             return matchingDevices;
 
         // Some peripherals omit or delay the device name, so retry by advertised service UUID.
-        status?.Invoke(new StatusMessage(StatusType.Working, "○ No Beo4Remote name match found; retrying with Nordic UART service UUID…", StatusKind.Discovery));
+        status?.Invoke(new DeviceStatusMessage(DeviceStatus.Discovering, "○ No Beo4Remote name match found; retrying with Nordic UART service UUID…"));
         var serviceDevices = await ScanWithServiceFilterAsync(ct);
         matchingDevices = EnumerateMatchingDevices(serviceDevices, namePrefix).ToList();
         if (matchingDevices.Count > 0)

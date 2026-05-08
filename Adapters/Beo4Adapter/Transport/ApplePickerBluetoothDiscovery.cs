@@ -14,7 +14,7 @@ internal sealed class ApplePickerBluetoothDiscovery : IBluetoothDiscovery
         CancellationToken ct,
         Action<StatusMessage>? status = null)
     {
-        status?.Invoke(new StatusMessage(StatusType.Working, "○ macOS is opening Bluetooth device selection…", StatusKind.Discovery));
+        status?.Invoke(new DeviceStatusMessage(DeviceStatus.Discovering, "○ macOS is opening Bluetooth device selection…"));
         ct.ThrowIfCancellationRequested();
 
         try
@@ -25,7 +25,7 @@ internal sealed class ApplePickerBluetoothDiscovery : IBluetoothDiscovery
         }
         catch (NullReferenceException)
         {
-            status?.Invoke(new StatusMessage(StatusType.Working, "○ Apple Bluetooth device selection failed before discovery started. Check Bluetooth permission for the host app and try again.", StatusKind.Discovery));
+            status?.Invoke(new DeviceStatusMessage(DeviceStatus.Discovering, "○ Apple Bluetooth device selection failed before discovery started. Check Bluetooth permission for the host app and try again."));
             return [];
         }
     }

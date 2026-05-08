@@ -92,17 +92,17 @@ else
 
     // ── log ──────────────────────────────────────────────────────────
     private record LogEntry(Spectre.Console.Color Color, string Text);
-    private Spectre.Console.Color StatusColor => _statusType switch
+    private Spectre.Console.Color StatusColor => _deviceStatus switch
     {
-        StatusType.Ok      => Spectre.Console.Color.Green,
-        StatusType.Working => Spectre.Console.Color.Yellow,
-        StatusType.Error   => Spectre.Console.Color.Red,
-        _                  => Spectre.Console.Color.Grey,
+        DeviceStatus.Connected => Spectre.Console.Color.Green,
+        DeviceStatus.Connecting or DeviceStatus.Discovering => Spectre.Console.Color.Yellow,
+        DeviceStatus.Error => Spectre.Console.Color.Red,
+        _ => Spectre.Console.Color.Grey,
     };
 
-    private void SetStatus(StatusType type, string text)
+    private void SetStatus(DeviceStatus status, string text)
     {
-        _statusType = type;
+        _deviceStatus = status;
         _statusMain = text;
         StateHasChanged();
     }
@@ -118,15 +118,17 @@ else
 
     private void HandleStatus(StatusMessage msg)
     {
-        switch (msg.Kind)
+        switch (msg)
         {
-            case StatusKind.Connection:
-            case StatusKind.Discovery:
-            case StatusKind.Source:
-            case StatusKind.AudioSetup:
-            case StatusKind.Transport:
-            case StatusKind.Info:
-                SetStatus(msg.Type, msg.Text);
+            case DeviceStatusMessage status:
+                SetStatus(status.Status, status.Text);
+                break;
+            case SourceStatusMessage source:
+                var label = BeoCommands.Get(source.Command)?.DisplayLabel ?? source.Command;
+                SetStatus(DeviceStatus.Connected, source.Index is int index ? $"{label} {index}" : label);
+                break;
+            case AudioSetupMessage audioSetup:
+                SetStatus(DeviceStatus.Connected, audioSetup.Text);
                 break;
         }
     }
@@ -149,7 +151,7 @@ else
     private string _input = string.Empty;
     private string _placeholder = "cd, vol+, bass+, /pc2, /bt, /port · ↑↓ history · /help";
     private string _statusMain = "○ Not connected  — /port [COMx]  /bt  /pc2";
-    private StatusType _statusType = StatusType.Idle;
+    private DeviceStatus _deviceStatus = DeviceStatus.Disconnected;
     private CancellationTokenSource _refreshCts = new();
     private CancellationTokenSource _connectCts = new();
 
@@ -239,7 +241,7 @@ else
     private async Task TryConnectSerial(string? portName)
     {
         ClearDevice();
-        SetStatus(StatusType.Working, $"○ Connecting to serial{(portName is not null ? $" ({portName})" : " (scanning)")}...");
+        SetStatus(DeviceStatus.Connecting, $"○ Connecting to serial{(portName is not null ? $" ({portName})" : " (scanning)")}...");
 
         var transporter = new SerialTransport(portName);
         if (!string.IsNullOrWhiteSpace(portName))
@@ -253,7 +255,7 @@ else
 
         if (found.Count == 0)
         {
-            SetStatus(StatusType.Error, "✗ No serial devices found");
+            SetStatus(DeviceStatus.Error, "✗ No serial devices found");
             AddLog(Spectre.Console.Color.Red, "No Beo4Remote found on any serial port. ESP32 plugged in?");
             StateHasChanged();
             return;
@@ -269,7 +271,8 @@ else
     private async Task TryConnectBle(string? deviceId = null)
     {
         ClearDevice();
-        SetStatus(StatusType.Working, deviceId is not null ? $"○ Connecting to BLE {deviceId}..." : "○ Scanning for 'Beo4Remote' via BLE...");
+        SetStatus(deviceId is not null ? DeviceStatus.Connecting : DeviceStatus.Discovering,
+            deviceId is not null ? $"○ Connecting to BLE {deviceId}..." : "○ Scanning for 'Beo4Remote' via BLE...");
 
 
         var transporter = new BluetoothTransport(deviceId);
@@ -284,7 +287,7 @@ else
 
         if (found.Count == 0)
         {
-            SetStatus(StatusType.Error, "✗ No BLE devices found");
+            SetStatus(DeviceStatus.Error, "✗ No BLE devices found");
             AddLog(Spectre.Console.Color.Red, "BLE scan found no 'Beo4Remote' devices. Firmware flashed? Device powered?");
             StateHasChanged();
             return;
@@ -301,7 +304,7 @@ else
     {
         _scanDevices = devices;
         _showDeviceSelect = true;
-        SetStatus(StatusType.Idle, "Select device ↑↓ Enter");
+        SetStatus(DeviceStatus.Info, "Select device ↑↓ Enter");
         StateHasChanged();
     }
 
@@ -312,7 +315,7 @@ else
         _showDeviceSelect = false;
         if (index == null || devices == null)
         {
-            SetStatus(StatusType.Idle, "○ Selection cancelled");
+            SetStatus(DeviceStatus.Info, "○ Selection cancelled");
             StateHasChanged();
             return;
         }
@@ -326,7 +329,7 @@ else
     private async Task TryConnectPc2()
     {
         ClearDevice();
-        SetStatus(StatusType.Working, "○ Connecting to PC2...");
+        SetStatus(DeviceStatus.Connecting, "○ Connecting to PC2...");
         var pc2 = new Pc2Device(_settings.ToAudioSetup());
         pc2.OnStore += setup =>
         {
@@ -368,7 +371,7 @@ else
 
     private void CancelIfConnecting()
     {
-        if (_statusType != StatusType.Working) return;
+        if (_deviceStatus is not DeviceStatus.Connecting and not DeviceStatus.Discovering) return;
         _device?.CancelAutoDetect();
         _connectCts.Cancel();
         _connectCts = new CancellationTokenSource();

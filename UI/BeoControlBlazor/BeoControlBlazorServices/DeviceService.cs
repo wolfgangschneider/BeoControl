@@ -68,7 +68,7 @@ public class DeviceService : IDisposable
 
     public async Task ConnectSerialAsync(string? portName = null)
     {
-        Notify(StatusType.Working, portName is not null ? $"Connecting to {portName}…" : "Connecting to serial…");
+        Notify(DeviceStatus.Connecting, portName is not null ? $"Connecting to {portName}…" : "Connecting to serial…");
         try
         {
             ReplaceDevice(null);
@@ -76,9 +76,9 @@ public class DeviceService : IDisposable
             await device.Connect();
             ReplaceDevice(device);
             PersistDevice();
-            Notify(StatusType.Ok, $"{device.Info.Name ?? device.Info.Id}");
+            Notify(DeviceStatus.Connected, $"{device.Info.Name ?? device.Info.Id}");
         }
-        catch (Exception ex) { Notify(StatusType.Error, $"Serial failed: {ex.Message}"); }
+        catch (Exception ex) { Notify(DeviceStatus.Error, $"Serial failed: {ex.Message}"); }
     }
 
     public Task ConnectBluetoothAsync(string? deviceId = null, string? preferredDeviceName = null)
@@ -93,7 +93,7 @@ public class DeviceService : IDisposable
             ReplaceDevice(null);
             if (policy.DelayBeforeFirstAttempt)
             {
-                Notify(StatusType.Working, OperatingSystem.IsMacCatalyst()
+                Notify(DeviceStatus.Connecting, OperatingSystem.IsMacCatalyst()
                     ? "Waiting for Apple Bluetooth startup…"
                     : "Waiting for Windows Bluetooth startup…");
                 await Task.Delay(policy.StartupDelay);
@@ -104,7 +104,7 @@ public class DeviceService : IDisposable
             {
                 if (attempt > 1)
                 {
-                    Notify(StatusType.Working, "Retrying Bluetooth reconnect…");
+                    Notify(DeviceStatus.Connecting, "Retrying Bluetooth reconnect…");
                     await Task.Delay(policy.RetryDelay);
                 }
 
@@ -117,13 +117,13 @@ public class DeviceService : IDisposable
         }
         catch (Exception ex)
         {
-            Notify(StatusType.Error, $"Bluetooth failed: {ex.Message}");
+            Notify(DeviceStatus.Error, $"Bluetooth failed: {ex.Message}");
         }
     }
 
     public async Task ConnectPc2Async()
     {
-        Notify(StatusType.Working, "Connecting to PC2…");
+        Notify(DeviceStatus.Connecting, "Connecting to PC2…");
         try
         {
             ReplaceDevice(null);
@@ -131,12 +131,12 @@ public class DeviceService : IDisposable
             await device.Connect();
             ReplaceDevice(device);
             PersistDevice();
-            Notify(StatusType.Ok, "Connected: PC2");
+            Notify(DeviceStatus.Connected, "Connected: PC2");
         }
         catch
         {
             ReplaceDevice(null);
-            Notify(StatusType.Idle, "Disconnected");
+            Notify(DeviceStatus.Disconnected, "Disconnected");
         }
     }
 
@@ -190,13 +190,13 @@ public class DeviceService : IDisposable
         if (_device is Pc2Device pc2)
             pc2.CurrentAudioSetup.DefaultSource = defaultSource;
         Settings.Save();
-        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, "PC2 default source updated.", StatusKind.Info));
+        OnStatusChanged?.Invoke(new DeviceStatusMessage(DeviceStatus.Info, "PC2 default source updated."));
     }
 
     public void Disconnect(bool silent = false)
     {
         ReplaceDevice(null);
-        if (!silent) Notify(StatusType.Idle, "Disconnected");
+        if (!silent) Notify(DeviceStatus.Disconnected, "Disconnected");
     }
 
     public void Dispose() => Disconnect(silent: true);
@@ -213,7 +213,7 @@ public class DeviceService : IDisposable
             if (firstAttemptError is null)
                 return null;
 
-            Notify(StatusType.Working, "Bluetooth direct reconnect failed, scanning…");
+            Notify(DeviceStatus.Discovering, "Bluetooth direct reconnect failed, scanning…");
         }
 
         var scanFallbackError = await TryConnectBluetoothAsync(null, preferredDeviceName);
@@ -227,7 +227,8 @@ public class DeviceService : IDisposable
 
     private async Task<Exception?> TryConnectBluetoothAsync(string? deviceId, string? preferredDeviceName)
     {
-        Notify(StatusType.Working, deviceId is not null ? $"Connecting to {deviceId}…" : "Scanning Bluetooth…");
+        Notify(deviceId is not null ? DeviceStatus.Connecting : DeviceStatus.Discovering,
+            deviceId is not null ? $"Connecting to {deviceId}…" : "Scanning Bluetooth…");
 
         Beo4Device? candidate = null;
         try
@@ -236,7 +237,7 @@ public class DeviceService : IDisposable
             await candidate.Connect();
             ReplaceDevice(candidate);
             PersistDevice();
-            Notify(StatusType.Ok, $"Connected: {candidate.Info.Name ?? candidate.Info.Id}");
+            Notify(DeviceStatus.Connected, $"Connected: {candidate.Info.Name ?? candidate.Info.Id}");
             return null;
         }
         catch (Exception ex)
@@ -293,13 +294,9 @@ public class DeviceService : IDisposable
 
     private void OnDeviceStatusChanged(StatusMessage msg)
     {
-        if (msg.Kind == StatusKind.AudioSetup)
+        if (msg is AudioSetupMessage setup)
         {
-            if (Pc2AudioStatusParser.TryParse(msg.Text, out var parsedSetup))
-            {
-                parsedSetup.DefaultSource = Settings.AudioSetup.DefaultSource;
-                SyncPc2AudioSetup(parsedSetup, save: true);
-            }
+            SyncPc2AudioSetup(ToAudioSetup(setup), save: true);
         }
 
         OnStatusChanged?.Invoke(msg);
@@ -324,8 +321,18 @@ public class DeviceService : IDisposable
             Settings.Save();
     }
 
-    private void Notify(StatusType type, string text, StatusKind kind = StatusKind.Connection)
+    private Beoported.Pc2.AudioSetup ToAudioSetup(AudioSetupMessage setup) => new()
     {
-        OnStatusChanged?.Invoke(new StatusMessage(type, text, kind));
+        Volume = checked((byte)setup.Volume),
+        Bass = checked((sbyte)setup.Bass),
+        Treble = checked((sbyte)setup.Treble),
+        Balance = checked((sbyte)setup.Balance),
+        Loudness = setup.Loudness,
+        DefaultSource = Settings.AudioSetup.DefaultSource,
+    };
+
+    private void Notify(DeviceStatus status, string text)
+    {
+        OnStatusChanged?.Invoke(new DeviceStatusMessage(status, text));
     }
 }

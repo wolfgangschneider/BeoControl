@@ -36,13 +36,13 @@
 
     @if (Selected == RemoteType.Beolink1000)
     {
-        <Beolink1000 OnCommand="SendCommand" DeviceStatus="@_status.Text" />
+        <Beolink1000 OnCommand="SendCommand" DeviceStatus="@CurrentSourceDisplayText()" />
     }
     else
     {
          string  song = Spotify.IsSourceSelected() ? Spotify.Song : string.Empty;
          string interpret = Spotify.IsSourceSelected() ? Spotify.Interpret : string.Empty;
-         string source = _currentSource?.DisplayLabel ?? BeoCommands.Get(_status.Text)?.DisplayLabel ?? _status.Text;
+         string source = CurrentSourceDisplayText();
 
 
         <Beo4 OnCommand="SendCommand" DeviceStatus="@source" Song="@song" Info="@interpret" />
@@ -75,7 +75,7 @@
         BeoCommands.All.Where(command => command.Category == CommandCategory.Source).ToArray();
 
     private RemoteType Selected;
-    private StatusMessage _status = new(StatusType.Idle, "");
+    private SourceStatusMessage? _sourceStatus;
     private BeoCommand? _currentSource;
     private SpotifyBridge Spotify =>  field ??= new(this);
 
@@ -95,11 +95,11 @@
 
     private async void OnStatusChanged(StatusMessage msg)
     {
-        if (msg.Kind == StatusKind.Source)
+        if (msg is SourceStatusMessage sourceStatus)
         {
-            var sourceChanged = !string.Equals(_status.Text, msg.Text, StringComparison.Ordinal);
-            _status = msg;
-            _currentSource = BeoCommands.Get(msg.Text) ?? _currentSource;
+            var sourceChanged = !string.Equals(_sourceStatus?.Command, sourceStatus.Command, StringComparison.Ordinal);
+            _sourceStatus = sourceStatus;
+            _currentSource = BeoCommands.Get(sourceStatus.Command) ?? _currentSource;
 
             if (sourceChanged)
             {
@@ -173,6 +173,18 @@
             return command;
 
         return BeoCommands.Get(CommandId.Pc);
+    }
+
+    private string CurrentSourceDisplayText()
+    {
+        var command = _sourceStatus?.Command;
+        var source = _currentSource?.DisplayLabel
+            ?? (command is not null ? BeoCommands.Get(command)?.DisplayLabel : null)
+            ?? command
+            ?? string.Empty;
+        return _sourceStatus?.Index is int index
+            ? $"{source} {index}"
+            : source;
     }
 
    

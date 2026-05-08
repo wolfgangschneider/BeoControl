@@ -121,7 +121,7 @@
     ];
 
     public int Option { get; set; }
-    private BeoControl.Interfaces.StatusMessage? _lastPc2AudioStatus;
+    private AudioSetupMessage? _lastPc2AudioStatus;
 
     private string Pc2TriggerCommand
     {
@@ -164,16 +164,16 @@
 
     private async void OnStatusChanged(BeoControl.Interfaces.StatusMessage msg)
     {
-        if (msg.Kind is not BeoControl.Interfaces.StatusKind.AudioSetup and not BeoControl.Interfaces.StatusKind.Connection)
-            return;
-
-        if (msg.Kind == BeoControl.Interfaces.StatusKind.AudioSetup)
+        switch (msg)
         {
-            _lastPc2AudioStatus = msg;
-        }
-        else if (msg.Type is BeoControl.Interfaces.StatusType.Idle or BeoControl.Interfaces.StatusType.Error or BeoControl.Interfaces.StatusType.Working)
-        {
-            _lastPc2AudioStatus = null;
+            case AudioSetupMessage audioSetup:
+                _lastPc2AudioStatus = audioSetup;
+                break;
+            case DeviceStatusMessage { Status: DeviceStatus.Disconnected or DeviceStatus.Error or DeviceStatus.Connecting or DeviceStatus.Discovering }:
+                _lastPc2AudioStatus = null;
+                break;
+            default:
+                return;
         }
 
         await InvokeAsync(StateHasChanged);

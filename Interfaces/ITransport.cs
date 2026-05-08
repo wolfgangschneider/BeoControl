@@ -142,11 +142,40 @@ public class BeoCommand
     public string? AddIn { get; set; }
 }
 
-public enum StatusType { Idle, Working, Ok, Source, Error }
-public enum StatusKind { Connection, Discovery, Source, AudioSetup, Transport, Info }
+public enum DeviceStatus
+{
+    Disconnected,
+    Connecting,
+    Discovering,
+    Connected,
+    Error,
+    Info,
+}
 
-/// <summary>One-line status bar message with semantic type for color rendering.</summary>
-public record StatusMessage(StatusType Type, string Text, StatusKind Kind = StatusKind.Info);
+/// <summary>Base type for the unified status stream.</summary>
+public abstract record StatusMessage
+{
+    public abstract string Text { get; }
+}
+
+/// <summary>Connection, discovery, error, and informational device status.</summary>
+public sealed record DeviceStatusMessage(DeviceStatus Status, string? Detail = null) : StatusMessage
+{
+    public override string Text => string.IsNullOrWhiteSpace(Detail) ? Status.ToString() : Detail;
+}
+
+/// <summary>Canonical source command with optional numeric source index.</summary>
+public sealed record SourceStatusMessage(string Command, int? Index = null) : StatusMessage
+{
+    public override string Text => Command;
+}
+
+/// <summary>Current PC2 audio setup values.</summary>
+public sealed record AudioSetupMessage(int Volume, int Bass, int Treble, int Balance, bool Loudness) : StatusMessage
+{
+    public override string Text =>
+        $"vol={Volume}  bass={Bass:+0;-0;0}  treble={Treble:+0;-0;0}  balance={Balance:+0;-0;0}  loudness={(Loudness ? "on" : "off")}";
+}
 
 public enum LogLevel { Debug, Info, Warning, Error }
 

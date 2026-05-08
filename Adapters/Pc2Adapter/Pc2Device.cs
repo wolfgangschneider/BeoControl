@@ -40,7 +40,7 @@ public sealed class Pc2Device : IDevice
         _core.OnAudioSetupChanged = setup =>
         {
             OnAudioSetupChanged?.Invoke(setup);
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, FormatAudioStatus(setup), StatusKind.AudioSetup));
+            OnStatusChanged?.Invoke(CreateAudioSetupMessage(setup));
         };
         _core.OnStore = setup =>
         {
@@ -55,7 +55,7 @@ public sealed class Pc2Device : IDevice
                 return;
             }
 
-            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, command, StatusKind.Source));
+            OnStatusChanged?.Invoke(new SourceStatusMessage(command, channel));
         };
 
     }
@@ -68,10 +68,9 @@ public sealed class Pc2Device : IDevice
             _cts = new CancellationTokenSource();
             _core.Start(_cts.Token);
             IsConnected = true;
-            OnStatusChanged?.Invoke(new StatusMessage(
-                StatusType.Ok,
-                $"● PC2 connected  {FormatAudioStatus(_core.AudioSetup)}",
-                StatusKind.Connection));
+            OnStatusChanged?.Invoke(new DeviceStatusMessage(
+                DeviceStatus.Connected,
+                $"● PC2 connected  {CreateAudioSetupMessage(_core.AudioSetup).Text}"));
 
         }
         catch (Exception ex)
@@ -90,7 +89,7 @@ public sealed class Pc2Device : IDevice
         _cts = null;
         try { _core.Shutdown(); } catch { }
         IsConnected = false;
-        OnStatusChanged?.Invoke(new StatusMessage(StatusType.Idle, "○ PC2 disconnected", StatusKind.Connection));
+        OnStatusChanged?.Invoke(new DeviceStatusMessage(DeviceStatus.Disconnected, "○ PC2 disconnected"));
     }
 
     public void SendCommand(string cmd, string? arg = null)
@@ -106,8 +105,8 @@ public sealed class Pc2Device : IDevice
             OnLog?.Invoke(new LogMessage(LogLevel.Warning, "PC2: automatic store command failed"));
     }
 
-    private static string FormatAudioStatus(AudioSetup s) =>
-        $"vol={s.Volume}  bass={s.Bass:+0;-0;0}  treble={s.Treble:+0;-0;0}  balance={s.Balance:+0;-0;0}  loudness={(s.Loudness ? "on" : "off")}";
+    private static AudioSetupMessage CreateAudioSetupMessage(AudioSetup setup) =>
+        new(setup.Volume, setup.Bass, setup.Treble, setup.Balance, setup.Loudness);
 
     public void Dispose()
     {
