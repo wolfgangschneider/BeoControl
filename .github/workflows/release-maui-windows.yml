@@ -424,43 +424,48 @@ jobs:
 
       - name: Generate Velopack release feeds
         shell: bash
-        env:
-          RELEASE_VERSION: ${{ needs.prepare-release.outputs.release_version }}
         run: |
           python - <<'PY'
           import glob
           import hashlib
           import json
           import os
+          import re
 
-          release_version = os.environ["RELEASE_VERSION"]
           updates_dir = os.path.join("site", "updates")
+          package_pattern = re.compile(
+              r"^(?P<package>.+)-(?P<version>\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)-(?P<channel>.+)-(?P<type>full|delta)\.nupkg$",
+              re.IGNORECASE,
+          )
 
-          for assets_path in glob.glob(os.path.join(updates_dir, "assets.*.json")):
-              channel = os.path.basename(assets_path)[len("assets."):-len(".json")]
-              with open(assets_path, "r", encoding="utf-8") as handle:
-                  assets = json.load(handle)
+          for release_path in glob.glob(os.path.join(updates_dir, "releases.*.json")):
+              os.remove(release_path)
 
-              release_assets = []
-              for asset in assets:
-                  asset_type = asset["Type"]
-                  if asset_type not in ("Full", "Delta"):
-                      continue
+          package_paths = sorted(glob.glob(os.path.join(updates_dir, "*.nupkg")))
+          if not package_paths:
+              raise SystemExit("No Velopack packages found in site/updates.")
 
-                  file_name = asset["RelativeFileName"]
-                  file_path = os.path.join(updates_dir, file_name)
-                  with open(file_path, "rb") as package_file:
-                      sha1 = hashlib.sha1(package_file.read()).hexdigest().upper()
+          channels = {}
+          for package_path in package_paths:
+              file_name = os.path.basename(package_path)
+              match = package_pattern.match(file_name)
+              if not match:
+                  raise SystemExit(f"Unsupported Velopack package name: {file_name}")
 
-                  release_assets.append({
-                      "PackageId": "BeoControl",
-                      "Version": release_version,
-                      "Type": asset_type,
-                      "FileName": file_name,
-                      "SHA1": sha1,
-                      "Size": os.path.getsize(file_path)
-                  })
+              with open(package_path, "rb") as package_file:
+                  sha1 = hashlib.sha1(package_file.read()).hexdigest().upper()
 
+              channel = match.group("channel")
+              channels.setdefault(channel, []).append({
+                  "PackageId": match.group("package"),
+                  "Version": match.group("version"),
+                  "Type": match.group("type").capitalize(),
+                  "FileName": file_name,
+                  "SHA1": sha1,
+                  "Size": os.path.getsize(package_path),
+              })
+
+          for channel, release_assets in channels.items():
               release_path = os.path.join(updates_dir, f"releases.{channel}.json")
               with open(release_path, "w", encoding="utf-8") as handle:
                   json.dump({"Assets": release_assets}, handle, separators=(",", ":"))
