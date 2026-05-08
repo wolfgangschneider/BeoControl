@@ -48,6 +48,24 @@ public static class SourceNames
         [0xA1] = "N.RADIO",
     };
 
+    private static readonly Dictionary<byte, string> CanonicalCommands = new()
+    {
+        [(byte)Source.Tv] = "tv",
+        [(byte)Source.VMem] = "vtape",
+        [(byte)Source.VTape2] = "vtape2",
+        [(byte)Source.Dtv] = "sat",
+        [(byte)Source.Dvd] = "dvd",
+        [(byte)Source.VAux] = "v.aux",
+        [(byte)Source.VAux2] = "doorcam",
+        [(byte)Source.Pc] = "pc",
+        [(byte)Source.Radio] = "radio",
+        [(byte)Source.AMem] = "atape",
+        [(byte)Source.AMem2] = "atape2",
+        [(byte)Source.Cd] = "cd",
+        [(byte)Source.AAux] = "a.aux",
+        [(byte)Source.NRadio] = "phono",
+    };
+
     private static readonly Dictionary<string, byte> CommandMap = new()
     {
         // ── Video sources ──────────────────────────────────────────────────
@@ -80,7 +98,7 @@ public static class SourceNames
     };
 
     public static string? CommandFromId(byte id) =>
-        CommandMap.FirstOrDefault(kv => kv.Value == id).Key;
+        CanonicalCommands.TryGetValue(id, out var command) ? command : null;
 
     public static string GetName(byte id) =>
         Names.TryGetValue(id, out var name) ? name : $"0x{id:X2}";

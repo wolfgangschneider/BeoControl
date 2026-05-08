@@ -1,5 +1,6 @@
 using BeoControl.Interfaces;
 
+using Beoported.Masterlink;
 using Beoported.Pc2;
 
 namespace Pc2Adapter;
@@ -45,7 +46,17 @@ public sealed class Pc2Device : IDevice
         {
             OnStore?.Invoke(setup);
         };
-        _core.OnStatusChanged = status => OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, status, StatusKind.Source));
+        _core.OnSourceChanged = (sourceId, channel) =>
+        {
+            var command = SourceNames.CommandFromId(sourceId);
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                OnLog?.Invoke(new LogMessage(LogLevel.Debug, $"PC2: unknown source id 0x{sourceId:X2}"));
+                return;
+            }
+
+            OnStatusChanged?.Invoke(new StatusMessage(StatusType.Ok, command, StatusKind.Source));
+        };
 
     }
 
