@@ -433,8 +433,18 @@ jobs:
           import re
 
           updates_dir = os.path.join("site", "updates")
-          package_pattern = re.compile(
-              r"^(?P<package>.+)-(?P<version>\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)-(?P<channel>.+)-(?P<type>full|delta)\.nupkg$",
+          known_channels = [
+              "win-x64-self-contained",
+              "win-x64-framework-dependent",
+              "win-arm64-self-contained",
+              "win-arm64-framework-dependent",
+              "linux-x64-self-contained",
+              "linux-x64-framework-dependent",
+              "linux-arm64-self-contained",
+              "linux-arm64-framework-dependent",
+          ]
+          package_version_pattern = re.compile(
+              r"^(?P<package>.+?)-(?P<version>\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$",
               re.IGNORECASE,
           )
 
@@ -448,18 +458,34 @@ jobs:
           channels = {}
           for package_path in package_paths:
               file_name = os.path.basename(package_path)
-              match = package_pattern.match(file_name)
-              if not match:
+              channel = None
+              asset_type = None
+              package_version_name = None
+              for candidate_channel in known_channels:
+                  for candidate_type in ("full", "delta"):
+                      suffix = f"-{candidate_channel}-{candidate_type}.nupkg"
+                      if file_name.endswith(suffix):
+                          channel = candidate_channel
+                          asset_type = candidate_type.capitalize()
+                          package_version_name = file_name[: -len(suffix)]
+                          break
+                  if channel is not None:
+                      break
+
+              if channel is None or asset_type is None or package_version_name is None:
                   raise SystemExit(f"Unsupported Velopack package name: {file_name}")
+
+              match = package_version_pattern.match(package_version_name)
+              if not match:
+                  raise SystemExit(f"Unsupported Velopack package/version prefix: {file_name}")
 
               with open(package_path, "rb") as package_file:
                   sha1 = hashlib.sha1(package_file.read()).hexdigest().upper()
 
-              channel = match.group("channel")
               channels.setdefault(channel, []).append({
                   "PackageId": match.group("package"),
                   "Version": match.group("version"),
-                  "Type": match.group("type").capitalize(),
+                  "Type": asset_type,
                   "FileName": file_name,
                   "SHA1": sha1,
                   "Size": os.path.getsize(package_path),
