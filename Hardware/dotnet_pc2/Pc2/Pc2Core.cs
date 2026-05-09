@@ -139,12 +139,14 @@ public sealed class Pc2Core : IDisposable
         {
             Mixer.TransmitLocally(true);
             Mixer.TransmitFromMl(false);
+            Mixer.MlDistribute(true);
             Mixer.SpeakerPower(true);
         }
         else if (cmd == "on")
         {
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(true);
+            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(true);
             Mixer.SpeakerMute(false);
         }
@@ -154,6 +156,7 @@ public sealed class Pc2Core : IDisposable
             GotoSource(mlSourceId, (byte)arg);
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(true);
+            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(true);
             Mixer.SpeakerMute(false);
         }
@@ -242,6 +245,7 @@ public sealed class Pc2Core : IDisposable
         {
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(false);
+            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(false);
         }
         else if (cmd is "alloff" or "allstandby")
@@ -249,6 +253,7 @@ public sealed class Pc2Core : IDisposable
             Beolink.SendTelegram(DecodedTelegrams.AllStandby());
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(false);
+            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(false);
         }
         else if (cmd == "store")
@@ -381,6 +386,7 @@ public sealed class Pc2Core : IDisposable
             GotoSource((byte)source);
             Mixer.TransmitLocally(true); // maybe should be false?
             Mixer.TransmitFromMl(true); // maybe should be false?
+            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(true);
         }
         else if (keycode == Beo4Key.Mute)
@@ -401,6 +407,7 @@ public sealed class Pc2Core : IDisposable
         {
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(false);
+            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(false);
         }
     }
@@ -408,6 +415,7 @@ public sealed class Pc2Core : IDisposable
     public void Dispose()
     {
         try { Mixer.TransmitLocally(false); } catch { /* best effort */ }
+        try { Mixer.MlDistribute(false); } catch { /* best effort */ }
         try { Mixer.SpeakerPower(false); } catch { /* best effort */ }
         try { Shutdown(); } catch { /* best effort */ }
         Device.Dispose();
