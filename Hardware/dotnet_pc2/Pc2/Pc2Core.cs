@@ -281,6 +281,16 @@ public sealed class Pc2Core : IDisposable
     /// <summary>Map a lowercase command name to its Beo4Key. Returns null if unknown.</summary>
     public static Beo4Key? KeyFromCommand(string cmd) => cmd switch
     {
+        "0" => Beo4Key.Digit0,
+        "1" => Beo4Key.Digit1,
+        "2" => Beo4Key.Digit2,
+        "3" => Beo4Key.Digit3,
+        "4" => Beo4Key.Digit4,
+        "5" => Beo4Key.Digit5,
+        "6" => Beo4Key.Digit6,
+        "7" => Beo4Key.Digit7,
+        "8" => Beo4Key.Digit8,
+        "9" => Beo4Key.Digit9,
         "up" => Beo4Key.ArrowUp,
         "down" => Beo4Key.ArrowDown,
         "left" => Beo4Key.ArrowLeft,
