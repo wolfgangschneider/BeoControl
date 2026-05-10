@@ -12,7 +12,7 @@
 	</PropertyGroup>
 
 
-	<PropertyGroup Condition="'$(TargetFramework)' == ''">
+	<PropertyGroup>
 		<!-- 1. Standard-Framework (Windows), falls nichts anderes gewählt wurde -->
 		<TargetFrameworks>net10.0-windows10.0.19041.0</TargetFrameworks>
 
