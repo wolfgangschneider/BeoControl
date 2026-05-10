@@ -89,8 +89,8 @@ public sealed class Pc2Core : IDisposable
     {
         Device.SendMessage([0xF1]);             // INIT
 
-        Device.SendMessage([0x80, 0x01, 0x00]); // SET_NODE = 0x01
-        //Device.SetNodeOption(AudioSetup.NodeOption);
+        //Device.SendMessage([0x80, 0x01, 0x00]); // SET_NODE = 0x01
+        Device.SetNodeOption(AudioSetup.NodeOption);
         Mixer.SetParameters(AudioSetup); // apply default audio setup (volume 0, neutral bass/treble/balance, loudness off)
 
     }
