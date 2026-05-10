@@ -88,7 +88,7 @@ public sealed class Pc2Core : IDisposable
     private void Init()
     {
         Device.SendMessage([0xF1]);             // INIT
-        Device.SendMessage([0x80, 0x01, 0x00]); // SET_NODE = 0x01
+        Device.SetNodeOption(0x00);
         Mixer.SetParameters(AudioSetup); // apply default audio setup (volume 0, neutral bass/treble/balance, loudness off)
 
     }
@@ -139,12 +139,14 @@ public sealed class Pc2Core : IDisposable
         {
             Mixer.TransmitLocally(true);
             Mixer.TransmitFromMl(false);
+            Mixer.MlDistribute(true);
             Mixer.SpeakerPower(true);
         }
         else if (cmd == "on")
         {
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(true);
+            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(true);
             Mixer.SpeakerMute(false);
         }
@@ -154,6 +156,7 @@ public sealed class Pc2Core : IDisposable
             GotoSource(mlSourceId, (byte)arg);
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(true);
+            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(true);
             Mixer.SpeakerMute(false);
         }
@@ -242,6 +245,7 @@ public sealed class Pc2Core : IDisposable
         {
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(false);
+            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(false);
         }
         else if (cmd is "alloff" or "allstandby")
@@ -249,6 +253,7 @@ public sealed class Pc2Core : IDisposable
             Beolink.SendTelegram(DecodedTelegrams.AllStandby());
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(false);
+            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(false);
         }
         else if (cmd == "store")
@@ -256,6 +261,14 @@ public sealed class Pc2Core : IDisposable
             OnStore?.Invoke(AudioSetup);
             SetAudioSetup(AudioSetup);// ??
 
+        }
+        else if (cmd is "option" or "opt")
+        {
+            if (arg < 0 || arg > byte.MaxValue)
+                return false;
+
+            Device.SetNodeOption((byte)arg);
+            OnDebugMessage?.Invoke($"PC2 option mode set to {arg} (0x{arg:X2}).");
         }
         else if (KeyFromCommand(cmd) is Beo4Key key)
         {

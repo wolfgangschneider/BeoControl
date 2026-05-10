@@ -476,6 +476,32 @@ else
                 StateHasChanged();
                 return;
             }
+            if (cmd.StartsWith("/opt", StringComparison.OrdinalIgnoreCase)
+                || cmd.StartsWith("/option", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_device is null || !_device.IsConnected)
+                {
+                    AddLog(Spectre.Console.Color.Yellow, "Not connected — use /port, /bt or /pc2");
+                    StateHasChanged();
+                    return;
+                }
+
+                var slashParts = cmd.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                var alias = slashParts[0].Equals("/option", StringComparison.OrdinalIgnoreCase) ? "option" : "opt";
+                var value = slashParts.Length > 1 ? slashParts[1] : null;
+
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    AddLog(Spectre.Console.Color.Yellow, "Usage: /opt <mode>  (example: /opt 2)");
+                    StateHasChanged();
+                    return;
+                }
+
+                AddLog(Spectre.Console.Color.Cyan1, $"-> {alias} {value}");
+                _device.SendCommand(alias, value);
+                StateHasChanged();
+                return;
+            }
             AddLog(Spectre.Console.Color.Red, $"Unknown command: {cmd}  (try /help)");
             StateHasChanged();
             return;
@@ -557,6 +583,7 @@ else
             ? input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries)
             : [input];
         var cmdPart  = parts[0];
+
         var hasParam = parts.Length > 1;
 
         var matches = candidates

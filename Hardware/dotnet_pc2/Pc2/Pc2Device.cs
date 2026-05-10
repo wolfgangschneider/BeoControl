@@ -135,6 +135,15 @@ public sealed class Pc2Device : IDisposable
         }
     }
 
+    /// <summary>
+    /// Set PC2 option mode via SET_NODE (0x80 0x01 [option]).
+    /// Common values are 0, 1, 2 and 5/6 depending on installation role.
+    /// </summary>
+    public void SetNodeOption(byte option)
+    {
+        SendMessage([0x80, 0x01, option]);
+    }
+
     /// <summary>Read the next complete message (blocking).</summary>
     public byte[] Read() => _inbox.Take();
 
