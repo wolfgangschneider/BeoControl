@@ -28,6 +28,9 @@ public class AudioSetup
     /// <summary>Loudness boost on/off. Default false.</summary>
     public bool  Loudness { get; set; } = false;
 
+    /// <summary>PC2 SET_NODE option value.</summary>
+    public byte NodeOption { get; set; } = 0;
+
     /// <summary>Startup source behavior: local PC or no automatic source activation.</summary>
     public Pc2DefaultSource DefaultSource { get; set; } = Pc2DefaultSource.None;
 }

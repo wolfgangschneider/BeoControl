@@ -83,6 +83,7 @@ public class AppSettings
         Treble   = AudioSetup.Treble,
         Balance  = AudioSetup.Balance,
         Loudness = AudioSetup.Loudness,
+        NodeOption = AudioSetup.NodeOption,
         DefaultSource = AudioSetup.DefaultSource,
     };
 
@@ -94,6 +95,7 @@ public class AppSettings
         AudioSetup.Treble   = src.Treble;
         AudioSetup.Balance  = src.Balance;
         AudioSetup.Loudness = src.Loudness;
+        AudioSetup.NodeOption = src.NodeOption;
         AudioSetup.DefaultSource = src.DefaultSource;
     }
 
@@ -117,5 +119,6 @@ public class AudioSetupDto
     public sbyte Treble   { get; set; } = 0;
     public sbyte Balance  { get; set; } = 0;
     public bool  Loudness { get; set; } = false;
+    public byte  NodeOption { get; set; } = 0;
     public Beoported.Pc2.Pc2DefaultSource DefaultSource { get; set; } = Beoported.Pc2.Pc2DefaultSource.None;
 }

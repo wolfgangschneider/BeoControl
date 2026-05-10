@@ -88,7 +88,9 @@ public sealed class Pc2Core : IDisposable
     private void Init()
     {
         Device.SendMessage([0xF1]);             // INIT
+
         Device.SendMessage([0x80, 0x01, 0x00]); // SET_NODE = 0x01
+        //Device.SetNodeOption(AudioSetup.NodeOption);
         Mixer.SetParameters(AudioSetup); // apply default audio setup (volume 0, neutral bass/treble/balance, loudness off)
 
     }
@@ -262,6 +264,15 @@ public sealed class Pc2Core : IDisposable
             SetAudioSetup(AudioSetup);// ??
 
         }
+        else if (cmd is "option" or "opt")
+        {
+            if (arg < 0 || arg > byte.MaxValue)
+                return false;
+
+            AudioSetup.NodeOption = (byte)arg;
+            Device.SetNodeOption(AudioSetup.NodeOption);
+            OnDebugMessage?.Invoke($"PC2 option mode set to {arg} (0x{arg:X2}).");
+        }
         else if (KeyFromCommand(cmd) is Beo4Key key)
         {
             Beolink.SendTelegram(DecodedTelegrams.SendBeo4Key(0x00, key));
@@ -362,6 +373,7 @@ public sealed class Pc2Core : IDisposable
                 if (r != null)
                 {
                     OnDebugMessage?.Invoke($"Mixer state {BitConverter.ToString(tgram)}");
+                    r.NodeOption = AudioSetup.NodeOption;
                     r.DefaultSource = AudioSetup.DefaultSource;
                     AudioSetup = r;
                     OnAudioSetupChanged?.Invoke(r);
