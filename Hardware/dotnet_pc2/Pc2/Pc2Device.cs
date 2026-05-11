@@ -1,10 +1,12 @@
-using System.Collections.Concurrent;
-using Microsoft.Win32;
 using Beoported.Logging;
-using Beoported.Masterlink;
+
 using LibUsbDotNet;
 using LibUsbDotNet.Main;
 using LibUsbDotNet.WinUsb;
+
+using Microsoft.Win32;
+
+using System.Collections.Concurrent;
 
 namespace Beoported.Pc2;
 
@@ -13,11 +15,11 @@ namespace Beoported.Pc2;
 /// </summary>
 public sealed class Pc2Device : IDisposable
 {
-    private const int VendorId  = 0x0CD4;
+    private const int VendorId = 0x0CD4;
     private const int ProductId = 0x0101;
-    private const byte EndpointIn  = 0x81; // LIBUSB_ENDPOINT_IN | 1
+    private const byte EndpointIn = 0x81; // LIBUSB_ENDPOINT_IN | 1
     private const byte EndpointOut = 0x01; // OUT endpoint
- 
+
     private UsbDevice? _usbDevice;
     private UsbEndpointReader? _reader;
     private UsbEndpointWriter? _writer;
@@ -37,7 +39,7 @@ public sealed class Pc2Device : IDisposable
         var finder = new UsbDeviceFinder(VendorId, ProductId);
         _usbDevice = UsbDevice.OpenUsbDevice(finder) ?? TryOpenWinUsbDeviceBySymbolicName()
             ?? throw new InvalidOperationException("PC2 device not found (VID=0x0CD4, PID=0x0101)");
- 
+
         // For Linux libusb: claim interface 0
         if (_usbDevice is IUsbDevice wholeDevice)
         {
@@ -106,7 +108,7 @@ public sealed class Pc2Device : IDisposable
             0xE7 => "Send [MUTE] =>",
             0xEA => "Send [SPEAKER] =>",
             0xEB => "Send [VOLUME] =>",
-            _    => "Send =>",
+            _ => "Send =>",
         } : "Send =>";
 
         DebugLog?.Invoke(ConsoleLog.FormatHexRow(frame, label, isSend: true));
@@ -138,6 +140,7 @@ public sealed class Pc2Device : IDisposable
     /// <summary>Set PC2 option mode via SET_NODE (0x80 0x01 [option]).</summary>
     public void SetNodeOption(byte option)
     {
+
         SendMessage([0x80, 0x01, option]);
     }
 
