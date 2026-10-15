@@ -20,6 +20,9 @@ TestResults/
 *.trx
 *.coverage
 
+# MSBuild SDK resolver backups
+*.SdkResolver.*.proj.Backup.tmp
+
 # OS
 Thumbs.db
 .DS_Store

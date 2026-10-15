@@ -6,7 +6,7 @@
 #ifdef BOARD_M5ATOMS3
     #include "BtNimbleMultiChannel.h"
     using ActiveBtChannel = BtNimbleMultiChannel;
-    constexpr uint8_t IR_TX_PIN = 38;   // M5 Atom S3
+    constexpr uint8_t IR_TX_PIN = 1;   // M5 Atom S3
     #undef DEVICE_NAME
     #define DEVICE_NAME "Beo4Remote_AtomS3"
 #elif defined(BOARD_M5STAMPS3)
@@ -25,9 +25,18 @@
 #elif defined(BOARD_M5STACK_ATOM)
     #include "BtNimbleSingleChannel.h"
     using ActiveBtChannel = BtNimbleSingleChannel;
-    constexpr uint8_t IR_TX_PIN = 25;    // M5 Stack Atom — G0
+   // constexpr uint8_t IR_TX_PIN = 25;    // M5 Stack Atom — BCB board
+    constexpr uint8_t IR_TX_PIN = 32;    // M5 Stack Atom Grove
     #undef DEVICE_NAME
     #define DEVICE_NAME "Beo4Remote_Atom"
+
+#elif defined(BOARD_S3_MINI)
+    #include "BtNimbleSingleChannel.h"
+    using ActiveBtChannel = BtNimbleSingleChannel;
+    constexpr uint8_t IR_TX_PIN = 13;    // ESP32-S3-mini-1-N4R2 — G0
+    #undef DEVICE_NAME
+    #define DEVICE_NAME "Beo4Remote_S3Mini"
+
 #else
 
     //#include "BtClassicChannel.h"
@@ -55,9 +64,14 @@ static char    serialCmdBuf[CMD_BUF_SIZE];
 static uint8_t serialCmdLen = 0;
 static char    btCmdBuf[CMD_BUF_SIZE];
 static uint8_t btCmdLen = 0;
+//-- BL E heartbeat timestamp --
+static unsigned long lastHeartbeat = 0;
 
 static void printStartup(Channel& channel, bool irReady) {
     channel.print("===> start beo4... ");
+    channel.print(DEVICE_NAME);
+    channel.print("  IR TX pin ");
+   channel.printf("%d ", IR_TX_PIN);
     channel.println(irReady ? "OK" : "failed");
     channel.println("\n\n=== ESP32 Beo4 Emulator ===");
     printHelp(channel);
@@ -85,11 +99,20 @@ void setup() {
 
     // On ESP32-S3 (USB-CDC), wait up to 3 s for a host to open the port.
     // On esp32dev (hardware UART), Serial is always ready immediately.
-#if defined(BOARD_M5ATOMS3) || defined(BOARD_M5STAMPS3)
+#if defined(BOARD_M5ATOMS3) || defined(BOARD_M5STAMPS3) || defined(BOARD_S3_MINI)
     uint32_t t0 = millis();
     while (!Serial && millis() - t0 < 3000) delay(10);
+    delay(300);   // let the host's monitor finish reconnecting to the freshly re-enumerated USB-CDC port
 #endif
 
+#if defined(BOARD_M5STACK_ATOM)
+    pinMode(GPIO_NUM_26, OUTPUT);
+    digitalWrite(GPIO_NUM_26, LOW);  // soft GND return for the IR LED on IR_TX_PIN
+#endif
+#if defined(BOARD_M5ATOMS3)
+    pinMode(GPIO_NUM_2, OUTPUT);
+    digitalWrite(GPIO_NUM_2, LOW);  // soft GND return for the IR LED on IR_TX_PIN
+#endif
 
 // not working esp32 & Atom
 /*
@@ -115,4 +138,10 @@ if (Serial) {
 void loop() {
     pollChannel(serialCh, serialCmdBuf, serialCmdLen);
     pollChannel(btCh, btCmdBuf, btCmdLen);
+
+     if (btCh.connected() && millis() - lastHeartbeat >= 5000) {
+         lastHeartbeat = millis();
+         btCh.println("HB");
+     }
+
 }

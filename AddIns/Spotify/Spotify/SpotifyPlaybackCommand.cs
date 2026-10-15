@@ -5,5 +5,11 @@ public enum SpotifyPlaybackCommand
     Play,
     Pause,
     Next,
-    Previous
+    Previous,
+    NextPlaylist,
+    PreviousPlaylist,
+
+
 }
+
+

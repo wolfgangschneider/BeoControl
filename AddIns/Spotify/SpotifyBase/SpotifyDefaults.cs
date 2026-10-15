@@ -16,7 +16,12 @@ public static class SpotifyDefaults
         "user-read-private",
         "user-read-playback-state",
         "user-read-currently-playing",
-        "user-modify-playback-state"
+        "user-modify-playback-state",
+        "user-read-playback-state",
+        //"user-modify-playback-state",
+        //"user-read-currently-playing",
+        "playlist-read-private",
+        "playlist-read-collaborative"
     ];
 
     public static TimeSpan NowPlayingPollInterval =>

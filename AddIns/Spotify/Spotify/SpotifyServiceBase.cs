@@ -61,6 +61,9 @@ public abstract class SpotifyServiceBase : ISpotifyService
             "Pause" => SpotifyPlaybackCommand.Pause,
             "Next" => SpotifyPlaybackCommand.Next,
             "Previous" => SpotifyPlaybackCommand.Previous,
+            "PreviousPlaylist" => SpotifyPlaybackCommand.PreviousPlaylist,
+            "NextPlayList" => SpotifyPlaybackCommand.NextPlaylist,
+
             _ => throw new InvalidOperationException($"Unsupported Spotify command '{command}'.")
         };
 

@@ -72,6 +72,10 @@ public class Beolink
                 HandleMlRequest(mlt);
                 break;
 
+            case MasterlinkTelegram.TelegramType.Command:
+                HandleMlCommand(mlt);
+                break;
+
             case MasterlinkTelegram.TelegramType.Status:
                 switch (mlt.PldType)
                 {
@@ -181,6 +185,29 @@ public class Beolink
                 SendTelegram(trackReply);
             }
         }
+    }
+
+    /// <summary>
+    /// Handle Beo4 keys sent to the PC2 over Masterlink, so it can be remote controlled without an
+    /// IR eye: BEO4_KEY (payload [source, key]) and VIRTUAL_BEO4 as a MasterLink Gateway sends it
+    /// (payload version 2: [0x00, dest, sec_source, link, key], e.g. Home Assistant's mlgw integration).
+    /// </summary>
+    private void HandleMlCommand(MasterlinkTelegram mlt)
+    {
+        if (mlt.DestNode != Nodes.Node01)
+            return;
+
+        byte? key = mlt.PldType switch
+        {
+            MasterlinkTelegram.PayloadType.Beo4Key when mlt.Payload.Length >= 2 => mlt.Payload[1],
+            MasterlinkTelegram.PayloadType.VirtualBeo4 when mlt.PayloadVersion == 2 && mlt.Payload.Length >= 5 => mlt.Payload[4],
+            _ => null,
+        };
+        if (key is null)
+            return;
+
+        DebugLog?.Invoke($"ML Beo4 key from {Nodes.GetName(mlt.SrcNode)}: {(Beo4Key)key.Value}");
+        KeystrokeCallback?.Invoke((Beo4Key)key.Value);
     }
 
     /// <summary>Process an incoming Beo4 IR keycode.</summary>

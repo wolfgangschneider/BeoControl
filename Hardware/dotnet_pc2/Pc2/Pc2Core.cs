@@ -52,6 +52,11 @@ public sealed class Pc2Core : IDisposable
         Beolink.TelegramReceived = t => OnTelegram?.Invoke(t);
         Beolink.StartupSourceDetect = _ =>
         {
+            // The first AUDIO_BUS answer can arrive long after startup (e.g. on the first source
+            // change when nothing played at startup). Apply the default source only if nothing
+            // has chosen a source since; otherwise it would switch a playing ML source to PC.
+            if (Mixer.TransmittingLocally || Mixer.TransmittingFromMl)
+                return;
             switch (AudioSetup.DefaultSource)
             {
                 case Pc2DefaultSource.PC:
@@ -132,6 +137,27 @@ public sealed class Pc2Core : IDisposable
     /// Execute a named command. Returns false if the command is not recognised.
     /// "help" / "?" are intentionally not handled here — the caller decides how to display help.
     /// </summary>
+    /// <summary>
+    /// Source and track from a Masterlink status telegram, or null if it carries none.
+    /// The position differs by type (cross-checked against ml-debug's decoder and bus captures):
+    /// STATUS_INFO (0x87, what the audio master broadcasts to link rooms on a source change)
+    /// has the source in payload[0] and the track in payload[9]; TRACK_INFO_LONG (0x82) has
+    /// them in payload[1] and payload[2]. Other status types (e.g. AUDIO_BUS answers) don't.
+    /// </summary>
+    internal static (byte Source, byte? Track)? SourceAndTrack(MasterlinkTelegram mlt)
+    {
+        var p = mlt.Payload;
+        (byte, byte?)? found = mlt.PldType switch
+        {
+            MasterlinkTelegram.PayloadType.StatusInfo when p.Length > 0 =>
+                (p[0], p.Length > 9 ? p[9] : null),
+            MasterlinkTelegram.PayloadType.TrackInfoLong when p.Length > 1 =>
+                (p[1], p.Length > 2 ? p[2] : null),
+            _ => null,
+        };
+        return found is { } f && SourceNames.CommandFromId(f.Item1) is not null ? f : null;
+    }
+
     public bool RunCommand(string cmd, int arg = 0)
     {
         cmd = cmd.ToLowerInvariant();
@@ -139,6 +165,9 @@ public sealed class Pc2Core : IDisposable
         // ── "pc" = local PC audio source (no Masterlink telegram) ────────
         if (cmd == "pc")
         {
+            // Leaving the Masterlink source: tell the audio master, like standby does.
+            if (Mixer.TransmittingFromMl)
+                Beolink.SendTelegram(DecodedTelegrams.Standby());
             Mixer.TransmitLocally(true);
             Mixer.TransmitFromMl(false);
             Mixer.MlDistribute(true);
@@ -146,6 +175,9 @@ public sealed class Pc2Core : IDisposable
         }
         else if (cmd == "on")
         {
+            // Back from the local input: request the Masterlink source again (released by "pc").
+            if (Mixer.TransmittingLocally && !Mixer.TransmittingFromMl && _mlSource is byte mlSource)
+                GotoSource(mlSource);
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(true);
             Mixer.MlDistribute(false);
@@ -245,6 +277,7 @@ public sealed class Pc2Core : IDisposable
         }
         else if (cmd is "off" or "standby")
         {
+            Beolink.SendTelegram(DecodedTelegrams.Standby());
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(false);
             Mixer.MlDistribute(false);
@@ -295,8 +328,11 @@ public sealed class Pc2Core : IDisposable
     }
 
     /// <summary>Send a GOTO_SOURCE telegram on the Masterlink bus.</summary>
+    private byte? _mlSource;   // last Masterlink source the PC2 requested
+
     public void GotoSource(byte mlSourceId, byte trackOrPreset = 0)
     {
+        _mlSource = mlSourceId;
         var tgram = DecodedTelegrams.GotoSource(mlSourceId, trackOrPreset);
         Beolink.SendTelegram(tgram);
     }
@@ -356,15 +392,11 @@ public sealed class Pc2Core : IDisposable
                 try
                 {
                     mlt = MasterlinkTelegram.Parse(tgram);
-                    if (mlt.Type == MasterlinkTelegram.TelegramType.Status)
+                    if (mlt.Type == MasterlinkTelegram.TelegramType.Status
+                        && SourceAndTrack(mlt) is { } st)
                     {
-                        if (mlt.Payload.Length > 1)
-                        {
-                            var channel = mlt.Payload.Length > 2 && mlt.Payload[2] > 0 && mlt.Payload[2] != 255
-                                ? mlt.Payload[2]
-                                : (byte?)null;
-                            OnSourceChanged?.Invoke(mlt.Payload[1], channel);
-                        }
+                        var channel = st.Track is > 0 and not 255 ? st.Track : null;
+                        OnSourceChanged?.Invoke(st.Source, channel);
                     }
                 }
                 catch (Exception e) { }
@@ -405,11 +437,15 @@ public sealed class Pc2Core : IDisposable
     {
         if (Beo4.TryGetSource(keycode, out var source))
         {
+            // Same routing as a Masterlink source started by command (RunCommand): play what
+            // comes from the bus, not the local PC input.
             GotoSource((byte)source);
-            Mixer.TransmitLocally(true); // maybe should be false?
-            Mixer.TransmitFromMl(true); // maybe should be false?
-            Mixer.MlDistribute(false);
+
+
+            Mixer.TransmitLocally(false);
+            Mixer.TransmitFromMl(true);
             Mixer.SpeakerPower(true);
+            Mixer.SpeakerMute(false);
         }
         else if (keycode == Beo4Key.Mute)
             Mixer.SpeakerMute(!Mixer.SpeakersMuted);
@@ -427,6 +463,7 @@ public sealed class Pc2Core : IDisposable
         }
         else if (keycode == Beo4Key.Standby)
         {
+            Beolink.SendTelegram(DecodedTelegrams.Standby());
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(false);
             Mixer.MlDistribute(false);

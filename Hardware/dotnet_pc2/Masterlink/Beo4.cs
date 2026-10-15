@@ -61,6 +61,7 @@ public static class Beo4
         [Beo4Key.Sat]   = Source.Sat,
         [Beo4Key.Pc]    = Source.Pc,
         [Beo4Key.ATape] = Source.ATape,
+        [Beo4Key.ATape2] = Source.AMem2,  // N.MUSIC
         [Beo4Key.Cd]    = Source.Cd,
         [Beo4Key.Phono] = Source.Phono,
     };

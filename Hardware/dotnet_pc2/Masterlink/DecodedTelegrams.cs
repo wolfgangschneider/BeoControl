@@ -100,6 +100,26 @@ public static class DecodedTelegrams
         };
     }
 
+    /// <summary>
+    /// Build a RELEASE to the audio master: what a link room sends when it goes to standby
+    /// (measured on a BeoLink link room: c1 03 01 0a 00 00 00 11 02 02 01 00). Lets the audio
+    /// master and listeners on the bus (e.g. Home Assistant's mlgw integration) see the room is off.
+    /// </summary>
+    public static MasterlinkTelegram Standby()
+    {
+        return new MasterlinkTelegram
+        {
+            DestNode = Nodes.AMaster,
+            SrcNode  = Nodes.Node01,
+            DestSrc  = 0x00,
+            SrcSrc   = 0x00,
+            Type     = MasterlinkTelegram.TelegramType.Command,
+            PldType  = MasterlinkTelegram.PayloadType.Release,
+            PayloadVersion = 2,
+            Payload  = [0x01, 0x00],
+        };
+    }
+
     /// <summary>Build a RELEASE broadcast to all nodes (triggers standby on all Masterlink devices).</summary>
     public static MasterlinkTelegram AllStandby()
     {

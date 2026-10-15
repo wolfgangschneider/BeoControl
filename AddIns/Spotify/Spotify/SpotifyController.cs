@@ -57,34 +57,51 @@ public sealed class SpotifyController : IDisposable
         var tokenPath = GetTokenPath();
         var token = await AuthenticateAsync(settings, tokenPath);
 
-        var authenticator = new PKCEAuthenticator(settings.ClientId, token);
-        authenticator.TokenRefreshed += (_, refreshedToken) =>
-        {
-            File.WriteAllText(tokenPath, JsonSerializer.Serialize(refreshedToken, JsonOptions));
-        };
-
-        var spotify = new SpotifyClient(SpotifyClientConfig.CreateDefault().WithAuthenticator(authenticator));
+        if (string.IsNullOrWhiteSpace(token.RefreshToken))
+            token = await AuthenticateAsync(settings, tokenPath, forceLogin: true);
 
         try
         {
-            var me = await spotify.UserProfile.Current();
-            var devicesResponse = await spotify.Player.GetAvailableDevices();
-            var devices = devicesResponse.Devices ?? [];
-            return new SpotifyConnection(spotify, me.DisplayName ?? me.Id, devices);
+            return await CreateConnectionAsync(settings.ClientId, tokenPath, token);
         }
-        catch (APITooManyRequestsException ex)
+        catch (APIException ex) when (RequiresNewLogin(ex))
         {
-            var wait = ex.RetryAfter;
-            Console.WriteLine($"Rate limit hit. Waiting {wait} seconds...");
-            throw new InvalidOperationException($"Rate limit hit. Waiting {wait.TotalHours} hours...", ex);
-
-            //return null;
-
+            Console.WriteLine("Spotify authorization is no longer valid. Starting a new login.");
+            token = await AuthenticateAsync(settings, tokenPath, forceLogin: true);
+            return await CreateConnectionAsync(settings.ClientId, tokenPath, token);
         }
-        catch (APIException ex)
+    }
+
+    private static async Task<SpotifyConnection> CreateConnectionAsync(
+        string clientId,
+        string tokenPath,
+        PKCETokenResponse token)
+    {
+        var refreshToken = token.RefreshToken;
+        var authenticator = new PKCEAuthenticator(clientId, token);
+        authenticator.TokenRefreshed += (_, refreshedToken) =>
         {
-            throw new InvalidOperationException($"Spotify API error: {ex.Message}", ex);
-        }
+            if (string.IsNullOrWhiteSpace(refreshedToken.RefreshToken))
+                refreshedToken.RefreshToken = refreshToken;
+            else
+                refreshToken = refreshedToken.RefreshToken;
+
+            SaveToken(tokenPath, refreshedToken);
+        };
+
+        var spotify = new SpotifyClient(
+            SpotifyClientConfig.CreateDefault().WithAuthenticator(authenticator));
+        var me = await spotify.UserProfile.Current();
+        var devicesResponse = await spotify.Player.GetAvailableDevices();
+        var devices = devicesResponse.Devices ?? [];
+
+        return new SpotifyConnection(spotify, me.DisplayName ?? me.Id, devices);
+    }
+
+    private static bool RequiresNewLogin(APIException exception)
+    {
+        return exception is APIUnauthorizedException
+            || string.Equals(exception.Message, "invalid_grant", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<string> ExecuteAsync(SpotifyPlaybackCommand command)
@@ -120,7 +137,43 @@ public sealed class SpotifyController : IDisposable
                 case SpotifyPlaybackCommand.Previous:
                     return await RestartOrSkipPreviousAsync();
 
+                case SpotifyPlaybackCommand.PreviousPlaylist:
+                    return await PlayRelativePlaylistAsync("previous");
+
+                case SpotifyPlaybackCommand.NextPlaylist:
+                    return await PlayRelativePlaylistAsync("next");
+
+
+                //case SpotifyPlaybackCommand.PlaySongNr:
+                //    try
+                //    {
+
+                //        var playback = await _spotify.Player.GetCurrentPlayback();
+                //        var playlistId = playback.Context.Uri["spotify:playlist:".Length..];
+
+                //        var items = await _spotify.Playlists.GetPlaylistItems(playlistId);
+
+                //        await _spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest
+                //        {
+                //            DeviceId = SelectedDevice.Id,
+                //            ContextUri = $"spotify:playlist:{playlistId}",
+                //            OffsetParam = new PlayerResumePlaybackRequest.Offset
+                //            {
+                //                Position = 4 // 5. Song
+                //            }
+                //        });
+
+                //        return $"Playlists retrieved:  {playlistId}";
+                //    }
+                //    catch (Exception ex)
+                //    {
+                //        string s = ex.ToString();
+                //        return s;
+                //    }
+                //    break;
+
                 default:
+
                     throw new InvalidOperationException("Unknown command. Use: play, pause, next, prev, quit");
             }
         }
@@ -130,6 +183,35 @@ public sealed class SpotifyController : IDisposable
             //throw new InvalidOperationException($"Spotify API error: {ex.Message}", ex);
         }
     }
+    public async Task<string> PlayRelativePlaylistAsync(string direction)
+    {
+        var playback = await _spotify.Player.GetCurrentPlayback();
+        var currentPlaylistId = playback.Context.Uri["spotify:playlist:".Length..];
+
+        var playlists = await _spotify.Playlists.CurrentUsers();
+        var list = playlists.Items;
+
+        var currentIndex = list.FindIndex(p => p.Id == currentPlaylistId);
+
+        var nextIndex = direction == "next"
+            ? (currentIndex + 1) % list.Count
+            : (currentIndex - 1 + list.Count) % list.Count;
+
+        var nextPlaylistId = list[nextIndex].Id;
+
+        await _spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest
+        {
+            DeviceId = SelectedDevice.Id,
+            ContextUri = $"spotify:playlist:{nextPlaylistId}",
+            OffsetParam = new PlayerResumePlaybackRequest.Offset
+            {
+                Position = 0 // Song 1
+            }
+        });
+
+        return list[nextIndex].Name;
+    }
+
 
     private async Task<string> RestartOrSkipPreviousAsync()
     {
@@ -233,9 +315,12 @@ public sealed class SpotifyController : IDisposable
         return Path.Combine(tokenDirectory, TokenFileName);
     }
 
-    private static async Task<PKCETokenResponse> AuthenticateAsync(SpotifyAppSettings settings, string tokenPath)
+    private static async Task<PKCETokenResponse> AuthenticateAsync(
+        SpotifyAppSettings settings,
+        string tokenPath,
+        bool forceLogin = false)
     {
-        if (File.Exists(tokenPath))
+        if (!forceLogin && File.Exists(tokenPath))
         {
             try
             {
@@ -266,7 +351,7 @@ public sealed class SpotifyController : IDisposable
                 var token = await new OAuthClient().RequestToken(
                     new PKCETokenRequest(settings.ClientId, response.Code, redirectUri, verifier));
 
-                File.WriteAllText(tokenPath, JsonSerializer.Serialize(token, JsonOptions));
+                SaveToken(tokenPath, token);
                 completion.TrySetResult(token);
             }
             catch (APIException ex)
@@ -316,5 +401,10 @@ public sealed class SpotifyController : IDisposable
         {
             server.Dispose();
         }
+    }
+
+    private static void SaveToken(string tokenPath, PKCETokenResponse token)
+    {
+        File.WriteAllText(tokenPath, JsonSerializer.Serialize(token, JsonOptions));
     }
 }

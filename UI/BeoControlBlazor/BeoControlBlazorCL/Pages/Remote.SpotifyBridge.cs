@@ -1,4 +1,5 @@
 using BeoControl.Interfaces;
+
 using BeoControlBlazorServices;
 
 namespace BeoControlBlazorCL.Pages;
@@ -24,9 +25,12 @@ public partial class Remote
 
 
             if (!owner.DeviceService.Settings.SpotifyEnabled || !IsSourceSelected())
-                return false;
+                return false; // no spotify return
 
-
+            //if (command.Category == CommandCategory.Number)
+            //{
+            //    _ = ExecutePlaylistSongAsync(command.Cmd);
+            //}
             if (command.Id == CommandId.Menu)
             {
                 await OpenAsync();
@@ -61,11 +65,13 @@ public partial class Remote
 
         private static string? TryMapCommand(BeoCommand command) => command.Id switch
         {
-            CommandId.Left => "Previous",
-            CommandId.Right => "Next",
+            CommandId.Left => "PreviousPlaylist",
+            CommandId.Right => "NextPlayList",
             CommandId.Stop => "Pause",
             CommandId.Play => "Play",
             CommandId.Go => "Play",
+            CommandId.Up => "Previous",
+            CommandId.Down => "Next",
             _ => null
         };
 
@@ -80,6 +86,22 @@ public partial class Remote
                 Error = string.Empty;
                 return await owner.LaunchSpotifyService.ExecuteSpotifyCommandAsync(
                     command,
+                    owner.DeviceService.Settings.SpotifyPreferredDeviceName);
+            }
+            catch (Exception ex)
+            {
+                await SetErrorStateAsync(ex.Message);
+                return false;
+            }
+        }
+
+        private async Task<bool> ExecutePlaylistSongAsync(string songId)
+        {
+            try
+            {
+                Error = string.Empty;
+                return await owner.LaunchSpotifyService.ExecuteSpotifyCommandAsync(
+                    songId,
                     owner.DeviceService.Settings.SpotifyPreferredDeviceName);
             }
             catch (Exception ex)
