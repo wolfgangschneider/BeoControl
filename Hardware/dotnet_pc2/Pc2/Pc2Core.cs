@@ -52,11 +52,6 @@ public sealed class Pc2Core : IDisposable
         Beolink.TelegramReceived = t => OnTelegram?.Invoke(t);
         Beolink.StartupSourceDetect = _ =>
         {
-            // The first AUDIO_BUS answer can arrive long after startup (e.g. on the first source
-            // change when nothing played at startup). Apply the default source only if nothing
-            // has chosen a source since; otherwise it would switch a playing ML source to PC.
-            if (Mixer.TransmittingLocally || Mixer.TransmittingFromMl)
-                return;
             switch (AudioSetup.DefaultSource)
             {
                 case Pc2DefaultSource.PC:
@@ -92,9 +87,7 @@ public sealed class Pc2Core : IDisposable
 
     private void Init()
     {
-        //Device.SetNodeOption(AudioSetup.NodeOption);
         Device.SendMessage([0xF1]);             // INIT
-
         Device.SendMessage([0x80, 0x01, 0x00]); // SET_NODE = 0x01
         Mixer.SetParameters(AudioSetup); // apply default audio setup (volume 0, neutral bass/treble/balance, loudness off)
 
@@ -165,22 +158,14 @@ public sealed class Pc2Core : IDisposable
         // ── "pc" = local PC audio source (no Masterlink telegram) ────────
         if (cmd == "pc")
         {
-            // Leaving the Masterlink source: tell the audio master, like standby does.
-            if (Mixer.TransmittingFromMl)
-                Beolink.SendTelegram(DecodedTelegrams.Standby());
             Mixer.TransmitLocally(true);
             Mixer.TransmitFromMl(false);
-            Mixer.MlDistribute(true);
             Mixer.SpeakerPower(true);
         }
         else if (cmd == "on")
         {
-            // Back from the local input: request the Masterlink source again (released by "pc").
-            if (Mixer.TransmittingLocally && !Mixer.TransmittingFromMl && _mlSource is byte mlSource)
-                GotoSource(mlSource);
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(true);
-            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(true);
             Mixer.SpeakerMute(false);
         }
@@ -190,7 +175,6 @@ public sealed class Pc2Core : IDisposable
             GotoSource(mlSourceId, (byte)arg);
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(true);
-            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(true);
             Mixer.SpeakerMute(false);
         }
@@ -277,10 +261,8 @@ public sealed class Pc2Core : IDisposable
         }
         else if (cmd is "off" or "standby")
         {
-            Beolink.SendTelegram(DecodedTelegrams.Standby());
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(false);
-            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(false);
         }
         else if (cmd is "alloff" or "allstandby")
@@ -288,7 +270,6 @@ public sealed class Pc2Core : IDisposable
             Beolink.SendTelegram(DecodedTelegrams.AllStandby());
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(false);
-            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(false);
         }
         else if (cmd == "store")
@@ -296,25 +277,6 @@ public sealed class Pc2Core : IDisposable
             OnStore?.Invoke(AudioSetup);
             SetAudioSetup(AudioSetup);// ??
 
-        }
-        else if (cmd is "option" or "opt")
-        {
-            if (arg < 0 || arg > byte.MaxValue)
-                return false;
-
-            AudioSetup.NodeOption = (byte)arg;
-
-
-            Device.SetNodeOption(AudioSetup.NodeOption);
-
-            // Device.SendMessage([0xA7]); // SHUTDOWN
-
-
-            Beolink.SendTelegram(DecodedTelegrams.AllStandby());
-
-            Device.SendMessage([0xF1]);             // INIT
-
-            OnDebugMessage?.Invoke($"PC2 option mode set to {arg} (0x{arg:X2}).");
         }
         else if (KeyFromCommand(cmd) is Beo4Key key)
         {
@@ -328,11 +290,8 @@ public sealed class Pc2Core : IDisposable
     }
 
     /// <summary>Send a GOTO_SOURCE telegram on the Masterlink bus.</summary>
-    private byte? _mlSource;   // last Masterlink source the PC2 requested
-
     public void GotoSource(byte mlSourceId, byte trackOrPreset = 0)
     {
-        _mlSource = mlSourceId;
         var tgram = DecodedTelegrams.GotoSource(mlSourceId, trackOrPreset);
         Beolink.SendTelegram(tgram);
     }
@@ -415,7 +374,6 @@ public sealed class Pc2Core : IDisposable
                 if (r != null)
                 {
                     OnDebugMessage?.Invoke($"Mixer state {BitConverter.ToString(tgram)}");
-                    r.NodeOption = AudioSetup.NodeOption;
                     r.DefaultSource = AudioSetup.DefaultSource;
                     AudioSetup = r;
                     OnAudioSetupChanged?.Invoke(r);
@@ -437,15 +395,10 @@ public sealed class Pc2Core : IDisposable
     {
         if (Beo4.TryGetSource(keycode, out var source))
         {
-            // Same routing as a Masterlink source started by command (RunCommand): play what
-            // comes from the bus, not the local PC input.
             GotoSource((byte)source);
-
-
-            Mixer.TransmitLocally(false);
-            Mixer.TransmitFromMl(true);
+            Mixer.TransmitLocally(true); // maybe should be false?
+            Mixer.TransmitFromMl(true); // maybe should be false?
             Mixer.SpeakerPower(true);
-            Mixer.SpeakerMute(false);
         }
         else if (keycode == Beo4Key.Mute)
             Mixer.SpeakerMute(!Mixer.SpeakersMuted);
@@ -463,10 +416,8 @@ public sealed class Pc2Core : IDisposable
         }
         else if (keycode == Beo4Key.Standby)
         {
-            Beolink.SendTelegram(DecodedTelegrams.Standby());
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(false);
-            Mixer.MlDistribute(false);
             Mixer.SpeakerPower(false);
         }
     }
@@ -474,7 +425,6 @@ public sealed class Pc2Core : IDisposable
     public void Dispose()
     {
         try { Mixer.TransmitLocally(false); } catch { /* best effort */ }
-        try { Mixer.MlDistribute(false); } catch { /* best effort */ }
         try { Mixer.SpeakerPower(false); } catch { /* best effort */ }
         try { Shutdown(); } catch { /* best effort */ }
         Device.Dispose();
