@@ -85,6 +85,21 @@ public sealed class Pc2Core : IDisposable
     /// <summary>Update the audio parameters used when activating a source.</summary>
     public void SetAudioSetup(AudioSetup setup) => AudioSetup = setup;
 
+    /// <summary>
+    /// Before switching the speakers on from off: set the PC2 up again and forget the
+    /// routing we believe it has. The PC2 loses node, address filter and routing when it
+    /// loses power, and doesn't announce it -- without this it ignores every command
+    /// until BeoControl is restarted.
+    /// </summary>
+    private void EnsureReady()
+    {
+        if (Mixer.SpeakersOn)
+            return;
+        Init();
+        Device.SetAddressFilter(AddressMask);
+        Mixer.ForgetState();
+    }
+
     private void Init()
     {
         Device.SendMessage([0xF1]);             // INIT
@@ -160,6 +175,7 @@ public sealed class Pc2Core : IDisposable
         {
             Mixer.TransmitLocally(true);
             Mixer.TransmitFromMl(false);
+            Mixer.TransmitLocally(true);
             Mixer.SpeakerPower(true);
         }
         else if (cmd == "on")
@@ -172,6 +188,7 @@ public sealed class Pc2Core : IDisposable
         // ── Any other named Masterlink source ─────────────────────────────
         else if (SourceIdFromName(cmd) is byte mlSourceId)
         {
+            EnsureReady();
             GotoSource(mlSourceId, (byte)arg);
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(true);
@@ -280,7 +297,11 @@ public sealed class Pc2Core : IDisposable
         }
         else if (KeyFromCommand(cmd) is Beo4Key key)
         {
-            Beolink.SendTelegram(DecodedTelegrams.SendBeo4Key(0x00, key));
+            // Like a Beo4 in a link room: key for the running source, then the key release.
+            // The audio master ignores keys without a source (e.g. track up/down for CD).
+            Beolink.SendTelegram(DecodedTelegrams.SendBeo4Key(_currentSource, key));
+            Thread.Sleep(200);
+            Beolink.SendTelegram(DecodedTelegrams.Beo4KeyRelease(_currentSource));
         }
         else
         {

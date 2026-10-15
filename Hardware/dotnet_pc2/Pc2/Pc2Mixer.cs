@@ -55,6 +55,18 @@ public class Pc2Mixer
         }
     }
 
+    /// <summary>
+    /// Forget what we believe the hardware is set to, after the PC2 may have lost it
+    /// (power cut). The next routing / speaker call then really goes out.
+    /// </summary>
+    public void ForgetState()
+    {
+        TransmittingLocally = false;
+        TransmittingFromMl = false;
+        DistributingOnMl = false;
+        SpeakersOn = false;
+    }
+
     public void SendRoutingState()
     {
         byte muted = (byte)((DistributingOnMl || TransmittingLocally || TransmittingFromMl) ? 0x00 : 0x01);
