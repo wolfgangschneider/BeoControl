@@ -41,6 +41,11 @@
 		<TargetFrameworks>net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
 	</PropertyGroup>
 
+	<!-- Android-only build on any host (the CI APK job passes -p:BuildAndroid=true) -->
+	<PropertyGroup Condition="'$(BuildAndroid)' == 'true'">
+		<TargetFrameworks>net10.0-android</TargetFrameworks>
+	</PropertyGroup>
+
 	<PropertyGroup>
 		<!--
         <TargetFrameworks>net10.0-android</TargetFrameworks>

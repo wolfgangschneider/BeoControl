@@ -348,8 +348,8 @@ jobs:
             $env:PROJECT_PATH,
             '-c', $env:CONFIGURATION,
             '-f', $env:ANDROID_TARGET_FRAMEWORK,
-            # BeoControlMaui.csproj builds only the Windows TFM on a Windows runner; add Android explicitly.
-            "-p:TargetFrameworks=$env:ANDROID_TARGET_FRAMEWORK",
+            # BeoControlMaui.csproj builds only the Windows TFM on a Windows runner; BuildAndroid selects Android.
+            '-p:BuildAndroid=true',
             '-p:Version=${{ needs.prepare-release.outputs.release_version }}',
             '-p:AndroidPackageFormats=apk',
             '-p:AndroidCreatePackagePerAbi=false',
