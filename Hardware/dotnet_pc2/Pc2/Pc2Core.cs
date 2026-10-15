@@ -85,21 +85,6 @@ public sealed class Pc2Core : IDisposable
     /// <summary>Update the audio parameters used when activating a source.</summary>
     public void SetAudioSetup(AudioSetup setup) => AudioSetup = setup;
 
-    /// <summary>
-    /// Before switching the speakers on from off: set the PC2 up again and forget the
-    /// routing we believe it has. The PC2 loses node, address filter and routing when it
-    /// loses power, and doesn't announce it -- without this it ignores every command
-    /// until BeoControl is restarted.
-    /// </summary>
-    private void EnsureReady()
-    {
-        if (Mixer.SpeakersOn)
-            return;
-        Init();
-        Device.SetAddressFilter(AddressMask);
-        Mixer.ForgetState();
-    }
-
     private void Init()
     {
         Device.SendMessage([0xF1]);             // INIT
@@ -145,27 +130,6 @@ public sealed class Pc2Core : IDisposable
     /// Execute a named command. Returns false if the command is not recognised.
     /// "help" / "?" are intentionally not handled here — the caller decides how to display help.
     /// </summary>
-    /// <summary>
-    /// Source and track from a Masterlink status telegram, or null if it carries none.
-    /// The position differs by type (cross-checked against ml-debug's decoder and bus captures):
-    /// STATUS_INFO (0x87, what the audio master broadcasts to link rooms on a source change)
-    /// has the source in payload[0] and the track in payload[9]; TRACK_INFO_LONG (0x82) has
-    /// them in payload[1] and payload[2]. Other status types (e.g. AUDIO_BUS answers) don't.
-    /// </summary>
-    internal static (byte Source, byte? Track)? SourceAndTrack(MasterlinkTelegram mlt)
-    {
-        var p = mlt.Payload;
-        (byte, byte?)? found = mlt.PldType switch
-        {
-            MasterlinkTelegram.PayloadType.StatusInfo when p.Length > 0 =>
-                (p[0], p.Length > 9 ? p[9] : null),
-            MasterlinkTelegram.PayloadType.TrackInfoLong when p.Length > 1 =>
-                (p[1], p.Length > 2 ? p[2] : null),
-            _ => null,
-        };
-        return found is { } f && SourceNames.CommandFromId(f.Item1) is not null ? f : null;
-    }
-
     public bool RunCommand(string cmd, int arg = 0)
     {
         cmd = cmd.ToLowerInvariant();
@@ -175,7 +139,6 @@ public sealed class Pc2Core : IDisposable
         {
             Mixer.TransmitLocally(true);
             Mixer.TransmitFromMl(false);
-            Mixer.TransmitLocally(true);
             Mixer.SpeakerPower(true);
         }
         else if (cmd == "on")
@@ -188,7 +151,6 @@ public sealed class Pc2Core : IDisposable
         // ── Any other named Masterlink source ─────────────────────────────
         else if (SourceIdFromName(cmd) is byte mlSourceId)
         {
-            EnsureReady();
             GotoSource(mlSourceId, (byte)arg);
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(true);
@@ -311,8 +273,11 @@ public sealed class Pc2Core : IDisposable
     }
 
     /// <summary>Send a GOTO_SOURCE telegram on the Masterlink bus.</summary>
+    private byte _currentSource;   // Masterlink source playing (requested or reported), 0 = unknown
+
     public void GotoSource(byte mlSourceId, byte trackOrPreset = 0)
     {
+        _currentSource = mlSourceId;
         var tgram = DecodedTelegrams.GotoSource(mlSourceId, trackOrPreset);
         Beolink.SendTelegram(tgram);
     }
@@ -372,11 +337,18 @@ public sealed class Pc2Core : IDisposable
                 try
                 {
                     mlt = MasterlinkTelegram.Parse(tgram);
-                    if (mlt.Type == MasterlinkTelegram.TelegramType.Status
-                        && SourceAndTrack(mlt) is { } st)
+                    if (mlt.Type == MasterlinkTelegram.TelegramType.Status)
                     {
-                        var channel = st.Track is > 0 and not 255 ? st.Track : null;
-                        OnSourceChanged?.Invoke(st.Source, channel);
+                        if (mlt.PldType is MasterlinkTelegram.PayloadType.StatusInfo or MasterlinkTelegram.PayloadType.TrackInfoLong
+                            && mlt.Payload.Length > 1 && SourceNames.CommandFromId(mlt.Payload[1]) is not null)
+                            _currentSource = mlt.Payload[1];
+                        if (mlt.Payload.Length > 1)
+                        {
+                            var channel = mlt.Payload.Length > 2 && mlt.Payload[2] > 0 && mlt.Payload[2] != 255
+                                ? mlt.Payload[2]
+                                : (byte?)null;
+                            OnSourceChanged?.Invoke(mlt.Payload[1], channel);
+                        }
                     }
                 }
                 catch (Exception e) { }
