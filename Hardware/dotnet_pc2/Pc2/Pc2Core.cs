@@ -181,8 +181,8 @@ public sealed class Pc2Core : IDisposable
             // Leaving the Masterlink source: tell the audio master, like standby does.
             if (Mixer.TransmittingFromMl)
                 Beolink.SendTelegram(DecodedTelegrams.Standby());
-            Mixer.TransmitLocally(true);
             Mixer.TransmitFromMl(false);
+            // Mixer.MlDistribute(true);
             Mixer.TransmitLocally(true);
             Mixer.SpeakerPower(true);
         }
@@ -193,6 +193,7 @@ public sealed class Pc2Core : IDisposable
                 GotoSource(_currentSource);
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(true);
+            // Mixer.MlDistribute(false);
             Mixer.SpeakerPower(true);
             Mixer.SpeakerMute(false);
         }
@@ -203,6 +204,7 @@ public sealed class Pc2Core : IDisposable
             GotoSource(mlSourceId, (byte)arg);
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(true);
+            // Mixer.MlDistribute(false);
             Mixer.SpeakerPower(true);
             Mixer.SpeakerMute(false);
         }
@@ -292,6 +294,7 @@ public sealed class Pc2Core : IDisposable
             Beolink.SendTelegram(DecodedTelegrams.Standby());
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(false);
+            // Mixer.MlDistribute(false);
             Mixer.SpeakerPower(false);
         }
         else if (cmd is "alloff" or "allstandby")
@@ -299,6 +302,7 @@ public sealed class Pc2Core : IDisposable
             Beolink.SendTelegram(DecodedTelegrams.AllStandby());
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(false);
+            // Mixer.MlDistribute(false);
             Mixer.SpeakerPower(false);
         }
         else if (cmd == "store")
@@ -438,6 +442,7 @@ public sealed class Pc2Core : IDisposable
             GotoSource((byte)source);
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(true);
+            // Mixer.MlDistribute(false);
             Mixer.SpeakerPower(true);
             Mixer.SpeakerMute(false);
         }
@@ -460,6 +465,7 @@ public sealed class Pc2Core : IDisposable
             Beolink.SendTelegram(DecodedTelegrams.Standby());
             Mixer.TransmitLocally(false);
             Mixer.TransmitFromMl(false);
+            // Mixer.MlDistribute(false);
             Mixer.SpeakerPower(false);
         }
     }
@@ -467,6 +473,7 @@ public sealed class Pc2Core : IDisposable
     public void Dispose()
     {
         try { Mixer.TransmitLocally(false); } catch { /* best effort */ }
+        // try { Mixer.MlDistribute(false); } catch { /* best effort */ }
         try { Mixer.SpeakerPower(false); } catch { /* best effort */ }
         try { Shutdown(); } catch { /* best effort */ }
         Device.Dispose();
