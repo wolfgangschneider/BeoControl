@@ -29,8 +29,8 @@ public sealed class Pc2Device : IDisposable
     /// <summary>Receives formatted debug text for every sent and received USB frame.</summary>
     internal Action<string>? DebugLog { get; set; }
     private readonly BlockingCollection<byte[]> _inbox = new();
-    private byte[] _reassemblyBuffer = [];
-    private int _remainingBytes;
+    // Bytes read from USB that don't form a complete frame yet (see ExtractFrames).
+    private readonly List<byte> _rxBuffer = new();
     private ulong _rxSeq;
 
     /// <summary>Open the PC2 USB device.</summary>
@@ -168,36 +168,71 @@ public sealed class Pc2Device : IDisposable
                 var raw = buffer[..bytesRead];
                 DebugLog?.Invoke(ConsoleLog.FormatHexRow(raw, $"Recv raw #{_rxSeq++} =>", isSend: false));
 
-                if (_reassemblyBuffer.Length > 0)
+                _rxBuffer.AddRange(raw);
+                var frames = ExtractFrames(_rxBuffer, out int skipped);
+                foreach (var frame in frames)
                 {
-                    _reassemblyBuffer = [.. _reassemblyBuffer, .. raw];
-                    _remainingBytes -= bytesRead;
-                    if (_remainingBytes <= 0)
-                    {
-                        _inbox.Add(_reassemblyBuffer);
-                        _reassemblyBuffer = [];
-                        _rxSeq = 0;
-                    }
+                    _inbox.Add(frame);
+                    _rxSeq = 0;
                 }
-                else
-                {
-                    if (bytesRead < 3) continue;
-                    int msgLength = raw[1] + 3;
-                    if (msgLength > bytesRead)
-                    {
-                        _reassemblyBuffer = raw.ToArray();
-                        _remainingBytes = msgLength - bytesRead;
-                    }
-                    else
-                    {
-                        _inbox.Add(raw.ToArray());
-                        _rxSeq = 0;
-                    }
-                }
+                if (skipped > 0)
+                    DebugLog?.Invoke($"PC2: skipped {skipped} byte(s) outside a frame");
             }
             catch (ObjectDisposedException) { break; }
             catch (Exception) when (_disposed) { break; }
         }
+    }
+
+    /// <summary>
+    /// Cut complete frames <c>[0x60] [len] [len bytes] [0x61]</c> out of the receive buffer.
+    /// A USB read can hold part of a frame, several frames, or bytes that belong to none
+    /// (e.g. left over in the PC2 after the Mac restarted). Bytes before a frame start, and
+    /// a start whose end byte doesn't match, are dropped one by one until a valid frame
+    /// lines up again -- so one stray byte can't throw off every following frame.
+    /// </summary>
+    // Longest frame payload accepted. The longest seen are Masterlink telegrams of ~0x30
+    // bytes; a larger length byte means we're not at a frame start.
+    private const int MaxFrameData = 0x80;
+
+    internal static List<byte[]> ExtractFrames(List<byte> buf, out int skipped)
+    {
+        var frames = new List<byte[]>();
+        skipped = 0;
+        while (true)
+        {
+            int start = buf.IndexOf(0x60);
+            if (start < 0)
+            {
+                skipped += buf.Count;
+                buf.Clear();
+                break;
+            }
+            if (start > 0)
+            {
+                skipped += start;
+                buf.RemoveRange(0, start);
+            }
+            if (buf.Count < 2)
+                break;                              // length byte not here yet
+            if (buf[1] > MaxFrameData)
+            {
+                skipped += 1;                       // no PC2 frame is that long
+                buf.RemoveAt(0);
+                continue;
+            }
+            int frameLength = buf[1] + 3;
+            if (buf.Count < frameLength)
+                break;                              // rest of the frame not here yet
+            if (buf[frameLength - 1] != 0x61)
+            {
+                skipped += 1;                       // not a frame start after all
+                buf.RemoveAt(0);
+                continue;
+            }
+            frames.Add(buf.GetRange(0, frameLength).ToArray());
+            buf.RemoveRange(0, frameLength);
+        }
+        return frames;
     }
 
     public void Dispose()
