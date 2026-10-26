@@ -14,6 +14,10 @@ public class Beolink
     public Action<Beo4Key>? KeystrokeCallback { get; set; }
     public string LastSource { get; private set; } = string.Empty;
 
+    /// <summary>Node addresses the PC2 answers requests for (Pc2Core adds the audio master's
+    /// when the PC2 acts as one).</summary>
+    public HashSet<byte> OwnNodes { get; } = [Nodes.Node01];
+
     /// <summary>Receives formatted debug text for every received ML frame and event.</summary>
     internal Action<string>? DebugLog { get; set; }
 
@@ -163,6 +167,11 @@ public class Beolink
     /// <summary>Handle incoming Masterlink requests (MASTER_PRESENT, GOTO_SOURCE).</summary>
     private void HandleMlRequest(MasterlinkTelegram mlt)
     {
+        // In promiscuous mode the PC2 also sees requests to other nodes; answering them
+        // impersonates that node (seen: a MASTER_PRESENT reply as 0xC2, a source center).
+        if (!OwnNodes.Contains(mlt.DestNode))
+            return;
+
         if (mlt.PldType == MasterlinkTelegram.PayloadType.MasterPresent)
         {
             var reply = DecodedTelegrams.MasterPresentReply(mlt);

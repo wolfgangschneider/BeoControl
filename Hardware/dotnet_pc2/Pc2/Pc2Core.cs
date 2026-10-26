@@ -45,6 +45,8 @@ public sealed class Pc2Core : IDisposable
         Device = new Pc2Device();
         Mixer = new Pc2Mixer(Device);
         Beolink = new Beolink(Device);
+        if (addressMask == AddressMask.AudioMaster)
+            Beolink.OwnNodes.Add(Nodes.AMaster);
 
         // Wire internal debug/telegram callbacks through to the public ones.
         Device.DebugLog = s => OnDebugMessage?.Invoke(s);
