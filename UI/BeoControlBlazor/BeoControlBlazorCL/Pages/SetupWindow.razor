@@ -66,16 +66,14 @@
     private static readonly string[] Menus = ["DEVICE", "PC2", "REMOTE", "SPOTIFY", "SYSTEM"];
 
     private string _menu = "DEVICE";
-    private DeviceStatus _deviceStatus = DeviceStatus.Disconnected;
-
     private string StatusLedText =>
         DeviceService.IsConnected ? "CONNECTED"
-        : _deviceStatus is DeviceStatus.Connecting or DeviceStatus.Discovering ? "CONNECTING"
+        : DeviceService.Status is DeviceStatus.Connecting or DeviceStatus.Discovering ? "CONNECTING"
         : "DISCONNECTED";
 
     private string StatusLedClass =>
         DeviceService.IsConnected ? "led-green"
-        : _deviceStatus is DeviceStatus.Connecting or DeviceStatus.Discovering ? "led-yellow"
+        : DeviceService.Status is DeviceStatus.Connecting or DeviceStatus.Discovering ? "led-yellow"
         : "led-red";
 
     protected override void OnInitialized()
@@ -83,13 +81,7 @@
         DeviceService.OnStatusChanged += OnServiceStatusChanged;
     }
 
-    private async void OnServiceStatusChanged(StatusMessage msg)
-    {
-        if (msg is DeviceStatusMessage status)
-            _deviceStatus = status.Status;
-
-        await InvokeAsync(StateHasChanged);
-    }
+    private async void OnServiceStatusChanged(StatusMessage msg) => await InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {

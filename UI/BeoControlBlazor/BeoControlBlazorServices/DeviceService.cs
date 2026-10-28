@@ -34,6 +34,9 @@ public class DeviceService : IDisposable
 
     public event Action<StatusMessage>? OnStatusChanged;
 
+    /// <summary>Last connection status reported by Notify (Connecting, Connected, Error, …).</summary>
+    public DeviceStatus Status { get; private set; } = DeviceStatus.Disconnected;
+
     // ── Connect helpers ───────────────────────────────────────────────────────
 
     public Task AutoConnectAsync()
@@ -341,6 +344,7 @@ public class DeviceService : IDisposable
 
     private void Notify(DeviceStatus status, string text)
     {
+        Status = status;
         OnStatusChanged?.Invoke(new DeviceStatusMessage(status, text));
     }
 }

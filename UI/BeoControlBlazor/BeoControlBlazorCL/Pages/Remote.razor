@@ -30,7 +30,7 @@
     }
     
     <div style="width:var(--remote-width); margin:0 auto;">
-        <div style="padding:4px;" class="conn-bar conn-bar--@(DeviceService.IsConnected ? "connected" : "disconnected")">
+        <div style="padding:4px;" class="conn-bar conn-bar--@ConnectionState()">
             <div style="display:flex; flex-direction:column; gap:4px; width:100%;">
                 <div style="display:flex; align-items:center; gap:6px;">
                     <span class="conn-dot"></span>
@@ -169,11 +169,17 @@
     }
 
    
+    private bool IsConnecting =>
+        !DeviceService.IsConnected && DeviceService.Status is DeviceStatus.Connecting or DeviceStatus.Discovering;
+
+    private string ConnectionState() =>
+        DeviceService.IsConnected ? "connected" : IsConnecting ? "working" : "disconnected";
+
     private string ConnectionLabel()
     {
         var dev = DeviceService.CurrentDevice;
         if (dev is null || !DeviceService.IsConnected)
-            return "DISCONNECTED";
+            return IsConnecting ? "CONNECTING…" : "DISCONNECTED";
 
         var detail = dev.Type switch
         {
