@@ -165,8 +165,22 @@
 
             if (InSubList)
             {
-                // if(selectedCommand.Id == CommandId.Store)
-                //     await OnCommand.InvokeAsync(BeoCommands.Get(CommandId.ASetup));
+                // TEST S.STORE: real Beo4 sends SOUND (0x44) then STORE (0x0B), both audio source
+                // (ESP32 uses the last selected source) - not tested on PC2
+                if (selectedCommand.Id == CommandId.Store)
+                {
+                    // await OnCommand.InvokeAsync(new BeoCommand(CommandId.Speaker, "0x0144", "SOUND", CommandCategory.Sound));
+                    // // TEST: Beomaster returns fast only after a second STORE (s+t test with SStoreReplay)
+                    // await OnCommand.InvokeAsync(new BeoCommand(CommandId.Store, "0x010B", "STORE", CommandCategory.Misc));
+                    // await OnCommand.InvokeAsync(new BeoCommand(CommandId.Store, "0x010B", "STORE", CommandCategory.Misc));
+           
+
+                    await OnCommand.InvokeAsync(BeoCommands.Get(CommandId.Speaker));
+                    // TEST: Beomaster returns fast only after a second STORE (s+t test with SStoreReplay)
+                    await OnCommand.InvokeAsync(BeoCommands.Get(CommandId.Store));
+                    await OnCommand.InvokeAsync(BeoCommands.Get(CommandId.Store));
+                    return;
+                }
 
                 await OnCommand.InvokeAsync(selectedCommand);
                 return;
@@ -197,22 +211,17 @@
     {
         get
         {
-            // var speakerCommand = BeoCommands.Get(CommandId.ASetup);
-            // speakerCommand.AddSubcommands(
-            //     BeoCommands.Get(CommandId.Speaker),
-            //     BeoCommands.Get(CommandId.Balance),
-            //     BeoCommands.Get(CommandId.Bass),
-            //     BeoCommands.Get(CommandId.Treble),
-            //     BeoCommands.Get(CommandId.Loudness),
-              
-
-                
-
-            //     BeoCommands.Get(CommandId.Store));
+            var speakerCommand = BeoCommands.Get(CommandId.ASetup);
+            speakerCommand.SubCommands =
+            [
+                BeoCommands.Get(CommandId.Bass),
+                BeoCommands.Get(CommandId.Treble),
+                BeoCommands.Get(CommandId.Loudness),
+                BeoCommands.Get(CommandId.Store),
+            ];
             return
             [
-               // speakerCommand,
-                
+                speakerCommand,
                 BeoCommands.Get(CommandId.Phono),
                 BeoCommands.Get(CommandId.Pc),
                 BeoCommands.Get(CommandId.Atape2),
