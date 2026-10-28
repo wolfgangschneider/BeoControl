@@ -12,10 +12,15 @@ public sealed class BlazorSpotifyService : SpotifyServiceBase
     private const string SpotifyWebFeatures = "popup=yes,width=1200,height=900";
     private readonly IJSRuntime _jsRuntime;
 
-    public BlazorSpotifyService(IJSRuntime jsRuntime)
+    private readonly DeviceService _deviceService;
+
+    public BlazorSpotifyService(IJSRuntime jsRuntime, DeviceService deviceService)
     {
         _jsRuntime = jsRuntime;
+        _deviceService = deviceService;
     }
+
+    protected override string ClientId => _deviceService.Settings.EffectiveSpotifyClientId;
 
     public override Task OpenAsync(SpotifyLaunchMode launchMode)
     {

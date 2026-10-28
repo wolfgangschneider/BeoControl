@@ -13,10 +13,11 @@ public abstract class SpotifyServiceBase : ISpotifyService
     public abstract Task OpenAsync(SpotifyLaunchMode launchMode);
 
     protected virtual string RedirectUri => "http://127.0.0.1:5543/callback";
+    protected virtual string ClientId => SpotifyDefaults.ClientId;
 
     protected virtual Task<SpotifyConnection> ConnectAsync()
     {
-        return SpotifyController.ConnectAsync(SpotifyDefaults.ClientId, RedirectUri);
+        return SpotifyController.ConnectAsync(ClientId, RedirectUri);
 
     }
 

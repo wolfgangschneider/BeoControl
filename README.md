@@ -213,6 +213,17 @@ BeoControl also includes an optional Spotify integration:
 - now-playing information with title, artist and play/pause state
 - Blazor Beo4 integration: when the active source is `A.TAPE`, Beo4 transport keys can control Spotify and show track info in the display
 
+#### Your own Spotify Client ID
+
+The built-in Client ID belongs to the author's Spotify app, which runs in Spotify's Development Mode. Only Spotify accounts that are added to that app by hand (max. 25) can log in with it. Everybody else needs their own free Spotify app:
+
+1. Open the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and create an app.
+2. Add the redirect URIs `http://127.0.0.1:5543/callback` (Windows, Linux, Blazor Server) and `beocontrolspotify://callbac` (Android), and select the Web API.
+3. Copy the app's Client ID.
+4. In BeoControl open Setup → SPOTIFY and paste it into **CLIENT ID**. Leave the field empty to use the built-in ID.
+
+The Client ID is not a secret (Spotify login uses PKCE without a client secret). Each device still logs in to Spotify once in the browser. Controlling playback needs a Spotify Premium account.
+
 Build and run the Spotify host:
 
 ```bash

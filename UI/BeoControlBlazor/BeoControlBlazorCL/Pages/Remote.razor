@@ -15,25 +15,6 @@
 
 <div class="remote-shell" style="background-color:transparent">
 
-    <div style="width:var(--remote-width); margin:0 auto;" class="remote-top">
-
-        <div class="remote-toolbar">
-        <div class="remote-switcher">
-            @foreach (var r in Enum.GetValues<RemoteType>())
-            {
-                <label class="switcher-option @(Selected == r ? "active" : "")">
-                    <input type="radio" name="remote" value="@r"
-                           checked="@(Selected == r)"
-                           @onchange="() => SelectRemote(r)" />
-                    @RemoteLabel(r)
-                </label>
-            }
-        </div>
-            <button class="gear-btn" title="Setup" @onclick='() => Nav.NavigateTo("/setup")'>⚙</button>
-            @* <button class="gear-btn" title="Zoom" @onclick='Zoom'>🔍</button> *@
-        </div>
-    </div>
-
     @if (Selected == RemoteType.Beolink1000)
     {
         <Beolink1000 OnCommand="SendCommand" DeviceStatus="@CurrentSourceDisplayText()" />
@@ -54,6 +35,7 @@
                 <div style="display:flex; align-items:center; gap:6px;">
                     <span class="conn-dot"></span>
                     <span class="conn-text">@ConnectionLabel()</span>
+                    <button class="gear-btn" style="margin-left:auto;" title="Setup" onclick="window.chrome?.webview ? window.chrome.webview.postMessage('beocontrol:open-setup') : window.open('/setupwindow', 'beoSetup', 'width=700,height=460')">⚙</button>
                 </div>
                 @if (DeviceService.Settings.SpotifyEnabled)
                 {
@@ -89,6 +71,7 @@
         RemoteButton.Zoom = NormalizeZoom(DeviceService.Settings.RemoteButtonZoom);
         SyncSourceAddIns();
         DeviceService.OnStatusChanged += OnStatusChanged;
+        DeviceService.Settings.Changed += OnSettingsChanged;
         Spotify.SubscribeNowPlayingChanged();
         _ = Spotify.EnsureConnectionStateAsync();
     }
@@ -117,18 +100,16 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    // Setup window changed zoom or remote type: reload, like Zoom() does
+    private void OnSettingsChanged() => InvokeAsync(() => Nav.NavigateTo("/", true));
+
     public void Dispose()
     {
         Spotify.UnsubscribeNowPlayingChanged();
         DeviceService.OnStatusChanged -= OnStatusChanged;
+        DeviceService.Settings.Changed -= OnSettingsChanged;
     }
 
-    private void SelectRemote(RemoteType r)
-    {
-        Selected = r;
-        DeviceService.Settings.LastRemote = r;
-        DeviceService.Settings.Save();
-    }
 
     private async Task SendCommand(BeoCommand command)
     {
@@ -207,12 +188,6 @@
    
     
 
-    private static string RemoteLabel(RemoteType r) => r switch
-    {
-        RemoteType.Beolink1000 => "BL1000",
-        RemoteType.Beo4        => "Beo4",
-        _                      => r.ToString(),
-    };
     private void Zoom(MouseEventArgs args)
     {
         RemoteButton.Zoom = RemoteButton.Zoom switch

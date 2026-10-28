@@ -7,6 +7,8 @@ using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Authentication;
 using Microsoft.Maui.Storage;
 
+using BeoControlBlazor.Services;
+
 namespace BeoControlBlazorServices;
 
 public sealed class AndroidSpotifyService : ISpotifyService
@@ -24,6 +26,15 @@ public sealed class AndroidSpotifyService : ISpotifyService
     private EventHandler<SpotifyNowPlayingChangedEventArgs>? _nowPlayingChanged;
     private (string Song, string Interpret)? _lastNotifiedNowPlaying;
     private string? _pollPreferredDeviceName;
+
+    // settings of the singleton DeviceService; static because the token helpers below are static
+    private static AppSettings? _settings;
+    private static string ClientId => _settings?.EffectiveSpotifyClientId ?? SpotifyDefaults.ClientId;
+
+    public AndroidSpotifyService(DeviceService deviceService)
+    {
+        _settings = deviceService.Settings;
+    }
 
     public event EventHandler<SpotifyNowPlayingChangedEventArgs>? NowPlayingChanged
     {
@@ -287,7 +298,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
     {
         var query = string.Join("&",
         [
-            $"client_id={Uri.EscapeDataString(SpotifyDefaults.ClientId)}",
+            $"client_id={Uri.EscapeDataString(ClientId)}",
             "response_type=code",
             $"redirect_uri={Uri.EscapeDataString(SpotifyAndroidRedirectUri)}",
             $"scope={Uri.EscapeDataString(string.Join(" ", SpotifyDefaults.Scopes))}",
@@ -303,7 +314,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
         using var httpClient = new HttpClient();
         using var content = new FormUrlEncodedContent(
         [
-            new KeyValuePair<string, string>("client_id", SpotifyDefaults.ClientId),
+            new KeyValuePair<string, string>("client_id", ClientId),
             new KeyValuePair<string, string>("grant_type", "authorization_code"),
             new KeyValuePair<string, string>("code", code),
             new KeyValuePair<string, string>("redirect_uri", SpotifyAndroidRedirectUri),
@@ -318,7 +329,7 @@ public sealed class AndroidSpotifyService : ISpotifyService
         using var httpClient = new HttpClient();
         using var content = new FormUrlEncodedContent(
         [
-            new KeyValuePair<string, string>("client_id", SpotifyDefaults.ClientId),
+            new KeyValuePair<string, string>("client_id", ClientId),
             new KeyValuePair<string, string>("grant_type", "refresh_token"),
             new KeyValuePair<string, string>("refresh_token", refreshToken)
         ]);

@@ -1,0 +1,197 @@
+/* Setup window: MCP 5500 LED display + control panel, Beomaster 4500 menu strip */
+
+.bo-panel {
+    height: 100vh;               /* fill the window, no empty area below the menu strip */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    text-transform: uppercase;
+}
+
+/* ── LED display ─────────────────────────────── */
+
+.bo-display {
+    background: #070707;
+    padding: 14px 20px 12px;
+    border-bottom: 1px solid #222;
+}
+
+.bo-display-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+}
+
+.bo-display-row + .bo-display-row { margin-top: 8px; }
+
+.led {
+    font-size: 11px;
+    letter-spacing: 2px;
+}
+
+.led-red    { color: #ff3b2f; }
+.led-green  { color: #3ecf5a; }
+.led-yellow { color: #e8c020; }
+.led-off    { color: #3a3a3a; }
+
+/* gentle LED pulse while scanning */
+@keyframes bo-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.15; }
+}
+
+/* three LED bar segments in the text color, lit one after another */
+.bo-dots { margin-left: 8px; }
+
+.bo-dots span {
+    display: inline-block;
+    width: 9px;
+    height: 4px;
+    margin-right: 3px;
+    vertical-align: middle;
+    background: currentColor;
+    animation: bo-pulse 1.2s ease-in-out infinite;
+}
+
+.bo-dots span:nth-child(2) { animation-delay: 0.2s; }
+.bo-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+.bo-push { margin-left: auto; }
+
+/* ── Control panel ───────────────────────────── */
+
+.bo-controls {
+    background: #2b2b2b;
+    padding: 18px 20px 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.bo-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #999;
+    margin: 16px 0 10px;
+}
+
+.bo-label:first-child { margin-top: 0; }
+
+.bo-keys {
+    display: grid;
+    gap: 10px;
+}
+
+.bo-keys-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.bo-actions { margin-top: 10px; }
+
+.bo-key {
+    background: #121212;
+    color: #ccc;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 0;
+    font: inherit;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.bo-key:hover:not(:disabled) { color: #fff; }
+.bo-key:disabled { color: #555; cursor: default; }
+.bo-key.active { color: #fff; }
+.bo-field,
+.bo-controls ::deep select.bo-field {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+    background: #121212;
+    color: #ccc;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-family: Arial, sans-serif;     /* red LED mono font only in the display */
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+button.bo-field { cursor: pointer; }
+.bo-field.active { color: #fff; }
+.bo-controls ::deep select.bo-field:disabled { color: #444; }
+
+.bo-hint {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #777;
+    margin: 6px 0;
+}
+
+/* ── Aluminium nameplate ─────────────────────── */
+
+.bo-nameplate {
+    background: #d2d2d2;
+    border-top: 1px solid #9a9a9a;
+    border-bottom: 1px solid #9a9a9a;
+    padding: 22px 20px 12px;
+    text-align: right;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #5a5a5a;
+}
+
+/* ── Menu strip ──────────────────────────────── */
+
+.bo-menu {
+    background: #0d0d0d;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.bo-menu-item {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #888;
+    font: inherit;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;         /* LED left of the label, in line with the close dot */
+    gap: 7px;
+}
+
+.bo-menu-item:hover { color: #ccc; }
+.bo-menu-item.active { color: #eee; }
+
+.bo-menu-led {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.bo-menu-item.active .bo-menu-led { background: #ff3b2f; }
+
+/* red standby-style dot bottom right = close window */
+.bo-close {
+    margin-left: auto;
+    align-self: center;
+    width: 12px;
+    height: 12px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #c8102e;
+    cursor: pointer;
+}
+
+.bo-close:hover { background: #ff3b2f; }

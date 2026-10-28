@@ -1,0 +1,681 @@
+@page "/setupwindow"
+@using BeoControlBlazor.Services
+@using BeoControl.Interfaces
+@using BeoControlBlazorCL.Components
+@using BeoControlBlazorServices
+@using System.Reflection
+@using Microsoft.AspNetCore.Components.Forms
+@inject DeviceService DeviceService
+@inject IAutostartRegistrationService AutostartRegistrationService
+@inject ISpotifyService LaunchSpotifyService
+@implements IDisposable
+
+
+<PageTitle>Setup</PageTitle>
+<HeadContent>
+    <style>body { width: auto; margin: 0; background: #2b2b2b; overflow: hidden; }</style>   @* app.css limits body to --body-width *@
+</HeadContent>
+
+<div class="bo-panel">
+
+    @* ── LED display (MCP 5500) ── *@
+    <div class="bo-display">
+        <div class="bo-display-row">
+            <span class="led @StatusLedClass">@StatusLedText</span>
+            <span class="led led-red">@(DeviceService.IsConnected && DeviceService.CurrentDevice is { } info ? (info.Name ?? info.Id)?.ToUpperInvariant() : "NO DEVICE")</span>
+            @if (DeviceService.IsConnected && DeviceService.CurrentDevice is { } connected)
+            {
+                <span class="led led-green">@TabLabel(connected.Type).ToUpperInvariant()</span>
+            }
+            <span class="led @(SpotifyEnabled ? "led-green" : "led-off") bo-push">SPOTIFY</span>
+            <span class="led led-red">@_menu</span>
+        </div>
+        @* line 2: info of the selected menu - all options shown, red = selected, green = connected/on, dark = not selected *@
+        <div class="bo-display-row">
+            @switch (_menu)
+            {
+                case "DEVICE":
+                    @foreach (var tab in Tabs)
+                    {
+                        <span class="led @(ActiveTab == tab ? "led-red" : "led-off")">@TabLabel(tab).ToUpperInvariant()</span>
+                    }
+                    @if (!string.IsNullOrEmpty(ScanStatus))
+                    {
+                        <span class="led led-red">@ScanLedText()@if (IsScanning)
+                        {<span class="bo-dots"><span></span><span></span><span></span></span>}</span>
+                    }
+                    break;
+                case "SOUND":
+                    @if (IsPc2Connected)
+                    {
+                        var a = DeviceService.CurrentPc2AudioSetup;
+                        <span class="led led-red">VOL @a.Volume</span>
+                        <span class="led led-red">BASS @FormatSigned(a.Bass)</span>
+                        <span class="led led-red">TREBLE @FormatSigned(a.Treble)</span>
+                        <span class="led led-red">BALANCE @FormatSigned(a.Balance)</span>
+                        <span class="led @(a.Loudness ? "led-green" : "led-off")">LOUDNESS</span>
+                    }
+                    else
+                    {
+                        <span class="led led-off">NO PC2</span>
+                    }
+                    break;
+                case "REMOTE":
+                    @foreach (var r in Enum.GetValues<RemoteType>())
+                    {
+                        <span class="led @(SelectedRemote == r ? "led-red" : "led-off")">@r.ToString().ToUpperInvariant()</span>
+                    }
+                    @foreach (var option in ZoomOptions)
+                    {
+                        <span class="led @(RemoteButtonZoom == option.Value ? "led-red" : "led-off")">@option.Label.ToUpperInvariant()</span>
+                    }
+                    break;
+                case "SPOTIFY":
+                    <span class="led @(SpotifyEnabled ? "led-red" : "led-off")">@(string.IsNullOrEmpty(SpotifyPreferredDeviceName) ? "NO DEVICE" : SpotifyPreferredDeviceName.ToUpperInvariant())</span>
+                    <span class="led @(SpotifyEnabled ? "led-red" : "led-off")">@FormatSpotifyTriggerSource(SpotifyTriggerCommand)</span>
+                    @foreach (var mode in Enum.GetValues<SpotifyLaunchMode>())
+                    {
+                        <span class="led @(SpotifyEnabled && SpotifyLaunchModeSetting == mode ? "led-red" : "led-off")">@mode.ToString().ToUpperInvariant()</span>
+                    }
+                    break;
+                case "SYSTEM":
+                    <span class="led @(_launchOnWindowsSignIn ? "led-green" : "led-off")">AUTOSTART</span>
+                    break;
+            }
+        </div>
+    </div>
+
+    @* ── Control panel (MCP 5500) ── *@
+    <div class="bo-controls">
+        @switch (_menu)
+        {
+            case "DEVICE":
+                <div class="bo-label">CONNECTION</div>
+                <div class="bo-keys bo-keys-3">
+                    @foreach (var tab in Tabs)
+                    {
+                        <button class="bo-key @(ActiveTab == tab ? "active" : "")" @onclick="() => SelectTab(tab)">@TabLabel(tab).ToUpperInvariant()</button>
+                    }
+                </div>
+
+                <div class="bo-keys bo-keys-3 bo-actions">
+                    <button class="bo-key" disabled="@IsScanning"
+                            @onclick="() => ActiveTab switch { DeviceType.USB => ScanSerial(), DeviceType.BT => ScanBluetooth(), _ => ScanPc2() }">SCAN</button>
+                    <button class="bo-key" @onclick="Disconnect" disabled="@(!DeviceService.IsConnected)">DISCONNECT</button>
+                </div>
+
+                <div class="bo-label">EDIT</div>
+                @if (ActiveTab == DeviceType.USB)
+                {
+                    @foreach (var d in SerialDevices)
+                    {
+                        <button class="bo-field @(SelectedSerial == d.Id ? "active" : "")" @onclick="() => ConnectSerial(d.Id)" disabled="@IsBusy">@d.Id  @d.Name</button>
+                    }
+                    @if (SerialDevices.Count == 0 && !IsScanning)
+                    {
+                        <p class="bo-hint">PRESS SCAN TO DISCOVER USB DEVICES</p>
+                    }
+                }
+                @if (ActiveTab == DeviceType.BT)
+                {
+                    @foreach (var d in BtDevices)
+                    {
+                        <button class="bo-field @(SelectedBt == d.Id ? "active" : "")" @onclick="() => ConnectBluetooth(d.Id)" disabled="@IsBusy">@(d.Name ?? "UNKNOWN")</button>
+                    }
+                    @if (BtDevices.Count == 0 && !IsScanning)
+                    {
+                        <p class="bo-hint">PRESS SCAN TO DISCOVER BLE DEVICES</p>
+                    }
+                }
+                @if (ActiveTab == DeviceType.PC2 && !IsPc2Connected)
+                {
+                    @if (Pc2Available)
+                    {
+                        <button class="bo-field active" @onclick="ConnectPc2" disabled="@IsBusy">PC2</button>
+                    }
+                    <p class="bo-hint">CONNECT DIRECTLY VIA USB / MASTERLINK (PC2 CONTROLLER)</p>
+                }
+                break;
+
+            case "SOUND":
+                @if (IsPc2Connected)
+                {
+                    <PC2Setup />
+                }
+                else
+                {
+                    <p class="bo-hint">SOUND SETUP NEEDS A PC2 CONNECTION</p>
+                }
+                break;
+
+            case "REMOTE":
+                <div class="bo-label">TYPE</div>
+                <div class="bo-keys bo-keys-3">
+                    @foreach (var r in Enum.GetValues<RemoteType>())
+                    {
+                        <button class="bo-key @(SelectedRemote == r ? "active" : "")" @onclick="() => SelectedRemote = r">@r.ToString().ToUpperInvariant()</button>
+                    }
+                </div>
+                <div class="bo-label">ZOOM</div>
+                <div class="bo-keys bo-keys-3">
+                    @foreach (var option in ZoomOptions)
+                    {
+                        <button class="bo-key @(RemoteButtonZoom == option.Value ? "active" : "")" @onclick="() => RemoteButtonZoom = option.Value">@option.Label</button>
+                    }
+                </div>
+                break;
+
+            case "SPOTIFY":
+                <div class="bo-keys bo-keys-3">
+                    <button class="bo-key @(SpotifyEnabled ? "active" : "")"
+                            @onclick="async () => { SpotifyEnabled = !SpotifyEnabled; await OnSpotifyEnabledChanged(); }">@(SpotifyEnabled ? "SPOTIFY ON" : "SPOTIFY OFF")</button>
+                </div>
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 16px;">
+                    <div>
+                        <div class="bo-label">TRIGGER</div>
+                        <InputSelect class="bo-field" @bind-Value="SpotifyTriggerCommand" disabled="@(!SpotifyEnabled)">
+                            @foreach (var source in SpotifyTriggerSources)
+                            {
+                                <option value="@source.Cmd">@FormatSpotifyTriggerSource(source.Cmd)</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div>
+                        <div class="bo-label">DEVICE</div>
+                        <InputSelect class="bo-field"
+                                     @key="_spotifyPreferredDeviceName"
+                                     @bind-Value="SpotifyPreferredDeviceName"
+                                     disabled="@(!SpotifyEnabled || IsLoadingSpotifyDevices)">
+                            @foreach (var deviceName in SpotifyDeviceOptions())
+                            {
+                                <option @key="deviceName" value="@deviceName">@deviceName</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div>
+                        <div class="bo-label">CLIENT ID</div>
+                        <input class="bo-field" @bind="SpotifyClientId" placeholder="@SpotifyDefaults.ClientId" />
+                    </div>
+                    <div>
+                        <div class="bo-label">LAUNCH</div>
+                        <InputSelect class="bo-field" @bind-Value="SpotifyLaunchModeSetting" disabled="@(!SpotifyEnabled)">
+                            <option value="@SpotifyLaunchMode.Web">WEB</option>
+                            <option value="@SpotifyLaunchMode.App">APP</option>
+                        </InputSelect>
+                    </div>
+                </div>
+                @if (SpotifyEnabled && !string.IsNullOrEmpty(SpotifyDevicesStatus))
+                {
+                    <p class="bo-hint">@SpotifyDevicesStatus.ToUpperInvariant()</p>
+                }
+                break;
+
+            case "SYSTEM":
+                <div class="bo-label">AUTOSTART</div>
+                @if (AutostartRegistrationService.IsSupported)
+                {
+                    <div class="bo-keys bo-keys-3">
+                        <button class="bo-key @(_launchOnWindowsSignIn ? "active" : "")"
+                                @onclick="() => { _launchOnWindowsSignIn = !_launchOnWindowsSignIn; return OnAutostartChanged(); }">START WITH WINDOWS</button>
+                    </div>
+                }
+                else
+                {
+                    <p class="bo-hint">AUTOSTART CAN ONLY BE CONFIGURED IN THE WINDOWS MAUI APP</p>
+                }
+                <div class="bo-label">VERSION</div>
+                <div class="bo-field">@AppVersionDisplay</div>
+                break;
+        }
+    </div>
+
+    @* ── Aluminium nameplate + menu strip (Beomaster 4500) ── *@
+    <div class="bo-nameplate"><span>BEOCONTROL SETUP PANEL</span></div>
+    <nav class="bo-menu">
+        @foreach (var m in Menus)
+        {
+            <button class="bo-menu-item @(_menu == m ? "active" : "")" @onclick="() => _menu = m">
+                <span class="bo-menu-led"></span>@m
+            </button>
+        }
+        <button class="bo-close" title="Close" aria-label="Close" onclick="window.close()"></button>
+    </nav>
+
+</div>
+
+@code {
+    private static readonly DeviceType[] Tabs = [DeviceType.USB, DeviceType.BT, DeviceType.PC2];
+    private static readonly (int Value, string Label)[] ZoomOptions =
+    [
+        (100, "1x"),
+        (150, "1.5x"),
+        (200, "2x"),
+    ];
+    private static readonly BeoCommand[] SpotifyTriggerSources =
+        BeoCommands.All.Where(command => command.Category == CommandCategory.Source)
+            .ToArray();
+
+    private static readonly string[] Menus = ["DEVICE", "SOUND", "REMOTE", "SPOTIFY", "SYSTEM"];
+
+    private string _menu = "DEVICE";
+    private DeviceType ActiveTab;
+    private bool IsScanning;
+    private bool IsBusy;
+    private string? SelectedSerial;
+    private string? SelectedBt;
+    private string ScanStatus = "";
+    private List<DeviceInfo> SerialDevices = [];
+    private List<DeviceInfo> BtDevices = [];
+    private CancellationTokenSource? _scanCts;
+    private int _remoteButtonZoom = 100;
+    private bool _launchOnWindowsSignIn;
+    private bool IsLoadingSpotifyDevices;
+    private string SpotifyDevicesStatus = string.Empty;
+    private List<string> SpotifyDevices = [];
+    private string _spotifyPreferredDeviceName = string.Empty;
+
+    private DeviceStatus _deviceStatus = DeviceStatus.Disconnected;
+    private bool Pc2Available;
+
+    private bool IsPc2Connected =>
+        DeviceService.IsConnected && DeviceService.CurrentDevice?.Type == DeviceType.PC2;
+
+    private int RemoteButtonZoom
+    {
+        get => _remoteButtonZoom;
+        set
+        {
+            if (_remoteButtonZoom == value)
+                return;
+
+            _remoteButtonZoom = value;
+            RemoteButton.Zoom = value;
+            DeviceService.Settings.RemoteButtonZoom = value;
+            DeviceService.Settings.Save();
+            DeviceService.Settings.NotifyChanged();
+        }
+    }
+
+    private RemoteType SelectedRemote
+    {
+        get => DeviceService.Settings.LastRemote;
+        set
+        {
+            if (DeviceService.Settings.LastRemote == value)
+                return;
+
+            DeviceService.Settings.LastRemote = value;
+            DeviceService.Settings.Save();
+            DeviceService.Settings.NotifyChanged();
+        }
+    }
+
+    private bool SpotifyEnabled
+    {
+        get => DeviceService.Settings.SpotifyEnabled;
+        set
+        {
+            if (DeviceService.Settings.SpotifyEnabled == value)
+                return;
+
+            DeviceService.Settings.SpotifyEnabled = value;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private string SpotifyTriggerCommand
+    {
+        get => DeviceService.Settings.SpotifyTriggerCommand;
+        set
+        {
+            var normalized = value?.Trim() ?? string.Empty;
+            if (DeviceService.Settings.SpotifyTriggerCommand == normalized)
+                return;
+
+            DeviceService.Settings.SpotifyTriggerCommand = normalized;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private string SpotifyPreferredDeviceName
+    {
+        get => _spotifyPreferredDeviceName;
+        set
+        {
+            var normalized = value?.Trim() ?? string.Empty;
+            if (_spotifyPreferredDeviceName == normalized)
+                return;
+
+            _spotifyPreferredDeviceName = normalized;
+            DeviceService.Settings.SpotifyPreferredDeviceName = normalized;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    // empty = built-in default client ID; takes effect on the next Spotify connect
+    private string SpotifyClientId
+    {
+        get => DeviceService.Settings.SpotifyClientId;
+        set
+        {
+            var normalized = value?.Trim() ?? string.Empty;
+            if (DeviceService.Settings.SpotifyClientId == normalized)
+                return;
+
+            DeviceService.Settings.SpotifyClientId = normalized;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private SpotifyLaunchMode SpotifyLaunchModeSetting
+    {
+        get => DeviceService.Settings.SpotifyLaunchMode;
+        set
+        {
+            if (DeviceService.Settings.SpotifyLaunchMode == value)
+                return;
+
+            DeviceService.Settings.SpotifyLaunchMode = value;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private static string AppVersionDisplay => GetAppVersionDisplay();
+
+    private static string FormatSigned(sbyte value) => value.ToString("+0;-0;0");
+
+    // Display text for scan progress: "SCANNING USB COM8", "SCANNING BLE"
+    private string ScanLedText()
+    {
+        var s = ScanStatus.TrimStart('○', ' ').TrimEnd('.', '…', ' ');
+        if (!IsScanning) return s.ToUpperInvariant();
+        var what = ActiveTab == DeviceType.USB && s.StartsWith("Probing ") ? s["Probing ".Length..] : "";
+        var kind = TabLabel(ActiveTab).ToUpperInvariant();
+        return $"SCANNING {kind} {what.ToUpperInvariant()}".TrimEnd();
+    }
+
+    private string StatusLedText =>
+        DeviceService.IsConnected ? "CONNECTED"
+        : _deviceStatus is DeviceStatus.Connecting or DeviceStatus.Discovering ? "CONNECTING"
+        : "DISCONNECTED";
+
+    private string StatusLedClass =>
+        DeviceService.IsConnected ? "led-green"
+        : _deviceStatus is DeviceStatus.Connecting or DeviceStatus.Discovering ? "led-yellow"
+        : "led-red";
+
+    protected override void OnInitialized()
+    {
+        DeviceService.OnStatusChanged += OnServiceStatusChanged;
+        ActiveTab      = DeviceService.Settings.LastDevice;
+        SelectedSerial = DeviceService.Settings.LastSerial?.Id;
+        SelectedBt     = DeviceService.Settings.LastBluetooth?.Id;
+        _remoteButtonZoom = NormalizeZoom(DeviceService.Settings.RemoteButtonZoom);
+        _spotifyPreferredDeviceName = DeviceService.Settings.SpotifyPreferredDeviceName;
+        _launchOnWindowsSignIn = AutostartRegistrationService.IsEnabled();
+        if (SpotifyEnabled)
+            _ = LoadSpotifyDevicesAsync();
+    }
+
+    private async void OnServiceStatusChanged(StatusMessage msg)
+    {
+        if (msg is SourceStatusMessage or AudioSetupMessage)
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (msg is DeviceStatusMessage status)
+            _deviceStatus = status.Status;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void SelectTab(DeviceType tab)
+    {
+        ActiveTab = tab;
+        _scanCts?.Cancel();
+        IsScanning = false;
+        ScanStatus = "";
+        if (tab != DeviceType.PC2)
+            Pc2Available = false;
+    }
+
+    private async Task ScanSerial()
+    {
+        _scanCts?.Cancel();
+        _scanCts = new CancellationTokenSource();
+        IsScanning = true;
+        SerialDevices = [];
+        ScanStatus = "Scanning…";
+        StateHasChanged();
+        try
+        {
+            SerialDevices = await DeviceService.ScanSerialAsync(
+                s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
+                _scanCts.Token);
+            if (SerialDevices.Count > 0 && SelectedSerial is null)
+                SelectedSerial = SerialDevices[0].Id;
+            ScanStatus = $"Found {SerialDevices.Count} device(s).";
+        }
+        catch (OperationCanceledException) { ScanStatus = "Scan cancelled."; }
+        catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
+        finally { IsScanning = false; StateHasChanged(); }
+    }
+
+    private async Task ScanBluetooth()
+    {
+        _scanCts?.Cancel();
+        _scanCts = new CancellationTokenSource();
+        IsScanning = true;
+        BtDevices = [];
+        ScanStatus = "Scanning…";
+        StateHasChanged();
+        try
+        {
+            BtDevices = await DeviceService.ScanBluetoothAsync(
+                s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
+                _scanCts.Token);
+            if (BtDevices is [{ Id: { } singleDeviceId }])
+            {
+                SelectedBt = singleDeviceId;
+                ScanStatus = "Found 1 device. Connecting…";
+                StateHasChanged();
+                await ConnectBluetooth(SelectedBt);
+                return;
+            }
+
+            if (BtDevices.Count > 0 && SelectedBt is null)
+                SelectedBt = BtDevices[0].Id;
+            ScanStatus = BtDevices.Count > 0
+                ? $"Found {BtDevices.Count} device(s)."
+                : GetBluetoothEmptyScanMessage();
+        }
+        catch (OperationCanceledException) { ScanStatus = "Scan cancelled."; }
+        catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
+        finally { IsScanning = false; StateHasChanged(); }
+    }
+
+    private async Task ScanPc2()
+    {
+        _scanCts?.Cancel();
+        _scanCts = new CancellationTokenSource();
+        IsScanning = true;
+        Pc2Available = false;
+        ScanStatus = "Scanning…";
+        StateHasChanged();
+        try
+        {
+            var found = await DeviceService.ScanPc2Async(
+                s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
+                _scanCts.Token);
+            Pc2Available = found;
+            ScanStatus = found ? "Found PC2 device." : "No PC2 device found.";
+        }
+        catch (OperationCanceledException) { ScanStatus = "Scan cancelled."; }
+        catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
+        finally { IsScanning = false; StateHasChanged(); }
+    }
+
+    private async Task ConnectSerial(string? portName = null)
+    {
+        SelectedSerial = portName;
+        IsBusy = true;
+        StateHasChanged();
+        await DeviceService.ConnectSerialAsync(portName);
+        IsBusy = false;
+        ScanStatus = DeviceService.IsConnected ? "" : "Connect failed.";
+    }
+
+    private async Task ConnectBluetooth(string? deviceId = null)
+    {
+        SelectedBt = deviceId;
+        IsBusy = true;
+        StateHasChanged();
+        await DeviceService.ConnectBluetoothAsync(deviceId);
+        IsBusy = false;
+        ScanStatus = DeviceService.IsConnected ? "" : "Connect failed.";
+    }
+
+    private async Task ConnectPc2()
+    {
+        IsBusy = true;
+        StateHasChanged();
+        await DeviceService.ConnectPc2Async();
+        IsBusy = false;
+        Pc2Available = DeviceService.IsConnected && DeviceService.CurrentDevice?.Type == DeviceType.PC2;
+        ScanStatus = DeviceService.IsConnected ? "" : "Connect failed.";
+    }
+
+    private void Disconnect() => DeviceService.Disconnect();
+
+    private static string TabLabel(DeviceType t) => t switch
+    {
+        DeviceType.USB => "USB",
+        DeviceType.BT     => "BLE",
+        DeviceType.PC2    => "PC2",
+        _                 => t.ToString(),
+    };
+
+    private static int NormalizeZoom(int zoom) => zoom switch
+    {
+        100 or 150 or 200 => zoom,
+        _ => 100
+    };
+
+    private static string GetAppVersionDisplay()
+    {
+        var entryAssembly = Assembly.GetEntryAssembly();
+        var informationalVersion = entryAssembly?
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion?
+            .Split('+', 2)[0];
+
+        var version = string.IsNullOrWhiteSpace(informationalVersion)
+            ? entryAssembly?.GetName().Version?.ToString(3)
+            : informationalVersion;
+
+        if (string.IsNullOrWhiteSpace(version))
+            return string.Empty;
+
+        return $"v{version.TrimStart('v', 'V')}";
+    }
+
+    private static string GetBluetoothEmptyScanMessage()
+    {
+        if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsMacCatalyst())
+            return "Found 0 device(s).";
+
+        return "No Bluetooth device selected. On macOS, Scan opens the Apple Bluetooth chooser. If it does not appear, check Bluetooth permission for the host app you launched this app from.";
+    }
+
+    private Task OnAutostartChanged()
+    {
+        AutostartRegistrationService.SetEnabled(_launchOnWindowsSignIn);
+        return Task.CompletedTask;
+    }
+
+    private async Task OnSpotifyEnabledChanged()
+    {
+        if (!SpotifyEnabled)
+        {
+            IsLoadingSpotifyDevices = false;
+            SpotifyDevicesStatus = string.Empty;
+            SpotifyDevices = [];
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        await LoadSpotifyDevicesAsync();
+    }
+
+    private async Task LoadSpotifyDevicesAsync()
+    {
+        IsLoadingSpotifyDevices = true;
+        SpotifyDevicesStatus = "Stage 1/3: starting Spotify device load…";
+        await InvokeAsync(StateHasChanged);
+
+        SpotifyDevicesStatus = "Stage 2/3: waiting for Spotify login or cached token…";
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            SpotifyDevices = (await LaunchSpotifyService.GetSpotifyDeviceNamesAsync())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            SpotifyDevicesStatus = SpotifyDevices.Count == 0
+                ? "Stage 3/3: Spotify device request returned 0 devices."
+                : $"Stage 3/3: Spotify device request returned {SpotifyDevices.Count} device(s).";
+        }
+        catch (Exception ex)
+        {
+            SpotifyDevices = [];
+            SpotifyDevicesStatus = ex.Message;
+        }
+        finally
+        {
+            IsLoadingSpotifyDevices = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private IEnumerable<string> SpotifyDeviceOptions()
+    {
+        if (string.IsNullOrWhiteSpace(_spotifyPreferredDeviceName)
+            || SpotifyDevices.Contains(_spotifyPreferredDeviceName, StringComparer.OrdinalIgnoreCase))
+            return SpotifyDevices;
+
+        return [_spotifyPreferredDeviceName, .. SpotifyDevices];
+    }
+
+    private static string FormatSpotifyTriggerSource(string sourceName) => sourceName.ToUpperInvariant() switch
+    {
+        "TV" => "TV",
+        "RADIO" => "RADIO",
+        "CD" => "CD",
+        "CD2" => "CD 2",
+        "PHONO" => "PHONO",
+        "DVD" => "DVD",
+        "SAT" => "SAT",
+        "VTAPE" => "V.TAPE",
+        "PC" => "PC",
+        "DOORCAM" => "DOORCAM",
+        "LIGHT" => "LIGHT",
+        "AAUX" or "AAUX" => "A.AUX",
+        "VAUX" or "VAUX" => "V.AUX",
+        "ATAPE" => "A.TAPE",
+        "ATAPE2" => "A.TAPE 2",
+        "TEXT" => "TEXT",
+        "SPDEMO" => "SPDEMO",
+        _ => sourceName.ToUpperInvariant()
+    };
+
+    public void Dispose()
+    {
+        DeviceService.OnStatusChanged -= OnServiceStatusChanged;
+        _scanCts?.Cancel();
+        _scanCts?.Dispose();
+    }
+}

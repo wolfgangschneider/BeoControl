@@ -43,6 +43,11 @@ public class AppSettings
     public int RemoteButtonZoom { get; set; } = 100;
     public bool SpotifyEnabled { get; set; } = true;
     public string SpotifyPreferredDeviceName { get; set; } = string.Empty;
+    /// <summary>Own Spotify app client ID; empty = built-in default.</summary>
+    public string SpotifyClientId { get; set; } = string.Empty;
+    [JsonIgnore]
+    public string EffectiveSpotifyClientId =>
+        string.IsNullOrWhiteSpace(SpotifyClientId) ? SpotifyDefaults.ClientId : SpotifyClientId.Trim();
     public string SpotifyTriggerCommand { get; set; } = "atape";
     public SpotifyLaunchMode SpotifyLaunchMode { get; set; } = SpotifyLaunchMode.Web;
     public string Pc2TriggerCommand { get; set; } = string.Empty;
@@ -74,6 +79,10 @@ public class AppSettings
         }
         catch { /* best-effort */ }
     }
+
+    /// <summary>Raised when a setting shown in other windows (zoom, remote type) changed.</summary>
+    public event Action? Changed;
+    public void NotifyChanged() => Changed?.Invoke();
 
     /// <summary>Convert to <see cref="AudioSetup"/> for passing to <c>Pc2Device</c>.</summary>
     public AudioSetup ToAudioSetup() => new()

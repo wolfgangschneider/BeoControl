@@ -25,8 +25,8 @@
 #elif defined(BOARD_M5STACK_ATOM)
     #include "BtNimbleSingleChannel.h"
     using ActiveBtChannel = BtNimbleSingleChannel;
-   // constexpr uint8_t IR_TX_PIN = 25;    // M5 Stack Atom — BCB board
-    constexpr uint8_t IR_TX_PIN = 32;    // M5 Stack Atom Grove
+    constexpr uint8_t IR_TX_PIN = 25;    // M5 Stack Atom — BCB board
+   // constexpr uint8_t IR_TX_PIN = 32;    // M5 Stack Atom Grove
     #undef DEVICE_NAME
     #define DEVICE_NAME "Beo4Remote_Atom"
 
