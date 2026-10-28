@@ -1,0 +1,125 @@
+@using BeoControl.Interfaces
+@using BeoControlBlazorServices
+@using BeoControlBlazorCL.Pages
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Sections
+@inject DeviceService DeviceService
+@implements IDisposable
+
+@* own copy of PC2Setup in bo style - PC2Setup itself stays for the old /setup page *@
+<SectionContent SectionName="@SetupWindow.DisplayLine2">
+    @if (IsPc2Connected || true) 
+    {
+        @* sound values are shown in the panel; the display shows what the panel does not *@
+        var a = DeviceService.CurrentPc2AudioSetup;
+        @foreach (var option in Pc2OptionValues)
+        {
+            <span class="led @(a.NodeOption == option ? "led-red" : "led-off")">@option</span>
+        }
+        @foreach (var source in Pc2DefaultSources)
+        {
+            <span class="led @(a.DefaultSource == source.Value ? "led-red" : "led-off")">@source.Label</span>
+        }
+        <span class="led @(string.IsNullOrEmpty(Pc2TriggerCommand) ? "led-off" : "led-red")">@(string.IsNullOrEmpty(Pc2TriggerCommand) ? "NO TRIGGER" : SpotifyTab.FormatSource(Pc2TriggerCommand))</span>
+    }
+    else
+    {
+        <span class="led led-off">NO PC2</span>
+    }
+</SectionContent>
+
+@if (IsPc2Connected || true)
+{
+    var audio = DeviceService.CurrentPc2AudioSetup;
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); column-gap: 24px;">
+        <div>
+            <div class="bo-label">SOUND</div>
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) 36px 36px 36px; gap: 8px; align-items: center;">
+                @foreach (var (label, value, down, up) in new[]
+                {
+                    ("VOLUME",   audio.Volume.ToString(),      "vol-", "vol+"),
+                    ("BALANCE",  FormatSigned(audio.Balance),  "bal-", "bal+"),
+                    ("BASS",     FormatSigned(audio.Bass),     "bas-", "bas+"),
+                    ("TREBLE",   FormatSigned(audio.Treble),   "tre-", "tre+"),
+                    ("LOUDNESS", audio.Loudness ? "ON" : "OFF", "lou-", "lou+"),
+                })
+                {
+                    <span class="bo-hint" style="margin: 0;">@label</span>
+                    <span style="color: #fff; font-size: 11px; text-align: right;">@value</span>
+                    <button class="bo-key" @onclick="() => DeviceService.SendCommand(down)">◄</button>
+                    <button class="bo-key" @onclick="() => DeviceService.SendCommand(up)">►</button>
+                }
+            </div>
+        </div>
+        <div>
+            <div class="bo-label">OPTION</div>
+            <div class="bo-keys" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+                @foreach (var option in Pc2OptionValues)
+                {
+                    <button class="bo-key" disabled>@option</button>
+                }
+            </div>
+            <div class="bo-label">DEFAULT SOURCE</div>
+            <div class="bo-keys bo-keys-3">
+                @foreach (var source in Pc2DefaultSources)
+                {
+                    <button class="bo-key @(Pc2DefaultSource == source.Value ? "active" : "")"
+                            @onclick="() => Pc2DefaultSource = source.Value">@source.Label</button>
+                }
+            </div>
+            <div class="bo-label">REMOTE TRIGGER</div>
+            <InputSelect class="bo-field" @bind-Value="Pc2TriggerCommand">
+                <option value="">OFF</option>
+                @foreach (var source in SpotifyTab.TriggerSources)
+                {
+                    <option value="@source.Cmd">@SpotifyTab.FormatSource(source.Cmd)</option>
+                }
+            </InputSelect>
+        </div>
+    </div>
+}
+else
+{
+    <p class="bo-hint">SOUND SETUP NEEDS A PC2 CONNECTION</p>
+}
+
+@code {
+    private static readonly int[] Pc2OptionValues = [0, 2, 4, 6];
+    private static readonly (Beoported.Pc2.Pc2DefaultSource Value, string Label)[] Pc2DefaultSources =
+    [
+        (Beoported.Pc2.Pc2DefaultSource.PC, "PC"),
+        (Beoported.Pc2.Pc2DefaultSource.ML, "ML"),
+        (Beoported.Pc2.Pc2DefaultSource.None, "NONE")
+    ];
+
+    private bool IsPc2Connected =>
+        DeviceService.IsConnected && DeviceService.CurrentDevice?.Type == DeviceType.PC2;
+
+    private Beoported.Pc2.Pc2DefaultSource Pc2DefaultSource
+    {
+        get => DeviceService.CurrentPc2AudioSetup.DefaultSource;
+        set => DeviceService.UpdatePc2DefaultSource(value);
+    }
+
+    private string Pc2TriggerCommand
+    {
+        get => DeviceService.Settings.Pc2TriggerCommand;
+        set
+        {
+            var normalized = value?.Trim() ?? string.Empty;
+            if (DeviceService.Settings.Pc2TriggerCommand == normalized)
+                return;
+
+            DeviceService.Settings.Pc2TriggerCommand = normalized;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private static string FormatSigned(sbyte value) => value.ToString("+0;-0;0");
+
+    protected override void OnInitialized() => DeviceService.OnStatusChanged += OnServiceStatusChanged;
+
+    private async void OnServiceStatusChanged(StatusMessage msg) => await InvokeAsync(StateHasChanged);
+
+    public void Dispose() => DeviceService.OnStatusChanged -= OnServiceStatusChanged;
+}

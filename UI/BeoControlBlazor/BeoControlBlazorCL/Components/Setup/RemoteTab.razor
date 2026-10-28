@@ -1,0 +1,80 @@
+@using BeoControlBlazor.Services
+@using BeoControlBlazorServices
+@using BeoControlBlazorCL.Pages
+@using Microsoft.AspNetCore.Components.Sections
+@inject DeviceService DeviceService
+
+<SectionContent SectionName="@SetupWindow.DisplayLine2">
+    @foreach (var r in Enum.GetValues<RemoteType>())
+    {
+        <span class="led @(SelectedRemote == r ? "led-red" : "led-off")">@r.ToString().ToUpperInvariant()</span>
+    }
+    @foreach (var option in ZoomOptions)
+    {
+        <span class="led @(RemoteButtonZoom == option.Value ? "led-red" : "led-off")">@option.Label.ToUpperInvariant()</span>
+    }
+</SectionContent>
+
+<div class="bo-label">TYPE</div>
+<div class="bo-keys bo-keys-3">
+    @foreach (var r in Enum.GetValues<RemoteType>())
+    {
+        <button class="bo-key @(SelectedRemote == r ? "active" : "")" @onclick="() => SelectedRemote = r">@r.ToString().ToUpperInvariant()</button>
+    }
+</div>
+<div class="bo-label">ZOOM</div>
+<div class="bo-keys bo-keys-3">
+    @foreach (var option in ZoomOptions)
+    {
+        <button class="bo-key @(RemoteButtonZoom == option.Value ? "active" : "")" @onclick="() => RemoteButtonZoom = option.Value">@option.Label</button>
+    }
+</div>
+
+@code {
+    private static readonly (int Value, string Label)[] ZoomOptions =
+    [
+        (100, "1x"),
+        (150, "1.5x"),
+        (200, "2x"),
+    ];
+
+    private int _remoteButtonZoom = 100;
+
+    private int RemoteButtonZoom
+    {
+        get => _remoteButtonZoom;
+        set
+        {
+            if (_remoteButtonZoom == value)
+                return;
+
+            _remoteButtonZoom = value;
+            RemoteButton.Zoom = value;
+            DeviceService.Settings.RemoteButtonZoom = value;
+            DeviceService.Settings.Save();
+            DeviceService.Settings.NotifyChanged();
+        }
+    }
+
+    private RemoteType SelectedRemote
+    {
+        get => DeviceService.Settings.LastRemote;
+        set
+        {
+            if (DeviceService.Settings.LastRemote == value)
+                return;
+
+            DeviceService.Settings.LastRemote = value;
+            DeviceService.Settings.Save();
+            DeviceService.Settings.NotifyChanged();
+        }
+    }
+
+    protected override void OnInitialized() => _remoteButtonZoom = NormalizeZoom(DeviceService.Settings.RemoteButtonZoom);
+
+    private static int NormalizeZoom(int zoom) => zoom switch
+    {
+        100 or 150 or 200 => zoom,
+        _ => 100
+    };
+}

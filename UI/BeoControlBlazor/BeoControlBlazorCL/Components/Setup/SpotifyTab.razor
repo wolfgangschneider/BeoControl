@@ -1,0 +1,226 @@
+@using BeoControl.Interfaces
+@using BeoControlBlazorServices
+@using BeoControlBlazorCL.Pages
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Sections
+@inject DeviceService DeviceService
+@inject ISpotifyService LaunchSpotifyService
+
+<SectionContent SectionName="@SetupWindow.DisplayLine2">
+    <span class="led @(SpotifyEnabled ? "led-red" : "led-off")">@(string.IsNullOrEmpty(SpotifyPreferredDeviceName) ? "NO DEVICE" : SpotifyPreferredDeviceName.ToUpperInvariant())</span>
+    <span class="led @(SpotifyEnabled ? "led-red" : "led-off")">@FormatSource(SpotifyTriggerCommand)</span>
+    @foreach (var mode in Enum.GetValues<SpotifyLaunchMode>())
+    {
+        <span class="led @(SpotifyEnabled && SpotifyLaunchModeSetting == mode ? "led-red" : "led-off")">@mode.ToString().ToUpperInvariant()</span>
+    }
+</SectionContent>
+
+<div class="bo-keys bo-keys-3">
+    <button class="bo-key @(SpotifyEnabled ? "active" : "")"
+            @onclick="async () => { SpotifyEnabled = !SpotifyEnabled; await OnSpotifyEnabledChanged(); }">@(SpotifyEnabled ? "SPOTIFY ON" : "SPOTIFY OFF")</button>
+</div>
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 16px;">
+    <div>
+        <div class="bo-label">TRIGGER</div>
+        <InputSelect class="bo-field" @bind-Value="SpotifyTriggerCommand" disabled="@(!SpotifyEnabled)">
+            @foreach (var source in TriggerSources)
+            {
+                <option value="@source.Cmd">@FormatSource(source.Cmd)</option>
+            }
+        </InputSelect>
+    </div>
+    <div>
+        <div class="bo-label">DEVICE</div>
+        <InputSelect class="bo-field"
+                     @key="_spotifyPreferredDeviceName"
+                     @bind-Value="SpotifyPreferredDeviceName"
+                     disabled="@(!SpotifyEnabled || IsLoadingSpotifyDevices)">
+            @foreach (var deviceName in SpotifyDeviceOptions())
+            {
+                <option @key="deviceName" value="@deviceName">@deviceName</option>
+            }
+        </InputSelect>
+    </div>
+    <div>
+        <div class="bo-label">CLIENT ID</div>
+        <input class="bo-field" @bind="SpotifyClientId" placeholder="@SpotifyDefaults.ClientId" />
+    </div>
+    <div>
+        <div class="bo-label">LAUNCH</div>
+        <InputSelect class="bo-field" @bind-Value="SpotifyLaunchModeSetting" disabled="@(!SpotifyEnabled)">
+            <option value="@SpotifyLaunchMode.Web">WEB</option>
+            <option value="@SpotifyLaunchMode.App">APP</option>
+        </InputSelect>
+    </div>
+</div>
+@if (SpotifyEnabled && !string.IsNullOrEmpty(SpotifyDevicesStatus))
+{
+    <p class="bo-hint">@SpotifyDevicesStatus.ToUpperInvariant()</p>
+}
+
+@code {
+    /// <summary>Beo4 source commands that can act as trigger (also used by the PC2 tab).</summary>
+    public static readonly BeoCommand[] TriggerSources =
+        BeoCommands.All.Where(command => command.Category == CommandCategory.Source)
+            .ToArray();
+
+    private bool IsLoadingSpotifyDevices;
+    private string SpotifyDevicesStatus = string.Empty;
+    private List<string> SpotifyDevices = [];
+    private string _spotifyPreferredDeviceName = string.Empty;
+
+    private bool SpotifyEnabled
+    {
+        get => DeviceService.Settings.SpotifyEnabled;
+        set
+        {
+            if (DeviceService.Settings.SpotifyEnabled == value)
+                return;
+
+            DeviceService.Settings.SpotifyEnabled = value;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private string SpotifyTriggerCommand
+    {
+        get => DeviceService.Settings.SpotifyTriggerCommand;
+        set
+        {
+            var normalized = value?.Trim() ?? string.Empty;
+            if (DeviceService.Settings.SpotifyTriggerCommand == normalized)
+                return;
+
+            DeviceService.Settings.SpotifyTriggerCommand = normalized;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private string SpotifyPreferredDeviceName
+    {
+        get => _spotifyPreferredDeviceName;
+        set
+        {
+            var normalized = value?.Trim() ?? string.Empty;
+            if (_spotifyPreferredDeviceName == normalized)
+                return;
+
+            _spotifyPreferredDeviceName = normalized;
+            DeviceService.Settings.SpotifyPreferredDeviceName = normalized;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    // empty = built-in default client ID; takes effect on the next Spotify connect
+    private string SpotifyClientId
+    {
+        get => DeviceService.Settings.SpotifyClientId;
+        set
+        {
+            var normalized = value?.Trim() ?? string.Empty;
+            if (DeviceService.Settings.SpotifyClientId == normalized)
+                return;
+
+            DeviceService.Settings.SpotifyClientId = normalized;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private SpotifyLaunchMode SpotifyLaunchModeSetting
+    {
+        get => DeviceService.Settings.SpotifyLaunchMode;
+        set
+        {
+            if (DeviceService.Settings.SpotifyLaunchMode == value)
+                return;
+
+            DeviceService.Settings.SpotifyLaunchMode = value;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        _spotifyPreferredDeviceName = DeviceService.Settings.SpotifyPreferredDeviceName;
+        if (SpotifyEnabled)
+            _ = LoadSpotifyDevicesAsync();
+    }
+
+    private async Task OnSpotifyEnabledChanged()
+    {
+        if (!SpotifyEnabled)
+        {
+            IsLoadingSpotifyDevices = false;
+            SpotifyDevicesStatus = string.Empty;
+            SpotifyDevices = [];
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        await LoadSpotifyDevicesAsync();
+    }
+
+    private async Task LoadSpotifyDevicesAsync()
+    {
+        IsLoadingSpotifyDevices = true;
+        SpotifyDevicesStatus = "Stage 1/3: starting Spotify device load…";
+        await InvokeAsync(StateHasChanged);
+
+        SpotifyDevicesStatus = "Stage 2/3: waiting for Spotify login or cached token…";
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            SpotifyDevices = (await LaunchSpotifyService.GetSpotifyDeviceNamesAsync())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            SpotifyDevicesStatus = SpotifyDevices.Count == 0
+                ? "Stage 3/3: Spotify device request returned 0 devices."
+                : $"Stage 3/3: Spotify device request returned {SpotifyDevices.Count} device(s).";
+        }
+        catch (Exception ex)
+        {
+            SpotifyDevices = [];
+            SpotifyDevicesStatus = ex.Message;
+        }
+        finally
+        {
+            IsLoadingSpotifyDevices = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private IEnumerable<string> SpotifyDeviceOptions()
+    {
+        if (string.IsNullOrWhiteSpace(_spotifyPreferredDeviceName)
+            || SpotifyDevices.Contains(_spotifyPreferredDeviceName, StringComparer.OrdinalIgnoreCase))
+            return SpotifyDevices;
+
+        return [_spotifyPreferredDeviceName, .. SpotifyDevices];
+    }
+
+    /// <summary>Display label of a Beo4 source command (also used by the PC2 tab).</summary>
+    public static string FormatSource(string sourceName) => sourceName.ToUpperInvariant() switch
+    {
+        "TV" => "TV",
+        "RADIO" => "RADIO",
+        "CD" => "CD",
+        "CD2" => "CD 2",
+        "PHONO" => "PHONO",
+        "DVD" => "DVD",
+        "SAT" => "SAT",
+        "VTAPE" => "V.TAPE",
+        "PC" => "PC",
+        "DOORCAM" => "DOORCAM",
+        "LIGHT" => "LIGHT",
+        "AAUX" or "AAUX" => "A.AUX",
+        "VAUX" or "VAUX" => "V.AUX",
+        "ATAPE" => "A.TAPE",
+        "ATAPE2" => "A.TAPE 2",
+        "TEXT" => "TEXT",
+        "SPDEMO" => "SPDEMO",
+        _ => sourceName.ToUpperInvariant()
+    };
+}

@@ -1,0 +1,54 @@
+@using BeoControlBlazorServices
+@using BeoControlBlazorCL.Pages
+@using System.Reflection
+@using Microsoft.AspNetCore.Components.Sections
+@inject IAutostartRegistrationService AutostartRegistrationService
+
+<SectionContent SectionName="@SetupWindow.DisplayLine2">
+    <span class="led @(_launchOnWindowsSignIn ? "led-green" : "led-off")">AUTOSTART</span>
+</SectionContent>
+
+<div class="bo-label">AUTOSTART</div>
+@if (AutostartRegistrationService.IsSupported)
+{
+    <div class="bo-keys bo-keys-3">
+        <button class="bo-key @(_launchOnWindowsSignIn ? "active" : "")"
+                @onclick="() => { _launchOnWindowsSignIn = !_launchOnWindowsSignIn; return OnAutostartChanged(); }">START WITH WINDOWS</button>
+    </div>
+}
+else
+{
+    <p class="bo-hint">AUTOSTART CAN ONLY BE CONFIGURED IN THE WINDOWS MAUI APP</p>
+}
+<div class="bo-label">VERSION</div>
+<div class="bo-field">@GetAppVersionDisplay()</div>
+
+@code {
+    private bool _launchOnWindowsSignIn;
+
+    protected override void OnInitialized() => _launchOnWindowsSignIn = AutostartRegistrationService.IsEnabled();
+
+    private Task OnAutostartChanged()
+    {
+        AutostartRegistrationService.SetEnabled(_launchOnWindowsSignIn);
+        return Task.CompletedTask;
+    }
+
+    private static string GetAppVersionDisplay()
+    {
+        var entryAssembly = Assembly.GetEntryAssembly();
+        var informationalVersion = entryAssembly?
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion?
+            .Split('+', 2)[0];
+
+        var version = string.IsNullOrWhiteSpace(informationalVersion)
+            ? entryAssembly?.GetName().Version?.ToString(3)
+            : informationalVersion;
+
+        if (string.IsNullOrWhiteSpace(version))
+            return string.Empty;
+
+        return $"v{version.TrimStart('v', 'V')}";
+    }
+}

@@ -1,0 +1,243 @@
+@using BeoControl.Interfaces
+@using BeoControlBlazorServices
+@using BeoControlBlazorCL.Pages
+@using Microsoft.AspNetCore.Components.Sections
+@inject DeviceService DeviceService
+@implements IDisposable
+
+<SectionContent SectionName="@SetupWindow.DisplayLine2">
+    @foreach (var tab in Tabs)
+    {
+        <span class="led @(ActiveTab == tab ? "led-red" : "led-off")">@Label(tab)</span>
+    }
+    @if (!string.IsNullOrEmpty(ScanStatus))
+    {
+        <span class="led led-red">@ScanLedText()@if (IsScanning)
+        {<span class="bo-dots"><span></span><span></span><span></span></span>}</span>
+    }
+</SectionContent>
+
+<div class="bo-label">CONNECTION</div>
+<div class="bo-keys bo-keys-3">
+    @foreach (var tab in Tabs)
+    {
+        <button class="bo-key @(ActiveTab == tab ? "active" : "")" @onclick="() => SelectTab(tab)">@Label(tab)</button>
+    }
+</div>
+
+<div class="bo-keys bo-keys-3 bo-actions">
+    <button class="bo-key" disabled="@IsScanning"
+            @onclick="() => ActiveTab switch { DeviceType.USB => ScanSerial(), DeviceType.BT => ScanBluetooth(), _ => ScanPc2() }">SCAN</button>
+    <button class="bo-key" @onclick="Disconnect" disabled="@(!DeviceService.IsConnected)">DISCONNECT</button>
+</div>
+
+<div class="bo-label">EDIT</div>
+@if (ActiveTab == DeviceType.USB)
+{
+    @foreach (var d in SerialDevices)
+    {
+        <button class="bo-field @(SelectedSerial == d.Id ? "active" : "")" @onclick="() => ConnectSerial(d.Id)" disabled="@IsBusy">@d.Id  @d.Name</button>
+    }
+    @if (SerialDevices.Count == 0 && !IsScanning)
+    {
+        <p class="bo-hint">PRESS SCAN TO DISCOVER USB DEVICES</p>
+    }
+}
+@if (ActiveTab == DeviceType.BT)
+{
+    @foreach (var d in BtDevices)
+    {
+        <button class="bo-field @(SelectedBt == d.Id ? "active" : "")" @onclick="() => ConnectBluetooth(d.Id)" disabled="@IsBusy">@(d.Name ?? "UNKNOWN")</button>
+    }
+    @if (BtDevices.Count == 0 && !IsScanning)
+    {
+        <p class="bo-hint">PRESS SCAN TO DISCOVER BLE DEVICES</p>
+    }
+}
+@if (ActiveTab == DeviceType.PC2 && !IsPc2Connected)
+{
+    @if (Pc2Available)
+    {
+        <button class="bo-field active" @onclick="ConnectPc2" disabled="@IsBusy">PC2</button>
+    }
+    <p class="bo-hint">CONNECT DIRECTLY VIA USB / MASTERLINK (PC2 CONTROLLER)</p>
+}
+
+@code {
+    private static readonly DeviceType[] Tabs = [DeviceType.USB, DeviceType.BT, DeviceType.PC2];
+
+    private DeviceType ActiveTab;
+    private bool IsScanning;
+    private bool IsBusy;
+    private string? SelectedSerial;
+    private string? SelectedBt;
+    private string ScanStatus = "";
+    private List<DeviceInfo> SerialDevices = [];
+    private List<DeviceInfo> BtDevices = [];
+    private CancellationTokenSource? _scanCts;
+    private bool Pc2Available;
+
+    private bool IsPc2Connected =>
+        DeviceService.IsConnected && DeviceService.CurrentDevice?.Type == DeviceType.PC2;
+
+    /// <summary>Display label of a connection type (also used by the setup window's display line 1).</summary>
+    public static string Label(DeviceType t) => t switch
+    {
+        DeviceType.USB => "USB",
+        DeviceType.BT  => "BLE",
+        DeviceType.PC2 => "PC2",
+        _              => t.ToString().ToUpperInvariant(),
+    };
+
+    protected override void OnInitialized()
+    {
+        DeviceService.OnStatusChanged += OnServiceStatusChanged;
+        ActiveTab      = DeviceService.Settings.LastDevice;
+        SelectedSerial = DeviceService.Settings.LastSerial?.Id;
+        SelectedBt     = DeviceService.Settings.LastBluetooth?.Id;
+    }
+
+    private async void OnServiceStatusChanged(StatusMessage msg) => await InvokeAsync(StateHasChanged);
+
+    // Display text for scan progress: "SCANNING USB COM8", "SCANNING BLE"
+    private string ScanLedText()
+    {
+        var s = ScanStatus.TrimStart('○', ' ').TrimEnd('.', '…', ' ');
+        if (!IsScanning) return s.ToUpperInvariant();
+        var what = ActiveTab == DeviceType.USB && s.StartsWith("Probing ") ? s["Probing ".Length..] : "";
+        return $"SCANNING {Label(ActiveTab)} {what.ToUpperInvariant()}".TrimEnd();
+    }
+
+    private void SelectTab(DeviceType tab)
+    {
+        ActiveTab = tab;
+        _scanCts?.Cancel();
+        IsScanning = false;
+        ScanStatus = "";
+        if (tab != DeviceType.PC2)
+            Pc2Available = false;
+    }
+
+    private async Task ScanSerial()
+    {
+        _scanCts?.Cancel();
+        _scanCts = new CancellationTokenSource();
+        IsScanning = true;
+        SerialDevices = [];
+        ScanStatus = "Scanning…";
+        StateHasChanged();
+        try
+        {
+            SerialDevices = await DeviceService.ScanSerialAsync(
+                s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
+                _scanCts.Token);
+            if (SerialDevices.Count > 0 && SelectedSerial is null)
+                SelectedSerial = SerialDevices[0].Id;
+            ScanStatus = $"Found {SerialDevices.Count} device(s).";
+        }
+        catch (OperationCanceledException) { ScanStatus = "Scan cancelled."; }
+        catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
+        finally { IsScanning = false; StateHasChanged(); }
+    }
+
+    private async Task ScanBluetooth()
+    {
+        _scanCts?.Cancel();
+        _scanCts = new CancellationTokenSource();
+        IsScanning = true;
+        BtDevices = [];
+        ScanStatus = "Scanning…";
+        StateHasChanged();
+        try
+        {
+            BtDevices = await DeviceService.ScanBluetoothAsync(
+                s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
+                _scanCts.Token);
+            if (BtDevices is [{ Id: { } singleDeviceId }])
+            {
+                SelectedBt = singleDeviceId;
+                ScanStatus = "Found 1 device. Connecting…";
+                StateHasChanged();
+                await ConnectBluetooth(SelectedBt);
+                return;
+            }
+
+            if (BtDevices.Count > 0 && SelectedBt is null)
+                SelectedBt = BtDevices[0].Id;
+            ScanStatus = BtDevices.Count > 0
+                ? $"Found {BtDevices.Count} device(s)."
+                : GetBluetoothEmptyScanMessage();
+        }
+        catch (OperationCanceledException) { ScanStatus = "Scan cancelled."; }
+        catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
+        finally { IsScanning = false; StateHasChanged(); }
+    }
+
+    private async Task ScanPc2()
+    {
+        _scanCts?.Cancel();
+        _scanCts = new CancellationTokenSource();
+        IsScanning = true;
+        Pc2Available = false;
+        ScanStatus = "Scanning…";
+        StateHasChanged();
+        try
+        {
+            var found = await DeviceService.ScanPc2Async(
+                s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
+                _scanCts.Token);
+            Pc2Available = found;
+            ScanStatus = found ? "Found PC2 device." : "No PC2 device found.";
+        }
+        catch (OperationCanceledException) { ScanStatus = "Scan cancelled."; }
+        catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
+        finally { IsScanning = false; StateHasChanged(); }
+    }
+
+    private async Task ConnectSerial(string? portName = null)
+    {
+        SelectedSerial = portName;
+        IsBusy = true;
+        StateHasChanged();
+        await DeviceService.ConnectSerialAsync(portName);
+        IsBusy = false;
+        ScanStatus = DeviceService.IsConnected ? "" : "Connect failed.";
+    }
+
+    private async Task ConnectBluetooth(string? deviceId = null)
+    {
+        SelectedBt = deviceId;
+        IsBusy = true;
+        StateHasChanged();
+        await DeviceService.ConnectBluetoothAsync(deviceId);
+        IsBusy = false;
+        ScanStatus = DeviceService.IsConnected ? "" : "Connect failed.";
+    }
+
+    private async Task ConnectPc2()
+    {
+        IsBusy = true;
+        StateHasChanged();
+        await DeviceService.ConnectPc2Async();
+        IsBusy = false;
+        Pc2Available = DeviceService.IsConnected && DeviceService.CurrentDevice?.Type == DeviceType.PC2;
+        ScanStatus = DeviceService.IsConnected ? "" : "Connect failed.";
+    }
+
+    private void Disconnect() => DeviceService.Disconnect();
+
+    private static string GetBluetoothEmptyScanMessage()
+    {
+        if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsMacCatalyst())
+            return "Found 0 device(s).";
+
+        return "No Bluetooth device selected. On macOS, Scan opens the Apple Bluetooth chooser. If it does not appear, check Bluetooth permission for the host app you launched this app from.";
+    }
+
+    public void Dispose()
+    {
+        DeviceService.OnStatusChanged -= OnServiceStatusChanged;
+        _scanCts?.Cancel();
+        _scanCts?.Dispose();
+    }
+}

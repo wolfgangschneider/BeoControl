@@ -26,15 +26,16 @@
 
 .bo-display-row + .bo-display-row { margin-top: 8px; }
 
-.led {
+/* ::deep - line 2 is rendered by the tab components (SectionContent) */
+.bo-display ::deep .led {
     font-size: 11px;
     letter-spacing: 2px;
 }
 
-.led-red    { color: #ff3b2f; }
-.led-green  { color: #3ecf5a; }
-.led-yellow { color: #e8c020; }
-.led-off    { color: #3a3a3a; }
+.bo-display ::deep .led-red    { color: #ff3b2f; }
+.bo-display ::deep .led-green  { color: #3ecf5a; }
+.bo-display ::deep .led-yellow { color: #e8c020; }
+.bo-display ::deep .led-off    { color: #3a3a3a; }
 
 /* gentle LED pulse while scanning */
 @keyframes bo-pulse {
@@ -43,9 +44,9 @@
 }
 
 /* three LED bar segments in the text color, lit one after another */
-.bo-dots { margin-left: 8px; }
+.bo-display ::deep .bo-dots { margin-left: 8px; }
 
-.bo-dots span {
+.bo-display ::deep .bo-dots span {
     display: inline-block;
     width: 9px;
     height: 4px;
@@ -55,8 +56,8 @@
     animation: bo-pulse 1.2s ease-in-out infinite;
 }
 
-.bo-dots span:nth-child(2) { animation-delay: 0.2s; }
-.bo-dots span:nth-child(3) { animation-delay: 0.4s; }
+.bo-display ::deep .bo-dots span:nth-child(2) { animation-delay: 0.2s; }
+.bo-display ::deep .bo-dots span:nth-child(3) { animation-delay: 0.4s; }
 
 .bo-push { margin-left: auto; }
 
@@ -69,25 +70,26 @@
     overflow-y: auto;
 }
 
-.bo-label {
+/* ::deep - the panel content is rendered by the tab components */
+.bo-controls ::deep .bo-label {
     font-size: 11px;
     letter-spacing: 2px;
     color: #999;
     margin: 16px 0 10px;
 }
 
-.bo-label:first-child { margin-top: 0; }
+.bo-controls ::deep .bo-label:first-child { margin-top: 0; }
 
-.bo-keys {
+.bo-controls ::deep .bo-keys {
     display: grid;
     gap: 10px;
 }
 
-.bo-keys-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.bo-controls ::deep .bo-keys-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-.bo-actions { margin-top: 10px; }
+.bo-controls ::deep .bo-actions { margin-top: 10px; }
 
-.bo-key {
+.bo-controls ::deep .bo-key {
     background: #121212;
     color: #ccc;
     border: none;
@@ -100,10 +102,10 @@
     cursor: pointer;
 }
 
-.bo-key:hover:not(:disabled) { color: #fff; }
-.bo-key:disabled { color: #555; cursor: default; }
-.bo-key.active { color: #fff; }
-.bo-field,
+.bo-controls ::deep .bo-key:hover:not(:disabled) { color: #fff; }
+.bo-controls ::deep .bo-key:disabled { color: #555; cursor: default; }
+.bo-controls ::deep .bo-key.active { color: #fff; }
+.bo-controls ::deep .bo-field,
 .bo-controls ::deep select.bo-field {
     display: block;
     width: 100%;
@@ -121,11 +123,11 @@
     text-transform: uppercase;
 }
 
-button.bo-field { cursor: pointer; }
-.bo-field.active { color: #fff; }
+.bo-controls ::deep button.bo-field { cursor: pointer; }
+.bo-controls ::deep .bo-field.active { color: #fff; }
 .bo-controls ::deep select.bo-field:disabled { color: #444; }
 
-.bo-hint {
+.bo-controls ::deep .bo-hint {
     font-size: 11px;
     letter-spacing: 2px;
     color: #777;
@@ -172,14 +174,6 @@ button.bo-field { cursor: pointer; }
 
 .bo-menu-item:hover { color: #ccc; }
 .bo-menu-item.active { color: #eee; }
-
-.bo-menu-led {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-}
-
-.bo-menu-item.active .bo-menu-led { background: #ff3b2f; }
 
 /* red standby-style dot bottom right = close window */
 .bo-close {
