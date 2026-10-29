@@ -19,7 +19,7 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 
 var app = builder.Build();
 var deviceService = app.Services.GetRequiredService<DeviceService>();
-await deviceService.AutoConnectAsync();
+_ = deviceService.AutoConnectAsync();   // connect in the background; the UI shows CONNECTING meanwhile
 app.Lifetime.ApplicationStopping.Register(() => deviceService.Disconnect(silent: true));
 
 // Configure the HTTP request pipeline.

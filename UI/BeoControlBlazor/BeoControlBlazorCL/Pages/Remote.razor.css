@@ -49,8 +49,8 @@
 .conn-bar--disconnected .conn-dot { background: #e04444; }
 .conn-bar--connected    { background: #1a2e1a; color: #6fcf6f; }
 .conn-bar--connected    .conn-dot { background: #6fcf6f; }
-.conn-bar--working    { background: #1a1a2e; color: #8888cf; }
-.conn-bar--working    .conn-dot { background: #8888cf; }
+.conn-bar--working    { background: #2e2a1a; color: #e8c020; }   /* same yellow as CONNECTING in the setup display */
+.conn-bar--working    .conn-dot { background: #e8c020; }
 
 /* ── Toolbar ──────────────────────────────────── */
 
