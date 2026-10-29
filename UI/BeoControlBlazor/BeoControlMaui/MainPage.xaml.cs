@@ -7,6 +7,9 @@ namespace BeoControlMaui
         private bool _permissionsChecked;
         private Window? _setupWindow;
 
+        [System.Diagnostics.CodeAnalysis.DynamicDependency(
+            System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All,
+            typeof(Microsoft.AspNetCore.Components.Web.HeadOutlet))]   // only referenced via x:Type in XAML; keep ctor and [Inject] setters in trimmed Release builds
         public MainPage()
         {
             InitializeComponent();
@@ -59,7 +62,9 @@ namespace BeoControlMaui
             if (platform == DevicePlatform.Android)
             {
                 var bluetoothStatus = await EnsurePermissionAsync<Permissions.Bluetooth>();
-                var locationStatus = await EnsurePermissionAsync<Permissions.LocationWhenInUse>();
+                var locationStatus = OperatingSystem.IsAndroidVersionAtLeast(31)
+                    ? PermissionStatus.Granted   // Android 12+: BLUETOOTH_SCAN with neverForLocation, no location needed
+                    : await EnsurePermissionAsync<Permissions.LocationWhenInUse>();
 
                 if (bluetoothStatus == PermissionStatus.Granted && locationStatus == PermissionStatus.Granted)
                 {

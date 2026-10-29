@@ -14,7 +14,7 @@
 
 	<!-- Standard: immer Windows -->
 	<PropertyGroup>
-		<TargetFrameworks>net10.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks>net10.0-windows10.0.19041.0;net10.0-android</TargetFrameworks>
 	</PropertyGroup>
 
 	<!-- Lokale Builds: abhängig vom VS-Dropdown -->
