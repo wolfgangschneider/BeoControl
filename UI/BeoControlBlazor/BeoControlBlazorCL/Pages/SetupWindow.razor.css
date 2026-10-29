@@ -189,3 +189,34 @@
 }
 
 .bo-close:hover { background: #ff3b2f; }
+
+/* ── Phone portrait ──────────────────────────── */
+
+@media (max-width: 600px) {
+    .bo-display  { padding: 12px 14px 10px; }
+    .bo-wide     { display: none; }   /* SPOTIFY and menu name only on wide screens */
+    .bo-controls { padding: 14px; }
+
+    .bo-controls ::deep .bo-keys-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .bo-controls ::deep .bo-key,
+    .bo-controls ::deep .bo-field { padding-top: 11px; padding-bottom: 11px; }   /* touch size */
+
+    .bo-nameplate { padding: 6px 14px; letter-spacing: 2px; }
+
+    /* menu strip swipes sideways, close dot stays on the right */
+    .bo-menu {
+        padding: 12px 14px;
+        gap: 22px;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .bo-menu-item { flex-shrink: 0; }
+
+    .bo-close {
+        position: sticky;
+        right: 0;
+        flex-shrink: 0;
+        box-shadow: 0 0 0 10px #0d0d0d;   /* covers tabs scrolling underneath */
+    }
+}

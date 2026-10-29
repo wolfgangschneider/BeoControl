@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:BeoControlMaui"
              xmlns:components="clr-namespace:BeoControlMaui.Components"
+             xmlns:web="clr-namespace:Microsoft.AspNetCore.Components.Web;assembly=Microsoft.AspNetCore.Components.Web"
              x:Class="BeoControlMaui.MainPage"
             BackgroundColor="Aqua"
              >
@@ -12,6 +13,8 @@
                        BlazorWebViewInitialized="OnBlazorWebViewInitialized">
         <BlazorWebView.RootComponents>
             <RootComponent  Selector="#app" ComponentType="{x:Type components:Routes}" />
+            <!-- HeadOutlet: /setupwindow opened in this view on phones lifts the body width via HeadContent -->
+            <RootComponent  Selector="head::after" ComponentType="{x:Type web:HeadOutlet}" />
         </BlazorWebView.RootComponents>
     </BlazorWebView>
     </Grid>

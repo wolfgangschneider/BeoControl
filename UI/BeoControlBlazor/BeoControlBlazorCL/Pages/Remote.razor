@@ -35,7 +35,7 @@
                 <div style="display:flex; align-items:center; gap:6px;">
                     <span class="conn-dot"></span>
                     <span class="conn-text">@ConnectionLabel()</span>
-                    <button class="gear-btn" style="margin-left:auto;" title="Setup" onclick="window.chrome?.webview ? window.chrome.webview.postMessage('beocontrol:open-setup') : window.open('/setupwindow', 'beoSetup', 'width=700,height=460')">⚙</button>
+                    <button class="gear-btn" style="margin-left:auto;" title="Setup" onclick="window.chrome?.webview ? window.chrome.webview.postMessage('beocontrol:open-setup') : /Android|iPhone|iPad/.test(navigator.userAgent) ? Blazor.navigateTo('/setupwindow') : window.open('/setupwindow', 'beoSetup', 'width=700,height=460')">⚙</button>
                 </div>
                 @if (DeviceService.Settings.SpotifyEnabled)
                 {

@@ -24,8 +24,8 @@
             {
                 <span class="led led-green">@DeviceTab.Label(connected.Type)</span>
             }
-            <span class="led @(DeviceService.Settings.SpotifyEnabled ? "led-green" : "led-off") bo-push">SPOTIFY</span>
-            <span class="led led-red">@_menu</span>
+            <span class="led @(DeviceService.Settings.SpotifyEnabled ? "led-green" : "led-off") bo-push bo-wide">SPOTIFY</span>
+            <span class="led led-red bo-wide">@_menu</span>
         </div>
         @* line 2: rendered by the selected tab - all options shown, red = selected, green = connected/on, dark = not selected *@
         <div class="bo-display-row">
@@ -54,7 +54,7 @@
                 @m
             </button>
         }
-        <button class="bo-close" title="Close" aria-label="Close" onclick="window.close()"></button>
+        <button class="bo-close" title="Close" aria-label="Close" onclick="window.opener || window.chrome?.webview ? window.close() : history.back()"></button>
     </nav>
 
 </div>
