@@ -41,10 +41,24 @@ namespace BeoControlMaui
             _setupWindow.Created += (_, _) => Dispatcher.Dispatch(() =>
             {
                 if (_setupWindow?.Handler?.PlatformView is Microsoft.UI.Xaml.Window native)
+                {
+                    if (Window?.Handler?.PlatformView is Microsoft.UI.Xaml.Window main)
+                        PlaceNextTo(native.AppWindow, main.AppWindow);
                     Win32.ShowWindow(WinRT.Interop.WindowNative.GetWindowHandle(native), Win32.SW_SHOW);
+                }
             });
             _setupWindow.Destroying += (_, _) => _setupWindow = null;
             Application.Current?.OpenWindow(_setupWindow);
+        }
+
+        // Left of the main window (it sits at the right screen edge), else right of it; bottom aligned, kept inside the work area
+        private static void PlaceNextTo(Microsoft.UI.Windowing.AppWindow setup, Microsoft.UI.Windowing.AppWindow main)
+        {
+            var work = Microsoft.UI.Windowing.DisplayArea.GetFromWindowId(main.Id, Microsoft.UI.Windowing.DisplayAreaFallback.Nearest).WorkArea;
+            var x = main.Position.X - setup.Size.Width;
+            if (x < work.X) x = main.Position.X + main.Size.Width;
+            var y = Math.Clamp(main.Position.Y + main.Size.Height - setup.Size.Height, work.Y, work.Y + work.Height - setup.Size.Height);
+            setup.Move(new Windows.Graphics.PointInt32(x, y));
         }
 #endif
 

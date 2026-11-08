@@ -26,12 +26,10 @@
 </div>
 
 <div class="bo-keys bo-keys-3 bo-actions">
-    <button class="bo-key" disabled="@IsScanning"
-            @onclick="() => ActiveTab switch { DeviceType.USB => ScanSerial(), DeviceType.BT => ScanBluetooth(), _ => ScanPc2() }">SCAN</button>
     <button class="bo-key" @onclick="Disconnect" disabled="@(!DeviceService.IsConnected)">DISCONNECT</button>
 </div>
 
-<div class="bo-label">EDIT</div>
+<div class="bo-label">DEVICES</div>
 @if (ActiveTab == DeviceType.USB)
 {
     @foreach (var d in SerialDevices)
@@ -40,7 +38,7 @@
     }
     @if (SerialDevices.Count == 0 && !IsScanning)
     {
-        <p class="bo-hint">PRESS SCAN TO DISCOVER USB DEVICES</p>
+        <p class="bo-hint">TAP USB TO DISCOVER USB DEVICES</p>
     }
 }
 @if (ActiveTab == DeviceType.BT)
@@ -51,7 +49,7 @@
     }
     @if (BtDevices.Count == 0 && !IsScanning)
     {
-        <p class="bo-hint">PRESS SCAN TO DISCOVER BLE DEVICES</p>
+        <p class="bo-hint">TAP BLE TO DISCOVER BLE DEVICES</p>
     }
 }
 @if (ActiveTab == DeviceType.PC2 && !IsPc2Connected)
@@ -108,20 +106,26 @@
         return $"SCANNING {Label(ActiveTab)} {what.ToUpperInvariant()}".TrimEnd();
     }
 
-    private void SelectTab(DeviceType tab)
+    private async Task SelectTab(DeviceType tab)
     {
+        var stopOnly = tab == ActiveTab && IsScanning;
         ActiveTab = tab;
         _scanCts?.Cancel();
         IsScanning = false;
         ScanStatus = "";
         if (tab != DeviceType.PC2)
             Pc2Available = false;
+
+        // no scan when only stopping, or when already connected via USB (open port can't be probed)
+        if (stopOnly || (tab == DeviceType.USB && DeviceService.IsConnected && DeviceService.CurrentDevice?.Type == tab))
+            return;
+        await (tab switch { DeviceType.USB => ScanSerial(), DeviceType.BT => ScanBluetooth(), _ => ScanPc2() });
     }
 
     private async Task ScanSerial()
     {
         _scanCts?.Cancel();
-        _scanCts = new CancellationTokenSource();
+        var cts = _scanCts = new CancellationTokenSource();
         IsScanning = true;
         SerialDevices = [];
         ScanStatus = "Scanning…";
@@ -130,20 +134,20 @@
         {
             SerialDevices = await DeviceService.ScanSerialAsync(
                 s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
-                _scanCts.Token);
+                cts.Token);
             if (SerialDevices.Count > 0 && SelectedSerial is null)
                 SelectedSerial = SerialDevices[0].Id;
             ScanStatus = $"Found {SerialDevices.Count} device(s).";
         }
-        catch (OperationCanceledException) { ScanStatus = "Scan cancelled."; }
+        catch (OperationCanceledException) { if (cts == _scanCts) ScanStatus = "Scan cancelled."; }
         catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
-        finally { IsScanning = false; StateHasChanged(); }
+        finally { if (cts == _scanCts) { IsScanning = false; StateHasChanged(); } }
     }
 
     private async Task ScanBluetooth()
     {
         _scanCts?.Cancel();
-        _scanCts = new CancellationTokenSource();
+        var cts = _scanCts = new CancellationTokenSource();
         IsScanning = true;
         BtDevices = [];
         ScanStatus = "Scanning…";
@@ -152,7 +156,7 @@
         {
             BtDevices = await DeviceService.ScanBluetoothAsync(
                 s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
-                _scanCts.Token);
+                cts.Token);
             if (BtDevices is [{ Id: { } singleDeviceId }])
             {
                 SelectedBt = singleDeviceId;
@@ -168,15 +172,15 @@
                 ? $"Found {BtDevices.Count} device(s)."
                 : GetBluetoothEmptyScanMessage();
         }
-        catch (OperationCanceledException) { ScanStatus = "Scan cancelled."; }
+        catch (OperationCanceledException) { if (cts == _scanCts) ScanStatus = "Scan cancelled."; }
         catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
-        finally { IsScanning = false; StateHasChanged(); }
+        finally { if (cts == _scanCts) { IsScanning = false; StateHasChanged(); } }
     }
 
     private async Task ScanPc2()
     {
         _scanCts?.Cancel();
-        _scanCts = new CancellationTokenSource();
+        var cts = _scanCts = new CancellationTokenSource();
         IsScanning = true;
         Pc2Available = false;
         ScanStatus = "Scanning…";
@@ -185,13 +189,13 @@
         {
             var found = await DeviceService.ScanPc2Async(
                 s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
-                _scanCts.Token);
+                cts.Token);
             Pc2Available = found;
             ScanStatus = found ? "Found PC2 device." : "No PC2 device found.";
         }
-        catch (OperationCanceledException) { ScanStatus = "Scan cancelled."; }
+        catch (OperationCanceledException) { if (cts == _scanCts) ScanStatus = "Scan cancelled."; }
         catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
-        finally { IsScanning = false; StateHasChanged(); }
+        finally { if (cts == _scanCts) { IsScanning = false; StateHasChanged(); } }
     }
 
     private async Task ConnectSerial(string? portName = null)

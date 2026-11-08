@@ -25,7 +25,7 @@ public class AppSettings
     };
 
     public DeviceType LastDevice { get; set; } = DeviceType.USB;
-    public RemoteType LastRemote { get; set; } = RemoteType.Beolink1000;
+    public RemoteType LastRemote { get; set; } = RemoteType.Beo4;
 
     /// <summary>Last connected serial port (port name + firmware name). Null = auto-detect.</summary>
     public DeviceInfo? LastSerial { get; set; }

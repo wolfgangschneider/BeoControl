@@ -18,8 +18,16 @@
     <div class="bo-display">
         @* line 1: general info for all menus *@
         <div class="bo-display-row">
-            <span class="led @StatusLedClass">@StatusLedText</span>
-            <span class="led led-red">@(DeviceService.IsConnected && DeviceService.CurrentDevice is { } info ? (info.Name ?? info.Id)?.ToUpperInvariant() : "NO DEVICE")</span>
+            <span class="led @StatusLedClass">@StatusLedText@if (IsConnecting)
+            {<span class="bo-dots"><span></span><span></span><span></span></span>}</span>
+            @if ((DeviceService.IsConnected ? DeviceService.CurrentDevice : IsConnecting ? TargetDevice : null) is { } info)
+            {
+                <span class="led led-red">@((info.Name ?? info.Id)?.ToUpperInvariant())</span>
+            }
+            else if (!IsConnecting)
+            {
+                <span class="led led-red">NO DEVICE</span>
+            }
             @if (DeviceService.IsConnected && DeviceService.CurrentDevice is { } connected)
             {
                 <span class="led led-green">@DeviceTab.Label(connected.Type)</span>
@@ -66,6 +74,17 @@
     private static readonly string[] Menus = ["DEVICE", "PC2", "REMOTE", "SPOTIFY", "SYSTEM"];
 
     private string _menu = "DEVICE";
+
+    private bool IsConnecting =>
+        !DeviceService.IsConnected && DeviceService.Status is DeviceStatus.Connecting or DeviceStatus.Discovering;
+
+    // device being connected: not known to DeviceService yet, so take the last one used from the settings
+    private DeviceInfo? TargetDevice => DeviceService.CurrentDevice ?? DeviceService.Settings.LastDevice switch
+    {
+        DeviceType.USB => DeviceService.Settings.LastSerial,
+        DeviceType.BT  => DeviceService.Settings.LastBluetooth,
+        _              => null,
+    };
     private string StatusLedText =>
         DeviceService.IsConnected ? "CONNECTED"
         : DeviceService.Status is DeviceStatus.Connecting or DeviceStatus.Discovering ? "CONNECTING"

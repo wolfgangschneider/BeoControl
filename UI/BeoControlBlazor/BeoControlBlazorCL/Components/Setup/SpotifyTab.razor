@@ -35,6 +35,7 @@
                      @key="_spotifyPreferredDeviceName"
                      @bind-Value="SpotifyPreferredDeviceName"
                      disabled="@(!SpotifyEnabled || IsLoadingSpotifyDevices)">
+            <option value="">SELECT DEVICE</option>
             @foreach (var deviceName in SpotifyDeviceOptions())
             {
                 <option @key="deviceName" value="@deviceName">@deviceName</option>
@@ -79,6 +80,7 @@
 
             DeviceService.Settings.SpotifyEnabled = value;
             DeviceService.Settings.Save();
+            DeviceService.Settings.NotifyChanged();
         }
     }
 
@@ -108,6 +110,7 @@
             _spotifyPreferredDeviceName = normalized;
             DeviceService.Settings.SpotifyPreferredDeviceName = normalized;
             DeviceService.Settings.Save();
+            DeviceService.Settings.NotifyChanged();
         }
     }
 

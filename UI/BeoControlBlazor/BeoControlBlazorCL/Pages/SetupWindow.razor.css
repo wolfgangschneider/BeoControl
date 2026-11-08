@@ -217,6 +217,7 @@
         position: sticky;
         right: 0;
         flex-shrink: 0;
+        margin-left: 18px;                 /* plus gap: keeps SYSTEM out of reach of the close tap */
         box-shadow: 0 0 0 10px #0d0d0d;   /* covers tabs scrolling underneath */
     }
 }
