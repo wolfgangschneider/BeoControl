@@ -64,6 +64,9 @@ public class DeviceService : IDisposable
             case DeviceType.PC2:
                 await ConnectPc2Async();
                 break;
+            case DeviceType.WIFI when Settings.LastWifi?.Id is { } host:
+                await ConnectWifiAsync(host);
+                break;
             default:
                 break;
         }
@@ -82,6 +85,21 @@ public class DeviceService : IDisposable
             Notify(DeviceStatus.Connected, $"{device.Info.Name ?? device.Info.Id}");
         }
         catch (Exception ex) { Notify(DeviceStatus.Error, $"Serial failed: {ex.Message}"); }
+    }
+
+    public async Task ConnectWifiAsync(string host)
+    {
+        Notify(DeviceStatus.Connecting, $"Connecting to {host}…");
+        try
+        {
+            ReplaceDevice(null);
+            var device = new Beo4Device(new TcpTransport(host));
+            await device.Connect();
+            ReplaceDevice(device);
+            PersistDevice();
+            Notify(DeviceStatus.Connected, $"Connected: {device.Info.Name ?? device.Info.Id}");
+        }
+        catch (Exception ex) { Notify(DeviceStatus.Error, $"WiFi failed: {ex.Message}"); }
     }
 
     public Task ConnectBluetoothAsync(string? deviceId = null, string? preferredDeviceName = null)
@@ -180,6 +198,12 @@ public class DeviceService : IDisposable
     public async Task<List<DeviceInfo>> ScanBluetoothAsync(Action<string>? progress = null, CancellationToken ct = default)
     {
         using var t = new BluetoothTransport();
+        return await t.ScanAsync(ct, s => { progress?.Invoke(s.Text); });
+    }
+
+    public async Task<List<DeviceInfo>> ScanWifiAsync(Action<string>? progress = null, CancellationToken ct = default)
+    {
+        using var t = new TcpTransport();
         return await t.ScanAsync(ct, s => { progress?.Invoke(s.Text); });
     }
 
@@ -322,6 +346,7 @@ public class DeviceService : IDisposable
         Settings.LastDevice = _device.Info.Type;
         if (_device.Info.Type == DeviceType.USB) Settings.LastSerial = _device.Info;
         else if (_device.Info.Type == DeviceType.BT) Settings.LastBluetooth = _device.Info;
+        else if (_device.Info.Type == DeviceType.WIFI) Settings.LastWifi = _device.Info;
         Settings.Save();
     }
 

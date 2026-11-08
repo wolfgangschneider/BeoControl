@@ -18,51 +18,90 @@
 </SectionContent>
 
 <div class="bo-label">CONNECTION</div>
-<div class="bo-keys bo-keys-3">
+<div class="bo-keys bo-keys-4">
     @foreach (var tab in Tabs)
     {
         <button class="bo-key @(ActiveTab == tab ? "active" : "")" @onclick="() => SelectTab(tab)">@Label(tab)</button>
     }
 </div>
 
-<div class="bo-keys bo-keys-3 bo-actions">
-    <button class="bo-key" @onclick="Disconnect" disabled="@(!DeviceService.IsConnected)">DISCONNECT</button>
-</div>
-
 <div class="bo-label">DEVICES</div>
 @if (ActiveTab == DeviceType.USB)
 {
-    @foreach (var d in SerialDevices)
+    var usb = WithCurrent(SerialDevices, DeviceType.USB);
+    @foreach (var d in usb)
     {
-        <button class="bo-field @(SelectedSerial == d.Id ? "active" : "")" @onclick="() => ConnectSerial(d.Id)" disabled="@IsBusy">@d.Id  @d.Name</button>
+        <div class="bo-inline">
+            <button class="bo-field @(SelectedSerial == d.Id ? "active" : "")" @onclick="() => SelectedSerial = d.Id">@d.Id  @d.Name</button>
+            <button class="bo-field bo-compact bo-conn" @onclick="() => Toggle(DeviceType.USB, d.Id, ConnectSerial)" disabled="@IsBusy">@ConnLabel(DeviceType.USB, d.Id)</button>
+        </div>
     }
-    @if (SerialDevices.Count == 0 && !IsScanning)
+    @if (usb.Count == 0 && !IsScanning)
     {
         <p class="bo-hint">TAP USB TO DISCOVER USB DEVICES</p>
     }
 }
 @if (ActiveTab == DeviceType.BT)
 {
-    @foreach (var d in BtDevices)
+    var ble = WithCurrent(BtDevices, DeviceType.BT);
+    @foreach (var d in ble)
     {
-        <button class="bo-field @(SelectedBt == d.Id ? "active" : "")" @onclick="() => ConnectBluetooth(d.Id)" disabled="@IsBusy">@(d.Name ?? "UNKNOWN")</button>
+        <div class="bo-inline">
+            <button class="bo-field @(SelectedBt == d.Id ? "active" : "")" @onclick="() => SelectedBt = d.Id">@(d.Name ?? "UNKNOWN")</button>
+            <button class="bo-field bo-compact bo-conn" @onclick="() => Toggle(DeviceType.BT, d.Id, ConnectBluetooth)" disabled="@IsBusy">@ConnLabel(DeviceType.BT, d.Id)</button>
+        </div>
     }
-    @if (BtDevices.Count == 0 && !IsScanning)
+    @if (ble.Count == 0 && !IsScanning)
     {
         <p class="bo-hint">TAP BLE TO DISCOVER BLE DEVICES</p>
     }
 }
-@if (ActiveTab == DeviceType.PC2 && !IsPc2Connected)
+@if (ActiveTab == DeviceType.PC2)
 {
-    @if (Pc2Available)
+    @if (Pc2Available || IsPc2Connected)
     {
-        <button class="bo-field active" @onclick="ConnectPc2" disabled="@IsBusy">PC2</button>
+        <div class="bo-inline">
+            <button class="bo-field active">PC2</button>
+            <button class="bo-field bo-compact bo-conn" @onclick="TogglePc2" disabled="@IsBusy">@(IsPc2Connected ? "DISCONNECT" : "CONNECT")</button>
+        </div>
     }
-    <p class="bo-hint">CONNECT DIRECTLY VIA USB / MASTERLINK (PC2 CONTROLLER)</p>
+    @if (!IsPc2Connected)
+    {
+        <p class="bo-hint">CONNECT DIRECTLY VIA USB / MASTERLINK (PC2 CONTROLLER)</p>
+    }
+}
+@if (ActiveTab == DeviceType.WIFI)
+{
+    var wifi = WithCurrent(WifiDevices, DeviceType.WIFI);
+    @foreach (var d in wifi)
+    {
+        <div class="bo-inline">
+            <button class="bo-field @(SelectedWifi == d.Id ? "active" : "")" @onclick="() => SelectedWifi = d.Id">@(d.Name ?? d.Id)</button>
+            <button class="bo-field bo-compact bo-conn" @onclick="() => Toggle(DeviceType.WIFI, d.Id, ConnectWifi)" disabled="@IsBusy">@ConnLabel(DeviceType.WIFI, d.Id)</button>
+        </div>
+    }
+    @if (wifi.Count == 0 && !IsScanning)
+    {
+        <p class="bo-hint">TAP WIFI TO DISCOVER WIFI DEVICES</p>
+    }
+}
+
+@if (ActiveTab is DeviceType.USB or DeviceType.BT && IsCurrentId(ActiveTab, ActiveTab == DeviceType.USB ? SelectedSerial : SelectedBt))
+{
+    @* credentials go over the USB/BLE link to exactly the selected, connected device *@
+    <div class="bo-label">WIFI SETUP  @DeviceService.CurrentDevice?.Name</div>
+    <div class="bo-inline">
+        <input class="bo-field" @bind="WifiSsid" placeholder="SSID" />
+        <span class="bo-pass">
+            <input class="bo-field" type="@(ShowPass ? "text" : "password")" @bind="WifiPass" placeholder="PASSWORD" />
+            <button type="button" class="bo-eye" @onclick="() => ShowPass = !ShowPass" title="@(ShowPass ? "Hide password" : "Show password")">@(ShowPass ? "🙈" : "👁")</button>
+        </span>
+        <button class="bo-field bo-compact" @onclick="StoreWifi" disabled="@string.IsNullOrWhiteSpace(WifiSsid)">STORE</button>
+    </div>
 }
 
 @code {
-    private static readonly DeviceType[] Tabs = [DeviceType.USB, DeviceType.BT, DeviceType.PC2];
+    private static readonly DeviceType[] Tabs = [DeviceType.USB, DeviceType.BT, DeviceType.PC2, DeviceType.WIFI];
 
     private DeviceType ActiveTab;
     private bool IsScanning;
@@ -74,6 +113,11 @@
     private List<DeviceInfo> BtDevices = [];
     private CancellationTokenSource? _scanCts;
     private bool Pc2Available;
+    private string? SelectedWifi;
+    private List<DeviceInfo> WifiDevices = [];
+    private string WifiSsid = "";
+    private string WifiPass = "";
+    private bool ShowPass;
 
     private bool IsPc2Connected =>
         DeviceService.IsConnected && DeviceService.CurrentDevice?.Type == DeviceType.PC2;
@@ -84,6 +128,7 @@
         DeviceType.USB => "USB",
         DeviceType.BT  => "BLE",
         DeviceType.PC2 => "PC2",
+        DeviceType.WIFI => "WIFI",
         _              => t.ToString().ToUpperInvariant(),
     };
 
@@ -93,6 +138,7 @@
         ActiveTab      = DeviceService.Settings.LastDevice;
         SelectedSerial = DeviceService.Settings.LastSerial?.Id;
         SelectedBt     = DeviceService.Settings.LastBluetooth?.Id;
+        SelectedWifi   = DeviceService.Settings.LastWifi?.Id;
     }
 
     private async void OnServiceStatusChanged(StatusMessage msg) => await InvokeAsync(StateHasChanged);
@@ -119,7 +165,7 @@
         // no scan when only stopping, or when already connected via USB (open port can't be probed)
         if (stopOnly || (tab == DeviceType.USB && DeviceService.IsConnected && DeviceService.CurrentDevice?.Type == tab))
             return;
-        await (tab switch { DeviceType.USB => ScanSerial(), DeviceType.BT => ScanBluetooth(), _ => ScanPc2() });
+        await (tab switch { DeviceType.USB => ScanSerial(), DeviceType.BT => ScanBluetooth(), DeviceType.WIFI => ScanWifi(), _ => ScanPc2() });
     }
 
     private async Task ScanSerial()
@@ -157,7 +203,7 @@
             BtDevices = await DeviceService.ScanBluetoothAsync(
                 s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
                 cts.Token);
-            if (BtDevices is [{ Id: { } singleDeviceId }])
+            if (BtDevices is [{ Id: { } singleDeviceId }] && !IsCurrentId(DeviceType.BT, singleDeviceId))
             {
                 SelectedBt = singleDeviceId;
                 ScanStatus = "Found 1 device. Connecting…";
@@ -171,6 +217,28 @@
             ScanStatus = BtDevices.Count > 0
                 ? $"Found {BtDevices.Count} device(s)."
                 : GetBluetoothEmptyScanMessage();
+        }
+        catch (OperationCanceledException) { if (cts == _scanCts) ScanStatus = "Scan cancelled."; }
+        catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
+        finally { if (cts == _scanCts) { IsScanning = false; StateHasChanged(); } }
+    }
+
+    private async Task ScanWifi()
+    {
+        _scanCts?.Cancel();
+        var cts = _scanCts = new CancellationTokenSource();
+        IsScanning = true;
+        WifiDevices = [];
+        ScanStatus = "Scanning…";
+        StateHasChanged();
+        try
+        {
+            WifiDevices = await DeviceService.ScanWifiAsync(
+                s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
+                cts.Token);
+            if (WifiDevices.Count > 0 && SelectedWifi is null)
+                SelectedWifi = WifiDevices[0].Id;
+            ScanStatus = $"Found {WifiDevices.Count} device(s).";
         }
         catch (OperationCanceledException) { if (cts == _scanCts) ScanStatus = "Scan cancelled."; }
         catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
@@ -228,7 +296,57 @@
         ScanStatus = DeviceService.IsConnected ? "" : "Connect failed.";
     }
 
+    private async Task ConnectWifi(string? host)
+    {
+        if (host is null) return;
+        SelectedWifi = host;
+        IsBusy = true;
+        StateHasChanged();
+        await DeviceService.ConnectWifiAsync(host);
+        IsBusy = false;
+        ScanStatus = DeviceService.IsConnected ? "" : "Connect failed.";
+    }
+
+    private bool IsConnectedVia(DeviceType type) =>
+        DeviceService.IsConnected && DeviceService.CurrentDevice?.Type == type;
+
+    private bool IsCurrentId(DeviceType type, string? id) =>
+        id is not null && IsConnectedVia(type) && DeviceService.CurrentDevice?.Id == id;
+
+    // scan result plus the connected device (USB can't be re-probed while its port is open)
+    private List<DeviceInfo> WithCurrent(List<DeviceInfo> scanned, DeviceType type) =>
+        IsConnectedVia(type) && DeviceService.CurrentDevice is { } c && !scanned.Any(d => d.Id == c.Id)
+            ? [c, .. scanned]
+            : scanned;
+
+    private void StoreWifi()
+    {
+        var ssid = WifiSsid.Trim();
+        if (ssid.Contains(' '))
+        {
+            ScanStatus = "SSID with spaces not supported.";
+            return;
+        }
+        DeviceService.SendCommand("wifi", $"{ssid} {WifiPass}");
+        WifiPass = "";
+        ScanStatus = "WiFi stored.";
+    }
+
     private void Disconnect() => DeviceService.Disconnect();
+
+    private string ConnLabel(DeviceType type, string? id) => IsCurrentId(type, id) ? "DISCONNECT" : "CONNECT";
+
+    private async Task Toggle(DeviceType type, string? id, Func<string?, Task> connect)
+    {
+        if (IsCurrentId(type, id)) Disconnect();
+        else await connect(id);
+    }
+
+    private async Task TogglePc2()
+    {
+        if (IsPc2Connected) Disconnect();
+        else await ConnectPc2();
+    }
 
     private static string GetBluetoothEmptyScanMessage()
     {

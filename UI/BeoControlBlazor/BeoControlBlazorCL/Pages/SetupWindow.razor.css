@@ -86,6 +86,7 @@
 }
 
 .bo-controls ::deep .bo-keys-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.bo-controls ::deep .bo-keys-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 .bo-controls ::deep .bo-actions { margin-top: 10px; }
 
@@ -126,6 +127,22 @@
 .bo-controls ::deep button.bo-field { cursor: pointer; }
 .bo-controls ::deep .bo-field.active { color: #fff; }
 .bo-controls ::deep select.bo-field:disabled { color: #444; }
+
+/* fields + compact button in one row (WiFi setup) */
+.bo-controls ::deep .bo-inline { display: flex; gap: 10px; }
+.bo-controls ::deep .bo-inline > .bo-field { flex: 1 1 0; min-width: 0; }
+.bo-controls ::deep .bo-inline input.bo-field { text-transform: none; }   /* SSID/password are case-sensitive */
+.bo-controls ::deep .bo-inline > .bo-pass { flex: 1 1 0; min-width: 0; position: relative; }
+.bo-controls ::deep .bo-pass > input.bo-field { padding-right: 32px; }
+.bo-controls ::deep .bo-pass > input::-ms-reveal { display: none; }   /* no second, native eye in Edge/WebView2 */
+.bo-controls ::deep .bo-eye {
+    position: absolute; top: 0; right: 4px; height: calc(100% - 10px);   /* minus .bo-field margin-bottom */
+    background: none; border: none; color: #888; cursor: pointer; font-size: 13px;
+}
+.bo-controls ::deep .bo-eye:hover { color: #fff; }
+.bo-controls ::deep .bo-inline > .bo-compact { flex: 0 0 auto; width: auto; padding: 8px 12px; text-align: center; }
+.bo-controls ::deep .bo-inline > .bo-compact:disabled { color: #555; cursor: default; }
+.bo-controls ::deep .bo-inline > .bo-conn { flex-basis: 110px; }   /* CONNECT and DISCONNECT same width */
 
 .bo-controls ::deep .bo-hint {
     font-size: 11px;
@@ -198,6 +215,7 @@
     .bo-controls { padding: 14px; }
 
     .bo-controls ::deep .bo-keys-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .bo-controls ::deep .bo-keys-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .bo-controls ::deep .bo-key,
     .bo-controls ::deep .bo-field { padding-top: 11px; padding-bottom: 11px; }   /* touch size */
 

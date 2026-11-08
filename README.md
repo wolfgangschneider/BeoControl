@@ -1,6 +1,6 @@
 # BeoControl
 
-A .NET 10 control system for Bang & Olufsen audio equipment via the Masterlink bus. BeoControl bridges legacy B&O hardware with modern software, supporting both USB PC2 controllers and ESP32-based Beo4 remote emulators over Serial/USB or Bluetooth LE.
+A .NET 10 control system for Bang & Olufsen audio equipment via the Masterlink bus. BeoControl bridges legacy B&O hardware with modern software, supporting both USB PC2 controllers and ESP32-based Beo4 remote emulators over Serial/USB, Bluetooth LE or WiFi.
 
 ## Overview
 
@@ -9,7 +9,7 @@ BeoControl lets you control B&O Masterlink devices (TV, Radio, CD, DVD, etc.) fr
 - **Unified command interface** across heterogeneous B&O hardware
 - **Audio control** — volume, bass, treble, balance, loudness
 - **Source switching** — TV, Radio, CD, DVD, SAT, PC and more
-- **Multi-transport support** — USB (PC2), Serial/USB (ESP32), Bluetooth LE (ESP32)
+- **Multi-transport support** — USB (PC2), Serial/USB (ESP32), Bluetooth LE (ESP32), WiFi (ESP32)
 - **Spotify playback control** — optional Spotify integration for play, pause, next, previous and now-playing info
 - **UI-agnostic design** — the core logic is fully decoupled from the UI layer, making it straightforward to add new frontends
 - **Shared settings** — all UIs share a single settings file (`%APPDATA%\BeoControl\beocontrol.settings.json`) and auto-connect on startup
@@ -51,7 +51,7 @@ Any UI  ──→  IDevice  ──→  Adapter  ──→  Transport  ──→ 
           │                                                  │
           │  ┌──────────────────────┐  ┌──────────────────┐  │
           │  │     Beo4Device       │  │    Pc2Device     │  │
-          │  │   (Serial / BLE)     │  │    (USB PC2)     │  │
+          │  │  (Serial/BLE/WiFi)   │  │    (USB PC2)     │  │
           │  └──────────┬───────────┘  └─────────┬────────┘  │
           └─────────────┼────────────────────────┼───────────┘
                         │                        │
@@ -59,13 +59,13 @@ Any UI  ──→  IDevice  ──→  Adapter  ──→  Transport  ──→ 
           │  Transport Layer    │  │    Hardware Layer      │
           │  SerialTransport    │  │  Pc2Core (event loop)  │
           │  BluetoothTransport │  │  Pc2Mixer (audio HW)   │
-          │  (BLE NUS)          │  │  Beolink (Masterlink)  │
+          │  TcpTransport (WiFi)│  │  Beolink (Masterlink)  │
           └──┬──────────────┬───┘  └───────────┬────────────┘
              │              │                  │
     ┌────────┴───┐  ┌───────┴────┐    ┌────────┴────┐
     │ M5 Atom S3 │  │ M5 Stamp S3│    │ Beolink PC2 │
     │ (Serial /  │  │ (Serial /  │    │   (USB)     │
-    │   BLE)     │  │   BLE)     │    │             │
+    │ BLE / WiFi)│  │ BLE / WiFi)│    │             │
     └─────┬──────┘  └─────┬──────┘    └──────┬──────┘
           │ IR            │ IR               │ Masterlink
           ▼               ▼                  ▼
@@ -76,7 +76,7 @@ Any UI  ──→  IDevice  ──→  Adapter  ──→  Transport  ──→ 
 | Project | Description |
 |---|---|
 | `Interfaces` | Core abstractions: `IDevice`, `ITransport`, `BeoCommands`, `Pc2Commands` |
-| `Adapters/Beo4Adapter` | Adapts ESP32 Beo4 (Serial or BLE) to `IDevice` |
+| `Adapters/Beo4Adapter` | Adapts ESP32 Beo4 (Serial, BLE or WiFi) to `IDevice` |
 | `Adapters/Pc2Adapter` | Adapts PC2 USB hardware to `IDevice` |
 | `Hardware/dotnet_pc2` | Low-level Masterlink/PC2 protocol implementation |
 | `Hardware/esp32_beo4` | ESP32 firmware (PlatformIO) for Beo4 remote emulation |
@@ -97,7 +97,23 @@ The PC2 implementation and Masterlink protocol knowledge is based on the work of
 
 ### ESP32 Beo4 Remote
 
-The ESP32 firmware emulates a Beo4 IR remote and communicates with BeoControl over Serial/USB or Bluetooth LE (Nordic UART Service). It runs on an M5 Atom S3 and is based on the excellent [**esp32_beo4**](https://github.com/aanban/esp32_beo4) project by **aanban** — many thanks for this great foundation!
+The ESP32 firmware emulates a Beo4 IR remote and communicates with BeoControl over Serial/USB, Bluetooth LE (Nordic UART Service) or WiFi (TCP). It runs on an M5 Atom S3 and is based on the excellent [**esp32_beo4**](https://github.com/aanban/esp32_beo4) project by **aanban** — many thanks for this great foundation!
+
+#### WiFi
+
+WiFi is optional — without stored credentials the radio stays off.
+
+1. Connect to the ESP32 via **USB** or **BLE** (Setup → DEVICE).
+2. Select the connected device in the list; **WIFI SETUP** appears below it. Enter SSID and password (both case-sensitive) and press **STORE**.  
+   The credentials are sent over the existing link and stored in the ESP32's NVS, so they survive reboots and firmware updates.
+3. Tap **WIFI** to discover devices on the network and press **CONNECT**.
+
+Details:
+
+- Discovery uses mDNS (service `_beo4._tcp.local`); the device announces itself as e.g. `beo4remote-atom.local`.
+- Commands run over a plain line-based TCP connection on port 23 — the same text protocol as Serial/BLE (one client at a time).
+- Firmware commands: `wifi` (status, IP), `wifi <ssid> <password>` (store + connect), `wifi off` (erase credentials, radio off). SSIDs with spaces are not supported.
+- ESP32 WiFi is 2.4 GHz only.
 
 ## Getting Started
 

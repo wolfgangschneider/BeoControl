@@ -57,13 +57,16 @@ QueueHandle_t beo4_tx_queue;           // referenced by CommandProcessor.h
 // ── Channels ─────────────────────────────────────────────────────────
 static SerialChannel serialCh;
 static ActiveBtChannel btCh;
+WifiChannel wifiCh;                    // referenced by CommandProcessor.h
 
 // ── Input buffers ─────────────────────────────────────────────────────
-static constexpr size_t CMD_BUF_SIZE = 64;
+static constexpr size_t CMD_BUF_SIZE = 128;   // "wifi <ssid 32> <pass 63>" must fit
 static char    serialCmdBuf[CMD_BUF_SIZE];
 static uint8_t serialCmdLen = 0;
 static char    btCmdBuf[CMD_BUF_SIZE];
 static uint8_t btCmdLen = 0;
+static char    wifiCmdBuf[CMD_BUF_SIZE];
+static uint8_t wifiCmdLen = 0;
 //-- BL E heartbeat timestamp --
 static unsigned long lastHeartbeat = 0;
 
@@ -126,6 +129,7 @@ if (Serial) {
  }
 */
     btCh.begin(DEVICE_NAME);
+    wifiCh.begin(DEVICE_NAME);
 
     // Beo4 IR TX
     pinMode(IR_TX_PIN, OUTPUT);
@@ -138,6 +142,8 @@ if (Serial) {
 void loop() {
     pollChannel(serialCh, serialCmdBuf, serialCmdLen);
     pollChannel(btCh, btCmdBuf, btCmdLen);
+    wifiCh.handle();
+    pollChannel(wifiCh, wifiCmdBuf, wifiCmdLen);
 
      if (btCh.connected() && millis() - lastHeartbeat >= 5000) {
          lastHeartbeat = millis();

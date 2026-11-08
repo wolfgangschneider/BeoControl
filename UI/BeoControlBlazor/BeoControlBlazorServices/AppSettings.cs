@@ -33,6 +33,9 @@ public class AppSettings
     /// <summary>Last connected BLE device (MAC/device ID + name). Null = scan.</summary>
     public DeviceInfo? LastBluetooth { get; set; }
 
+    /// <summary>Last connected WiFi device (Id = host name or IP + firmware name).</summary>
+    public DeviceInfo? LastWifi { get; set; }
+
     /// <summary>Last saved PC2 audio mixer settings.</summary>
     public AudioSetupDto AudioSetup { get; set; } = new();
 

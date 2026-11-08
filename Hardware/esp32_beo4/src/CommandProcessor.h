@@ -2,6 +2,9 @@
 #include <Arduino.h>
 #include "IrBeo4.h"
 #include "Channel.h"
+#include "WifiChannel.h"
+
+extern WifiChannel wifiCh;   // defined in main.cpp
 
 //#define DEVICE_NAME "Beo4Remote"
 
@@ -123,7 +126,26 @@ static void printHelp(Channel& reply) {
     reply.println("Raw hex:  0x0192 (send raw beoCode)");
     reply.println("  help   - show this message");
     reply.println("  status - show current source");
+    reply.println("  wifi              - show WiFi status");
+    reply.println("  wifi <ssid> <pass> - store credentials + connect");
+    reply.println("  wifi off          - erase credentials, radio off");
     reply.println("");
+}
+
+// ── wifi command (case-sensitive args: works on the original line) ──
+static void handleWifiCommand(char* args, Channel& reply) {
+    while (*args == ' ') args++;
+    if (*args == '\0') { wifiCh.printStatus(reply); return; }
+    if (strcasecmp(args, "off") == 0) {
+        wifiCh.clearCredentials();
+        reply.println("WiFi: credentials erased");
+        return;
+    }
+    char* pass = strchr(args, ' ');   // ssid must not contain spaces
+    if (pass) { *pass++ = '\0'; while (*pass == ' ') pass++; }
+    else pass = (char*)"";
+    wifiCh.setCredentials(args, pass);
+    reply.printf("WiFi: saved, connecting to %s\n", args);
 }
 
 // ── processCommand ──────────────────────────────────────────────────
@@ -133,6 +155,11 @@ static void processCommand(char* line, Channel& reply) {
     while (len > 0 && (line[len-1] == ' ' || line[len-1] == '\r' || line[len-1] == '\n'))
         line[--len] = '\0';
     if (len == 0) return;
+
+    if (strncasecmp(line, "wifi", 4) == 0 && (line[4] == '\0' || line[4] == ' ')) {
+        handleWifiCommand(line + 4, reply);
+        return;
+    }
 
     char lower[64];
     for (size_t i = 0; i <= len && i < sizeof(lower)-1; i++)
