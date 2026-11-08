@@ -214,6 +214,9 @@ public class DeviceService : IDisposable
     /// <summary>Last source the device reported (e.g. "cd", "pc"), or null.</summary>
     public SourceStatusMessage? LastSource { get; private set; }
 
+    /// <summary>Firmware version of the connected ESP32, or null (not reported yet / PC2).</summary>
+    public string? FirmwareVersion { get; private set; }
+
     /// <summary>Speaker and routing state when a PC2 is connected, otherwise null.</summary>
     public Pc2Adapter.Pc2RoutingState? Pc2Routing => (_device as Pc2Adapter.Pc2Device)?.Routing;
 
@@ -314,6 +317,7 @@ public class DeviceService : IDisposable
             _device.Dispose();
         }
         _device = next;
+        FirmwareVersion = null;
         if (_device is not null)
         {
             _device.OnStatusChanged += OnDeviceStatusChanged;
@@ -329,6 +333,8 @@ public class DeviceService : IDisposable
     {
         if (msg is SourceStatusMessage source)
             LastSource = source;
+        if (msg is FirmwareVersionMessage firmware)
+            FirmwareVersion = firmware.Version;
         if (msg is AudioSetupMessage setup)
         {
             SyncPc2AudioSetup(ToAudioSetup(setup), save: true);

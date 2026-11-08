@@ -22,13 +22,20 @@ public sealed class Beo4Device : IDevice
         //DeviceName = deviceName ?? "ESP32 Beo4";
 
         _transport.OnStatusChanged += s => OnStatusChanged?.Invoke(s);
-        _transport.OnLog += m => OnLog?.Invoke(m);
+        _transport.OnLog += m =>
+        {
+            // reply to "version" (sent on connect)
+            if (m.Text.StartsWith("Version:", StringComparison.OrdinalIgnoreCase))
+                OnStatusChanged?.Invoke(new FirmwareVersionMessage(m.Text["Version:".Length..].Trim()));
+            OnLog?.Invoke(m);
+        };
     }
 
     public async Task Connect()
     {
         var r = await _transport.Connect();
         Info = r ?? throw new Exception("Transport connect failed");
+        _transport.SendLine("version");
     }
 
     public void CancelAutoDetect() => _transport.CancelAutoDetect();

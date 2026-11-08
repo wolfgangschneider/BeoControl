@@ -3,9 +3,10 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <Preferences.h>
+#include <ArduinoOTA.h>
 #include "Channel.h"
 
-// WiFi STA + single-client TCP server (raw line protocol, port 23).
+// WiFi STA + single-client TCP server (raw line protocol, port 23) + ArduinoOTA (espota, UDP 3232).
 // Credentials live in NVS (namespace "wifi"); set via the "wifi <ssid> <pass>" command.
 // Without stored credentials the radio stays off.
 class WifiChannel : public Channel {
@@ -40,10 +41,20 @@ public:
                 MDNS.addService("beo4", "tcp", PORT);     // app discovers _beo4._tcp.local
                 _mdns = true;
             }
+            if (!_ota) {
+                ArduinoOTA.setHostname(_host);
+                ArduinoOTA.setMdnsEnabled(false);         // mDNS already runs (see above)
+                ArduinoOTA.onStart([] { Serial.println("OTA: start"); });
+                ArduinoOTA.onEnd([] { Serial.println("OTA: done, rebooting"); });
+                ArduinoOTA.onError([](ota_error_t e) { Serial.printf("OTA: error %u\n", e); });
+                ArduinoOTA.begin();
+                _ota = true;
+            }
         } else if (!up && _wasUp) {
             Serial.println("WiFi: disconnected");
         }
         _wasUp = up;
+        if (_ota) ArduinoOTA.handle();
 
         // newest client wins
         if (_server.hasClient()) {
@@ -63,10 +74,11 @@ public:
             // begin() fails with ESP_ERR_WIFI_CONN while a previous connect is still
             // retrying -> restart the STA from scratch
             if (_client) _client.stop();
+            if (_ota) ArduinoOTA.end();
             if (_mdns) MDNS.end();
             WiFi.disconnect(true);
             WiFi.mode(WIFI_OFF);
-            _mdns = _wasUp = false;
+            _ota = _mdns = _wasUp = false;
         }
         start(ssid, pass);
     }
@@ -79,11 +91,15 @@ public:
         if (!_started) return;
         if (_client) _client.stop();
         _server.end();
+        if (_ota) ArduinoOTA.end();
         if (_mdns) MDNS.end();
         WiFi.disconnect(true);
         WiFi.mode(WIFI_OFF);
-        _started = _mdns = _wasUp = false;
+        _started = _ota = _mdns = _wasUp = false;
     }
+
+    bool configured() const { return _started; }                                   // credentials stored
+    bool online()     const { return _started && WiFi.status() == WL_CONNECTED; }
 
     void printStatus(Channel& reply) {
         if (!_started) { reply.println("WiFi: off (no credentials)"); return; }
@@ -128,5 +144,6 @@ private:
     WiFiClient _client;
     bool       _started = false;
     bool       _mdns    = false;
+    bool       _ota     = false;
     bool       _wasUp   = false;
 };

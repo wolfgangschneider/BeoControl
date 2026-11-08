@@ -6,6 +6,11 @@
 
 extern WifiChannel wifiCh;   // defined in main.cpp
 
+// Release version, set by CI via PLATFORMIO_BUILD_FLAGS (-DFW_VERSION=\"1.2.3\")
+#ifndef FW_VERSION
+#define FW_VERSION "dev"
+#endif
+
 //#define DEVICE_NAME "Beo4Remote"
 
 // ── Device identity ──────────────────────────────────────────────────
@@ -126,6 +131,7 @@ static void printHelp(Channel& reply) {
     reply.println("Raw hex:  0x0192 (send raw beoCode)");
     reply.println("  help   - show this message");
     reply.println("  status - show current source");
+    reply.println("  version - show firmware version");
     reply.println("  wifi              - show WiFi status");
     reply.println("  wifi <ssid> <pass> - store credentials + connect");
     reply.println("  wifi off          - erase credentials, radio off");
@@ -168,6 +174,10 @@ static void processCommand(char* line, Channel& reply) {
 
     if (strcmp(lower, "name") == 0) {
         reply.println("Name: " DEVICE_NAME);
+        return;
+    }
+    if (strcmp(lower, "version") == 0) {
+        reply.println("Version: " FW_VERSION);
         return;
     }
     if (strcmp(lower, "help") == 0) {

@@ -1,11 +1,18 @@
+@using BeoControl.Interfaces
 @using BeoControlBlazorServices
 @using BeoControlBlazorCL.Pages
 @using System.Reflection
+@using BeoControlBlazor.Services
+@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Sections
 @inject IAutostartRegistrationService AutostartRegistrationService
+@inject DeviceService DeviceService
+@inject UpdateService UpdateService
+@implements IDisposable
 
 <SectionContent SectionName="@SetupWindow.DisplayLine2">
     <span class="led @(_launchOnWindowsSignIn ? "led-green" : "led-off")">AUTOSTART</span>
+    <span class="led led-red">UPDATE @(string.IsNullOrEmpty(Pinned) ? Mode.ToString().ToUpperInvariant() : $"PIN {Pinned}")</span>
 </SectionContent>
 
 <div class="bo-label">AUTOSTART</div>
@@ -23,10 +30,124 @@ else
 <div class="bo-label">VERSION</div>
 <div class="bo-field">@GetAppVersionDisplay()</div>
 
+<div class="bo-label">FIRMWARE</div>
+<div class="bo-inline">
+    <div class="bo-field">@(DeviceService.FirmwareVersion is { } fw ? $"v{fw}" : "NO DEVICE CONNECTED")</div>
+    <button class="bo-field bo-compact" @onclick="UpdateService.UpdateFirmwareAsync" disabled="@(!UpdateService.FirmwareUpdateAvailable)">
+        @(UpdateService.FirmwareProgress is { } p ? $"{p} %" : $"UPDATE TO v{UpdateService.AppVersion}")
+    </button>
+</div>
+@if (UpdateService.FirmwareStatus is { } status)
+{
+    <p class="bo-hint">@status.ToUpperInvariant()</p>
+}
+else if (DeviceService.FirmwareVersion is not null && DeviceService.CurrentDevice?.Type != DeviceType.WIFI)
+{
+    <p class="bo-hint">FIRMWARE UPDATE NEEDS A WIFI CONNECTION</p>
+}
+
+<div class="bo-label">UPDATE</div>
+<div class="bo-keys bo-keys-3">
+    @foreach (var mode in Enum.GetValues<UpdateMode>())
+    {
+        <button class="bo-key @(Mode == mode ? "active" : "")" @onclick="() => Mode = mode" disabled="@(!string.IsNullOrEmpty(Pinned))">@mode.ToString().ToUpperInvariant()</button>
+    }
+    @* applies to AUTO and to the PIN VERSION list *@
+    <button class="bo-key @(Prereleases ? "active" : "")" @onclick="TogglePrereleases">PRERELEASES</button>
+</div>
+<div class="bo-label">PIN VERSION</div>
+@if (_versions.Count > 0 || !string.IsNullOrEmpty(Pinned))
+{
+    <InputSelect class="bo-field" @bind-Value="Pinned">
+        <option value="">NOT PINNED</option>
+        @foreach (var v in _versions)
+        {
+            <option value="@v">v@(v)</option>
+        }
+        @if (!string.IsNullOrEmpty(Pinned) && !_versions.Contains(Pinned))
+        {
+            <option value="@Pinned">v@(Pinned)</option>
+        }
+    </InputSelect>
+    <p class="bo-hint">A PINNED VERSION IS INSTALLED AND KEPT ON THE NEXT START, ALSO AS DOWNGRADE</p>
+}
+else
+{
+    <p class="bo-hint">@_versionsStatus</p>
+}
+
 @code {
     private bool _launchOnWindowsSignIn;
 
-    protected override void OnInitialized() => _launchOnWindowsSignIn = AutostartRegistrationService.IsEnabled();
+    private List<string> _versions = [];
+    private string _versionsStatus = "LOADING VERSIONS…";
+
+    protected override void OnInitialized()
+    {
+        _launchOnWindowsSignIn = AutostartRegistrationService.IsEnabled();
+        UpdateService.FirmwareChanged += OnChanged;
+        DeviceService.OnStatusChanged += OnDeviceStatusChanged;
+    }
+
+    private async void OnChanged() => await InvokeAsync(StateHasChanged);
+    private void OnDeviceStatusChanged(StatusMessage _) => OnChanged();
+
+    public void Dispose()
+    {
+        UpdateService.FirmwareChanged -= OnChanged;
+        DeviceService.OnStatusChanged -= OnDeviceStatusChanged;
+    }
+
+    protected override Task OnInitializedAsync() => LoadVersionsAsync();
+
+    private async Task TogglePrereleases()
+    {
+        Prereleases = !Prereleases;
+        await LoadVersionsAsync();
+    }
+
+    private async Task LoadVersionsAsync()
+    {
+        try
+        {
+            _versions = await UpdateService.GetAvailableVersionsAsync();
+            _versionsStatus = "ONLY AVAILABLE IN INSTALLED RELEASE BUILDS";
+        }
+        catch (Exception ex)
+        {
+            _versionsStatus = $"VERSIONS NOT AVAILABLE: {ex.Message}";
+        }
+    }
+
+    private UpdateMode Mode
+    {
+        get => DeviceService.Settings.UpdateMode;
+        set
+        {
+            DeviceService.Settings.UpdateMode = value;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private bool Prereleases
+    {
+        get => DeviceService.Settings.IncludePrereleases;
+        set
+        {
+            DeviceService.Settings.IncludePrereleases = value;
+            DeviceService.Settings.Save();
+        }
+    }
+
+    private string Pinned
+    {
+        get => DeviceService.Settings.PinnedVersion ?? "";
+        set
+        {
+            DeviceService.Settings.PinnedVersion = string.IsNullOrEmpty(value) ? null : value;
+            DeviceService.Settings.Save();
+        }
+    }
 
     private Task OnAutostartChanged()
     {

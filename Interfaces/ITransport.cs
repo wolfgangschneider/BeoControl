@@ -170,6 +170,12 @@ public sealed record SourceStatusMessage(string Command, int? Index = null) : St
     public override string Text => Command;
 }
 
+/// <summary>Firmware version reported by the ESP32 ("version" command, e.g. "1.4.0" or "dev").</summary>
+public sealed record FirmwareVersionMessage(string Version) : StatusMessage
+{
+    public override string Text => $"Firmware {Version}";
+}
+
 /// <summary>Current PC2 audio setup values.</summary>
 public sealed record AudioSetupMessage(int Volume, int Bass, int Treble, int Balance, bool Loudness) : StatusMessage
 {

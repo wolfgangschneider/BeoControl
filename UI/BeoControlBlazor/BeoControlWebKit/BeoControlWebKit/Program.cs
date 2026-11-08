@@ -19,8 +19,6 @@ using WebKitGtk;
 [UnsupportedOSPlatform("Windows")]
 internal class Program : IHostedService
 {
-    private const string UpdateFeedUrl = "https://wolfgangschneider.github.io/BeoControl/updates/";
-
     private static async Task Main(string[] args)
     {
         VelopackApp.Build().Run();
@@ -49,6 +47,7 @@ internal class Program : IHostedService
         .AddHostedService<Program>();
 
         builder.Services.AddSingleton<DeviceService>();
+        builder.Services.AddSingleton<UpdateService>();
         builder.Services.AddSingleton<WebKitSpotifyService>();
         builder.Services.AddSingleton<ISpotifyService>(sp => sp.GetRequiredService<WebKitSpotifyService>());
         builder.Services.AddSingleton<IAutostartRegistrationService, UnsupportedAutostartRegistrationService>();
@@ -125,43 +124,11 @@ internal class Program : IHostedService
 
     private async Task CheckForUpdatesAsync()
     {
-        try
+        var updates = _serviceProvider.GetRequiredService<UpdateService>();
+        if (await updates.CheckOnStartupAsync())
         {
-            Console.WriteLine("Velopack: starting update check");
-            Console.WriteLine($"Velopack: AppContext.BaseDirectory = {AppContext.BaseDirectory}");
-            Console.WriteLine($"Velopack: CurrentDirectory = {Environment.CurrentDirectory}");
-            Console.WriteLine($"Velopack: ProcessPath = {Environment.ProcessPath}");
-
-            Console.WriteLine($"Velopack: UpdateFeedUrl = {UpdateFeedUrl}");
-            var manager = new UpdateManager(UpdateFeedUrl);
-            Console.WriteLine($"Velopack: IsInstalled = {manager.IsInstalled}");
-            if (!manager.IsInstalled)
-            {
-                Console.WriteLine("Velopack: skipping update check because app is not running from an installed Velopack location");
-                return;
-            }
-
-            Console.WriteLine("Velopack: checking update feed");
-            var update = await manager.CheckForUpdatesAsync();
-            if (update is null)
-            {
-                Console.WriteLine("Velopack: no update available");
-                return;
-            }
-
-            Console.WriteLine($"Velopack: update found -> {update.TargetFullRelease.Version}");
-            Console.WriteLine("Velopack: downloading update package");
-            await manager.DownloadUpdatesAsync(update);
-            Console.WriteLine("Velopack: download finished");
-
-            Console.WriteLine("Velopack: scheduling apply on exit");
-            manager.WaitExitThenApplyUpdates(update.TargetFullRelease);
             Console.WriteLine("Velopack: quitting app so update can be applied");
             _app.Quit();
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"Velopack update check failed: {ex}");
         }
     }
 

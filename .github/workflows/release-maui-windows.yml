@@ -90,9 +90,54 @@ jobs:
 
           gh @args
 
+  build-firmware:
+    name: Build ESP32 firmware
+    needs: prepare-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build all boards
+        shell: bash
+        env:
+          PLATFORMIO_BUILD_FLAGS: -DFW_VERSION=\"${{ needs.prepare-release.outputs.release_version }}\"
+        run: |
+          pip install platformio
+          cd Hardware/esp32_beo4
+          # file name = firmware DEVICE_NAME, so the app picks "<name>.bin" without a mapping table
+          declare -A names=(
+            [m5stack-atom]=Beo4Remote_Atom
+            [m5atoms3]=Beo4Remote_AtomS3
+            [m5stamps3]=Beo4Remote_StampS3
+            [esp32-s3-mini-1-N4R2]=Beo4Remote_S3Mini
+            [esp32dev]=Beo4Remote_ESP32
+          )
+          mkdir -p "$RUNNER_TEMP/firmware"
+          for env in "${!names[@]}"; do
+            pio run -e "$env"
+            cp ".pio/build/$env/firmware.bin" "$RUNNER_TEMP/firmware/${names[$env]}.bin"
+          done
+
+      - name: Upload firmware workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: ${{ runner.temp }}/firmware
+          if-no-files-found: error
+
+      - name: Upload firmware to GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload '${{ needs.prepare-release.outputs.release_tag }}' "$RUNNER_TEMP"/firmware/*.bin --clobber
+
   publish-velopack-maui:
     name: Publish Velopack MAUI ${{ matrix.runtime }} (${{ matrix.package_mode }})
-    needs: prepare-release
+    needs: [prepare-release, build-firmware]
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -153,6 +198,12 @@ jobs:
             -p:PublishTrimmed=false `
             -o $publishDir
 
+      - name: Bundle firmware
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: ${{ runner.temp }}\publish\velopack\maui\${{ matrix.runtime }}\${{ matrix.package_mode }}\Firmware
+
       - name: Pack MAUI Windows with Velopack
         shell: pwsh
         run: |
@@ -200,13 +251,14 @@ jobs:
           $runtime = '${{ matrix.runtime }}'
           $packageMode = '${{ matrix.package_mode }}'
           $releaseDir = Join-Path $env:RUNNER_TEMP "releases\velopack-maui-$runtime-$packageMode"
-          Get-ChildItem -Path $releaseDir -File -Filter "*-Setup.exe" | ForEach-Object {
+          # Setup + full package + feed json: every release stays installable (version pin / downgrade)
+          Get-ChildItem -Path $releaseDir -File | Where-Object { $_.Name -like '*-Setup.exe' -or $_.Name -like '*-full.nupkg' -or $_.Name -like 'releases.*.json' } | ForEach-Object {
             gh release upload '${{ needs.prepare-release.outputs.release_tag }}' $_.FullName --clobber
           }
 
   publish-velopack-webkit:
     name: Publish Velopack WebKit ${{ matrix.runtime }} (${{ matrix.package_mode }})
-    needs: prepare-release
+    needs: [prepare-release, build-firmware]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -259,6 +311,12 @@ jobs:
             -p:Version=${{ needs.prepare-release.outputs.release_version }} `
             -o $publishDir
 
+      - name: Bundle firmware
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: ${{ runner.temp }}/publish/velopack/webkit/${{ matrix.runtime }}/${{ matrix.package_mode }}/Firmware
+
       - name: Pack BeoControlWebKit with Velopack
         shell: pwsh
         run: |
@@ -302,7 +360,8 @@ jobs:
           $runtime = '${{ matrix.runtime }}'
           $packageMode = '${{ matrix.package_mode }}'
           $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-$runtime-$packageMode"
-          Get-ChildItem -Path $releaseDir -File -Filter "*.AppImage" | ForEach-Object {
+          # AppImage + full package + feed json: every release stays installable (version pin / downgrade)
+          Get-ChildItem -Path $releaseDir -File | Where-Object { $_.Name -like '*.AppImage' -or $_.Name -like '*-full.nupkg' -or $_.Name -like 'releases.*.json' } | ForEach-Object {
             gh release upload '${{ needs.prepare-release.outputs.release_tag }}' $_.FullName --clobber
           }
 
@@ -407,6 +466,8 @@ jobs:
       - prepare-release
       - publish-velopack-maui
       - publish-velopack-webkit
+    # the Pages feed drives AUTO updates -> stable releases only; prereleases are installable via version pin
+    if: needs.prepare-release.outputs.prerelease != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Configure GitHub Pages

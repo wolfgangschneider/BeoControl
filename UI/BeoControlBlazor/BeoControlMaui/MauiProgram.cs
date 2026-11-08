@@ -73,6 +73,7 @@ namespace BeoControlMaui
 #endif
 
             builder.Services.AddSingleton<DeviceService>();
+            builder.Services.AddSingleton<UpdateService>();
 
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();

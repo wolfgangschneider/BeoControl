@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <esp_ota_ops.h>
 #include "IrBeo4.h"
 #include "SerialChannel.h"
 
@@ -69,6 +70,13 @@ static char    wifiCmdBuf[CMD_BUF_SIZE];
 static uint8_t wifiCmdLen = 0;
 //-- BL E heartbeat timestamp --
 static unsigned long lastHeartbeat = 0;
+
+// ── OTA rollback ──────────────────────────────────────────────────────
+// A freshly OTA-flashed firmware stays "pending" until loop() marks it valid.
+// If it crashes/reboots before that, the bootloader falls back to the previous one.
+extern "C" bool verifyRollbackLater() { return true; }   // overrides Arduino's auto-confirm
+static constexpr unsigned long APP_VALID_AFTER_MS = 30000;
+static bool appValid = false;
 
 static void printStartup(Channel& channel, bool irReady) {
     channel.print("===> start beo4... ");
@@ -144,6 +152,12 @@ void loop() {
     pollChannel(btCh, btCmdBuf, btCmdLen);
     wifiCh.handle();
     pollChannel(wifiCh, wifiCmdBuf, wifiCmdLen);
+
+    // self-test passed: 30 s up, and WiFi online if configured (OTA needs it)
+    if (!appValid && millis() > APP_VALID_AFTER_MS && (wifiCh.online() || !wifiCh.configured())) {
+        esp_ota_mark_app_valid_cancel_rollback();
+        appValid = true;
+    }
 
      if (btCh.connected() && millis() - lastHeartbeat >= 5000) {
          lastHeartbeat = millis();
