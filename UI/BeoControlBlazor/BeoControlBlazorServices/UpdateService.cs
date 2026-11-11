@@ -146,7 +146,7 @@ public sealed class UpdateService(DeviceService deviceService, ILogger<UpdateSer
             return;
         }
 
-        SetFirmware(null, $"Firmware {AppVersion} installed, device restarts…");
+        SetFirmware(null, $"Firmware {AppVersion} uploaded, device restarts…");
         deviceService.Disconnect();
         await Task.Delay(RebootWait);
         for (var attempt = 1; attempt <= ReconnectAttempts && !deviceService.IsConnected; attempt++)
@@ -155,9 +155,18 @@ public sealed class UpdateService(DeviceService deviceService, ILogger<UpdateSer
             if (!deviceService.IsConnected)
                 await Task.Delay(RebootWait / 2);
         }
-        SetFirmware(null, deviceService.IsConnected
+        if (!deviceService.IsConnected)
+        {
+            SetFirmware(null, "Firmware uploaded, reconnect failed — connect via WIFI to check the version.");
+            return;
+        }
+
+        // only the version the restarted device reports proves the update (it may have rolled back)
+        for (var i = 0; i < 20 && deviceService.FirmwareVersion is null; i++)
+            await Task.Delay(250);
+        SetFirmware(null, deviceService.FirmwareVersion == AppVersion
             ? $"Firmware {AppVersion} installed."
-            : $"Firmware {AppVersion} installed, reconnect failed — connect via WIFI.");
+            : $"Update not applied: device reports {deviceService.FirmwareVersion ?? "no version"} instead of {AppVersion}.");
     }
 
     private void SetFirmware(int? progress, string? status)

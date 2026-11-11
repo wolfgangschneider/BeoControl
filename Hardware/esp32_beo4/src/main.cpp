@@ -1,25 +1,29 @@
 #include <Arduino.h>
 #include <esp_ota_ops.h>
+#include <Preferences.h>
 #include "IrBeo4.h"
 #include "SerialChannel.h"
 
-// IR TX pin per board
+// IR TX pin + soft-GND pin per board (defaults; "txpin" stores overrides in NVS)
 #ifdef BOARD_M5ATOMS3
     #include "BtNimbleMultiChannel.h"
     using ActiveBtChannel = BtNimbleMultiChannel;
     constexpr uint8_t IR_TX_PIN = 1;   // M5 Atom S3
+    constexpr int8_t  IR_GND_PIN = 2;  // Grove G2 next to G1
     #undef DEVICE_NAME
     #define DEVICE_NAME "Beo4Remote_AtomS3"
 #elif defined(BOARD_M5STAMPS3)
     #include "BtNimbleMultiChannel.h"
     using ActiveBtChannel = BtNimbleMultiChannel;
     constexpr uint8_t IR_TX_PIN = 9;    // M5 Stamp S3 — G0
+    constexpr int8_t  IR_GND_PIN = -1;
     #undef DEVICE_NAME
     #define DEVICE_NAME "Beo4Remote_StampS3"
 #elif defined(BOARD_M5STAMPC3)
     #include "BtNimbleSingleChannel.h"
     using ActiveBtChannel = BtNimbleSingleChannel;
     constexpr uint8_t IR_TX_PIN = 4;    
+    constexpr int8_t  IR_GND_PIN = -1;
     #undef DEVICE_NAME
     #define DEVICE_NAME "Beo4Remote_StampC3"
 
@@ -28,6 +32,7 @@
     using ActiveBtChannel = BtNimbleSingleChannel;
     constexpr uint8_t IR_TX_PIN = 25;    // M5 Stack Atom — BCB board
    // constexpr uint8_t IR_TX_PIN = 32;    // M5 Stack Atom Grove
+    constexpr int8_t  IR_GND_PIN = 26;
     #undef DEVICE_NAME
     #define DEVICE_NAME "Beo4Remote_Atom"
 
@@ -35,6 +40,7 @@
     #include "BtNimbleSingleChannel.h"
     using ActiveBtChannel = BtNimbleSingleChannel;
     constexpr uint8_t IR_TX_PIN = 13;    // ESP32-S3-mini-1-N4R2 — G0
+    constexpr int8_t  IR_GND_PIN = -1;
     #undef DEVICE_NAME
     #define DEVICE_NAME "Beo4Remote_S3Mini"
 
@@ -45,6 +51,7 @@
     #include "BtNimbleSingleChannel.h"
     using ActiveBtChannel = BtNimbleSingleChannel;
     constexpr uint8_t IR_TX_PIN = 32;   // esp32dev
+    constexpr int8_t  IR_GND_PIN = -1;
     #undef DEVICE_NAME
     #define DEVICE_NAME "Beo4Remote_ESP32"
 #endif
@@ -52,7 +59,9 @@
 #include "CommandProcessor.h"
 
 // ── Beo4 IR ─────────────────────────────────────────────────────────
-static IrBeo4 beo4(-1, IR_TX_PIN);
+uint8_t irTxPin  = IR_TX_PIN;          // referenced by CommandProcessor.h
+int8_t  irGndPin = IR_GND_PIN;         // soft GND return for the IR LED, -1 = none
+static IrBeo4* beo4;
 QueueHandle_t beo4_tx_queue;           // referenced by CommandProcessor.h
 
 // ── Channels ─────────────────────────────────────────────────────────
@@ -82,7 +91,7 @@ static void printStartup(Channel& channel, bool irReady) {
     channel.print("===> start beo4... ");
     channel.print(DEVICE_NAME);
     channel.print("  IR TX pin ");
-   channel.printf("%d ", IR_TX_PIN);
+   channel.printf("%d GND pin %d ", irTxPin, irGndPin);
     channel.println(irReady ? "OK" : "failed");
     channel.println("\n\n=== ESP32 Beo4 Emulator ===");
     printHelp(channel);
@@ -116,14 +125,15 @@ void setup() {
     delay(300);   // let the host's monitor finish reconnecting to the freshly re-enumerated USB-CDC port
 #endif
 
-#if defined(BOARD_M5STACK_ATOM)
-    pinMode(GPIO_NUM_26, OUTPUT);
-    digitalWrite(GPIO_NUM_26, LOW);  // soft GND return for the IR LED on IR_TX_PIN
-#endif
-#if defined(BOARD_M5ATOMS3)
-    pinMode(GPIO_NUM_2, OUTPUT);
-    digitalWrite(GPIO_NUM_2, LOW);  // soft GND return for the IR LED on IR_TX_PIN
-#endif
+    Preferences prefs;
+    prefs.begin("ir", true);
+    irTxPin  = prefs.getUChar("txpin", IR_TX_PIN);
+    irGndPin = prefs.getChar("gndpin", IR_GND_PIN);
+    prefs.end();
+    if (irGndPin >= 0) {
+        pinMode(irGndPin, OUTPUT);
+        digitalWrite(irGndPin, LOW);  // soft GND return for the IR LED on irTxPin
+    }
 
 // not working esp32 & Atom
 /*
@@ -140,9 +150,10 @@ if (Serial) {
     wifiCh.begin(DEVICE_NAME);
 
     // Beo4 IR TX
-    pinMode(IR_TX_PIN, OUTPUT);
+    beo4 = new IrBeo4(-1, irTxPin);
+    pinMode(irTxPin, OUTPUT);
     beo4_tx_queue = xQueueCreate(50, sizeof(uint32_t));
-    bool irReady = beo4.Begin(NULL, beo4_tx_queue) == 0;
+    bool irReady = beo4->Begin(NULL, beo4_tx_queue) == 0;
     printStartup(serialCh, irReady);
     printStartup(btCh, irReady);
 }

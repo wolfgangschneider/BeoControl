@@ -234,7 +234,8 @@ jobs:
           $runtime = '${{ matrix.runtime }}'
           $packageMode = '${{ matrix.package_mode }}'
           $releaseDir = Join-Path $env:RUNNER_TEMP "releases\velopack-maui-$runtime-$packageMode"
-          Get-ChildItem -Path $releaseDir -File -Filter "RELEASES*" | Remove-Item -Force
+          # -Filter is case-insensitive and would also delete the new releases.<channel>.json feed
+          Get-ChildItem -Path $releaseDir -File | Where-Object { $_.Name -cmatch '^RELEASES' } | Remove-Item -Force
 
       - name: Upload Velopack workflow artifact
         uses: actions/upload-artifact@v4
@@ -343,7 +344,8 @@ jobs:
           $runtime = '${{ matrix.runtime }}'
           $packageMode = '${{ matrix.package_mode }}'
           $releaseDir = Join-Path $env:RUNNER_TEMP "releases/velopack-webkit-$runtime-$packageMode"
-          Get-ChildItem -Path $releaseDir -File -Filter "RELEASES*" | Remove-Item -Force
+          # -Filter is case-insensitive and would also delete the new releases.<channel>.json feed
+          Get-ChildItem -Path $releaseDir -File | Where-Object { $_.Name -cmatch '^RELEASES' } | Remove-Item -Force
 
       - name: Upload Velopack workflow artifact
         uses: actions/upload-artifact@v4

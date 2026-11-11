@@ -5,6 +5,8 @@
 #include "WifiChannel.h"
 
 extern WifiChannel wifiCh;   // defined in main.cpp
+extern uint8_t irTxPin;      // defined in main.cpp
+extern int8_t  irGndPin;     // defined in main.cpp
 
 // Release version, set by CI via PLATFORMIO_BUILD_FLAGS (-DFW_VERSION=\"1.2.3\")
 #ifndef FW_VERSION
@@ -135,7 +137,32 @@ static void printHelp(Channel& reply) {
     reply.println("  wifi              - show WiFi status");
     reply.println("  wifi <ssid> <pass> - store credentials + connect");
     reply.println("  wifi off          - erase credentials, radio off");
+    reply.println("  txpin             - show IR TX + soft-GND pin");
+    reply.println("  txpin <tx> [gnd]  - store pins (gnd -1 = none) + restart");
     reply.println("");
+}
+
+// ── txpin command: "txpin" shows, "txpin <tx> [gnd]" stores to NVS and restarts ──
+static void handleTxPinCommand(char* args, Channel& reply) {
+    char* end;
+    long tx = strtol(args, &end, 10);
+    if (end == args) { reply.printf("TX pin: %d  GND pin: %d\n", irTxPin, irGndPin); return; }
+    long gnd = irGndPin;
+    char* gndArg = end;
+    long g = strtol(gndArg, &end, 10);
+    if (end != gndArg) gnd = g;
+    if (!GPIO_IS_VALID_OUTPUT_GPIO(tx) || (gnd >= 0 && (!GPIO_IS_VALID_OUTPUT_GPIO(gnd) || gnd == tx)) || gnd < -1) {
+        reply.println("  invalid pin");
+        return;
+    }
+    Preferences prefs;
+    prefs.begin("ir", false);
+    prefs.putUChar("txpin", (uint8_t)tx);
+    prefs.putChar("gndpin", (int8_t)gnd);
+    prefs.end();
+    reply.printf("TX %ld + GND %ld stored, restarting...\n", tx, gnd);
+    delay(200);
+    ESP.restart();
 }
 
 // ── wifi command (case-sensitive args: works on the original line) ──
@@ -178,6 +205,10 @@ static void processCommand(char* line, Channel& reply) {
     }
     if (strcmp(lower, "version") == 0) {
         reply.println("Version: " FW_VERSION);
+        return;
+    }
+    if (strncmp(lower, "txpin", 5) == 0 && (lower[5] == '\0' || lower[5] == ' ')) {
+        handleTxPinCommand(lower + 5, reply);
         return;
     }
     if (strcmp(lower, "help") == 0) {

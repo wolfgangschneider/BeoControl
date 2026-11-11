@@ -69,6 +69,7 @@ else
 <div class="bo-keys bo-keys-3">
     @* applies to the update check and the version list *@
     <button class="bo-key @(Prereleases ? "active" : "")" @onclick="TogglePrereleases">PRERELEASES</button>
+    <button class="bo-key" @onclick="SearchForUpdateAsync">SEARCH FOR UPDATE</button>
 </div>
 
 @code {
@@ -101,6 +102,12 @@ else
     private async Task TogglePrereleases()
     {
         Prereleases = !Prereleases;
+        await LoadVersionsAsync();
+        await UpdateService.CheckForUpdateAsync();
+    }
+
+    private async Task SearchForUpdateAsync()
+    {
         await LoadVersionsAsync();
         await UpdateService.CheckForUpdateAsync();
     }
