@@ -2,7 +2,6 @@
 @using BeoControlBlazorServices
 @using BeoControlBlazorCL.Pages
 @using System.Reflection
-@using BeoControlBlazor.Services
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Sections
 @inject IAutostartRegistrationService AutostartRegistrationService
@@ -12,7 +11,8 @@
 
 <SectionContent SectionName="@SetupWindow.DisplayLine2">
     <span class="led @(_launchOnWindowsSignIn ? "led-green" : "led-off")">AUTOSTART</span>
-    <span class="led led-red">UPDATE @(string.IsNullOrEmpty(Pinned) ? Mode.ToString().ToUpperInvariant() : $"PIN {Pinned}")</span>
+    <span class="led @(Prereleases ? "led-red" : "led-off")">PRERELEASES</span>
+    <span class="led led-green">@GetAppVersionDisplay().ToUpperInvariant()</span>
 </SectionContent>
 
 <div class="bo-label">AUTOSTART</div>
@@ -27,8 +27,6 @@ else
 {
     <p class="bo-hint">AUTOSTART CAN ONLY BE CONFIGURED IN THE WINDOWS MAUI APP</p>
 }
-<div class="bo-label">VERSION</div>
-<div class="bo-field">@GetAppVersionDisplay()</div>
 
 <div class="bo-label">FIRMWARE</div>
 <div class="bo-inline">
@@ -46,46 +44,46 @@ else if (DeviceService.FirmwareVersion is not null && DeviceService.CurrentDevic
     <p class="bo-hint">FIRMWARE UPDATE NEEDS A WIFI CONNECTION</p>
 }
 
-<div class="bo-label">UPDATE</div>
-<div class="bo-keys bo-keys-3">
-    @foreach (var mode in Enum.GetValues<UpdateMode>())
-    {
-        <button class="bo-key @(Mode == mode ? "active" : "")" @onclick="() => Mode = mode" disabled="@(!string.IsNullOrEmpty(Pinned))">@mode.ToString().ToUpperInvariant()</button>
-    }
-    @* applies to AUTO and to the PIN VERSION list *@
-    <button class="bo-key @(Prereleases ? "active" : "")" @onclick="TogglePrereleases">PRERELEASES</button>
-</div>
-<div class="bo-label">PIN VERSION</div>
-@if (_versions.Count > 0 || !string.IsNullOrEmpty(Pinned))
+<div class="bo-label">APP UPDATE</div>
+@if (UpdateService.AvailableVersion is { } available)
 {
-    <InputSelect class="bo-field" @bind-Value="Pinned">
-        <option value="">NOT PINNED</option>
-        @foreach (var v in _versions)
-        {
-            <option value="@v">v@(v)</option>
-        }
-        @if (!string.IsNullOrEmpty(Pinned) && !_versions.Contains(Pinned))
-        {
-            <option value="@Pinned">v@(Pinned)</option>
-        }
-    </InputSelect>
-    <p class="bo-hint">A PINNED VERSION IS INSTALLED AND KEPT ON THE NEXT START, ALSO AS DOWNGRADE</p>
+    <p class="bo-hint">UPDATE AVAILABLE: V@(available.ToUpperInvariant())</p>
+}
+@if (_versions.Count > 0)
+{
+    <div class="bo-inline">
+        <InputSelect class="bo-field" @bind-Value="_selectedVersion">
+            @foreach (var v in _versions)
+            {
+                <option value="@v">v@(v)</option>
+            }
+        </InputSelect>
+        <button class="bo-field bo-compact" @onclick="InstallAsync" disabled="@_installing">@(_installing ? "INSTALLING…" : "INSTALL")</button>
+    </div>
+    <p class="bo-hint">@(_installStatus ?? "INSTALLS THE SELECTED VERSION (ALSO OLDER) AND RESTARTS THE APP")</p>
 }
 else
 {
     <p class="bo-hint">@_versionsStatus</p>
 }
+<div class="bo-keys bo-keys-3">
+    @* applies to the update check and the version list *@
+    <button class="bo-key @(Prereleases ? "active" : "")" @onclick="TogglePrereleases">PRERELEASES</button>
+</div>
 
 @code {
     private bool _launchOnWindowsSignIn;
 
     private List<string> _versions = [];
     private string _versionsStatus = "LOADING VERSIONS…";
+    private string _selectedVersion = "";
+    private bool _installing;
+    private string? _installStatus;
 
     protected override void OnInitialized()
     {
         _launchOnWindowsSignIn = AutostartRegistrationService.IsEnabled();
-        UpdateService.FirmwareChanged += OnChanged;
+        UpdateService.Changed += OnChanged;
         DeviceService.OnStatusChanged += OnDeviceStatusChanged;
     }
 
@@ -94,7 +92,7 @@ else
 
     public void Dispose()
     {
-        UpdateService.FirmwareChanged -= OnChanged;
+        UpdateService.Changed -= OnChanged;
         DeviceService.OnStatusChanged -= OnDeviceStatusChanged;
     }
 
@@ -104,6 +102,23 @@ else
     {
         Prereleases = !Prereleases;
         await LoadVersionsAsync();
+        await UpdateService.CheckForUpdateAsync();
+    }
+
+    private async Task InstallAsync()
+    {
+        _installing = true;
+        _installStatus = null;
+        try
+        {
+            await UpdateService.InstallVersionAsync(_selectedVersion);   // restarts the app on success
+            _installStatus = $"V{_selectedVersion.ToUpperInvariant()} IS ALREADY INSTALLED";
+        }
+        catch (Exception ex)
+        {
+            _installStatus = $"INSTALL FAILED: {ex.Message}";
+        }
+        _installing = false;
     }
 
     private async Task LoadVersionsAsync()
@@ -111,21 +126,12 @@ else
         try
         {
             _versions = await UpdateService.GetAvailableVersionsAsync();
+            _selectedVersion = _versions.FirstOrDefault() ?? "";
             _versionsStatus = "ONLY AVAILABLE IN INSTALLED RELEASE BUILDS";
         }
         catch (Exception ex)
         {
             _versionsStatus = $"VERSIONS NOT AVAILABLE: {ex.Message}";
-        }
-    }
-
-    private UpdateMode Mode
-    {
-        get => DeviceService.Settings.UpdateMode;
-        set
-        {
-            DeviceService.Settings.UpdateMode = value;
-            DeviceService.Settings.Save();
         }
     }
 
@@ -135,16 +141,6 @@ else
         set
         {
             DeviceService.Settings.IncludePrereleases = value;
-            DeviceService.Settings.Save();
-        }
-    }
-
-    private string Pinned
-    {
-        get => DeviceService.Settings.PinnedVersion ?? "";
-        set
-        {
-            DeviceService.Settings.PinnedVersion = string.IsNullOrEmpty(value) ? null : value;
             DeviceService.Settings.Save();
         }
     }

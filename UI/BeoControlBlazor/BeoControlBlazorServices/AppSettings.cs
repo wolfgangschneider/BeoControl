@@ -9,9 +9,6 @@ namespace BeoControlBlazor.Services;
 
 public enum RemoteType { Beolink1000, Beo4 }
 
-/// <summary>App self-update on startup: Auto = latest release, Off = no check.</summary>
-public enum UpdateMode { Auto, Off }
-
 /// <summary>Persisted B&amp;O device settings (last transport type and device identifiers).</summary>
 public class AppSettings
 {
@@ -58,11 +55,8 @@ public class AppSettings
     public SpotifyLaunchMode SpotifyLaunchMode { get; set; } = SpotifyLaunchMode.Web;
     public string Pc2TriggerCommand { get; set; } = string.Empty;
 
-    public UpdateMode UpdateMode { get; set; } = UpdateMode.Auto;
-    /// <summary>AUTO also installs prereleases (e.g. 1.5.0-beta), not only stable releases.</summary>
+    /// <summary>Update check and version list also include prereleases (e.g. 1.5.0-beta).</summary>
     public bool IncludePrereleases { get; set; }
-    /// <summary>App version to install and hold (also as downgrade); overrides <see cref="UpdateMode"/>. Null = not pinned.</summary>
-    public string? PinnedVersion { get; set; }
 
     public static AppSettings Load()
     {

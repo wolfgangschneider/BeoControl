@@ -111,6 +111,13 @@ namespace BeoControlMaui.WinUI
 
                 _settings = AppSettings.Load();
                 var lastWinPosition = _settings.LastWinPosition;
+                // repair geometry saved by older versions while minimized
+                if (lastWinPosition.WindowWidth < 200 || lastWinPosition.WindowHeight < 300)
+                {
+                    lastWinPosition.WindowWidth = AppSettings.WindowGeometry.DefaultWindowWidth;
+                    lastWinPosition.WindowHeight = AppSettings.WindowGeometry.DefaultWindowHeight;
+                    lastWinPosition.WindowX = lastWinPosition.WindowY = 0;   // -> default position above the tray
+                }
 
                 _appWindow.Resize(new SizeInt32(lastWinPosition.WindowWidth, lastWinPosition.WindowHeight));
 
@@ -137,12 +144,9 @@ namespace BeoControlMaui.WinUI
                 .Any(argument => string.Equals(argument, "/silent", StringComparison.OrdinalIgnoreCase));
         }
 
-        private async Task CheckForUpdatesAsync()
-        {
-            var updates = MauiProgram.Services!.GetRequiredService<UpdateService>();
-            if (await updates.CheckOnStartupAsync())
-                _dispatcher?.TryEnqueue(ExitApp);
-        }
+        // only looks for a newer release; installing is a manual step in the SYSTEM tab
+        private Task CheckForUpdatesAsync() =>
+            MauiProgram.Services!.GetRequiredService<UpdateService>().CheckForUpdateAsync();
 
         private void StartSingleInstanceListener()
         {
@@ -369,6 +373,8 @@ namespace BeoControlMaui.WinUI
         private void OnAppWindowChanged(AppWindow sender, AppWindowChangedEventArgs e)
         {
             if (_settings is null || (!e.DidSizeChange && !e.DidPositionChange)) return;
+            // minimized (e.g. while Velopack closes the app for an update) reports a tiny size/odd position -> don't persist
+            if (sender.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized }) return;
 
             var lastWinPosition = _settings.LastWinPosition;
 

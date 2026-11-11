@@ -16,29 +16,23 @@ using Velopack.Sources;
 namespace BeoControlBlazorServices;
 
 /// <summary>
-/// App self-update via Velopack, shared by the desktop hosts.
-/// PinnedVersion set → install and hold exactly that version from the GitHub releases (also downgrade);
-/// otherwise UpdateMode.Auto → latest GitHub release (prereleases only with IncludePrereleases), UpdateMode.Off → nothing.
+/// Manual updates, shared by the desktop hosts — nothing installs by itself:
+/// the hosts call <see cref="CheckForUpdateAsync"/> on startup, which only sets <see cref="AvailableVersion"/>;
+/// the user installs any listed version (also downgrade) via <see cref="InstallVersionAsync"/>.
+/// Versions come from the GitHub releases, prereleases only with AppSettings.IncludePrereleases.
 /// (The Pages feed stays stable-only for installs that predate this service.)
 /// The ESP32 firmware follows the app: the image bundled in Firmware/ has the app's version and is
-/// pushed via OTA when a WiFi-connected device reports a different one (automatically unless UpdateMode.Off).
+/// pushed via OTA on request (<see cref="UpdateFirmwareAsync"/>).
 /// </summary>
-public sealed class UpdateService
+public sealed class UpdateService(DeviceService deviceService, ILogger<UpdateService> logger)
 {
     private const string FeedUrl = "https://wolfgangschneider.github.io/BeoControl/updates/";
     private const string RepoUrl = "https://github.com/wolfgangschneider/BeoControl";
 
-    private readonly DeviceService deviceService;
-    private readonly ILogger<UpdateService> logger;
-
-    public UpdateService(DeviceService deviceService, ILogger<UpdateService> logger)
-    {
-        this.deviceService = deviceService;
-        this.logger = logger;
-        deviceService.OnStatusChanged += OnDeviceStatusChanged;
-    }
-
     private AppSettings Settings => deviceService.Settings;
+
+    /// <summary>Raised when <see cref="AvailableVersion"/> or the firmware upload state changes.</summary>
+    public event Action? Changed;
 
     /// <summary>Installed version, or null when not running from a Velopack install (dev build, Android).</summary>
     public string? CurrentVersion
@@ -50,32 +44,24 @@ public sealed class UpdateService
         }
     }
 
-    /// <summary>Startup check. Returns true when an update was downloaded and scheduled — the caller must then quit the app.</summary>
-    public async Task<bool> CheckOnStartupAsync()
+    /// <summary>Newer app version found by the last check, or null.</summary>
+    public string? AvailableVersion { get; private set; }
+
+    /// <summary>Looks for a newer release (no download); result in <see cref="AvailableVersion"/>.</summary>
+    public async Task CheckForUpdateAsync()
     {
         try
         {
-            if (!string.IsNullOrWhiteSpace(Settings.PinnedVersion))
-                return await InstallVersionAsync(Settings.PinnedVersion);
-            if (Settings.UpdateMode == UpdateMode.Off)
-                return false;
-
             var (_, manager) = CreateGithub(Settings.IncludePrereleases, allowDowngrade: false);
             if (!manager.IsInstalled)
-                return false;
+                return;
             var update = await manager.CheckForUpdatesAsync();
-            if (update is null)
-                return false;
-
-            logger.LogInformation("Update {Version} found, downloading.", update.TargetFullRelease.Version);
-            await manager.DownloadUpdatesAsync(update);
-            manager.WaitExitThenApplyUpdates(update.TargetFullRelease);
-            return true;
+            AvailableVersion = update?.TargetFullRelease.Version.ToString();
+            Changed?.Invoke();
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Update check failed.");
-            return false;
         }
     }
 
@@ -90,23 +76,22 @@ public sealed class UpdateService
     }
 
     /// <summary>
-    /// Downloads exactly <paramref name="version"/> (up- or downgrade) and schedules it for when the app exits.
-    /// Returns true when scheduled, false when already installed or not a Velopack install.
+    /// Downloads exactly <paramref name="version"/> (up- or downgrade), installs it and restarts the app —
+    /// does not return in that case. Returns when already installed or not a Velopack install.
     /// </summary>
-    public async Task<bool> InstallVersionAsync(string version)
+    public async Task InstallVersionAsync(string version)
     {
         var (source, manager) = CreateGithub();
         if (!manager.IsInstalled || manager.CurrentVersion?.ToString() == version)
-            return false;
+            return;
 
         var target = (await GetFullAssetsAsync(source, manager)).FirstOrDefault(a => a.Version.ToString() == version)
             ?? throw new InvalidOperationException($"Version {version} not found in the GitHub releases.");
 
-        logger.LogInformation("Installing pinned version {Version}.", version);
+        logger.LogInformation("Installing version {Version}.", version);
         var update = new UpdateInfo(target, target.Version < manager.CurrentVersion!, null!, []);
         await manager.DownloadUpdatesAsync(update);
-        manager.WaitExitThenApplyUpdates(target);
-        return true;
+        manager.ApplyUpdatesAndRestart(target);
     }
 
     // ── ESP32 firmware ────────────────────────────────────────────────────────
@@ -134,13 +119,8 @@ public sealed class UpdateService
     /// <summary>Result of the last upload (e.g. "Firmware 1.4.0 installed"), null before the first one.</summary>
     public string? FirmwareStatus { get; private set; }
 
-    public event Action? FirmwareChanged;
-
     private static readonly TimeSpan RebootWait = TimeSpan.FromSeconds(10);
     private const int ReconnectAttempts = 3;
-
-    // hosts that already got an automatic update this session -> no endless loop if a device keeps an old version (rollback)
-    private readonly HashSet<string> _autoUpdated = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Pushes the bundled image via OTA, then reconnects: the device reboots and the old TCP
@@ -184,17 +164,10 @@ public sealed class UpdateService
     {
         FirmwareProgress = progress;
         FirmwareStatus = status;
-        FirmwareChanged?.Invoke();
+        Changed?.Invoke();
     }
 
-    private void OnDeviceStatusChanged(StatusMessage msg)
-    {
-        if (msg is FirmwareVersionMessage && Settings.UpdateMode == UpdateMode.Auto && FirmwareUpdateAvailable
-            && deviceService.CurrentDevice?.Id is { } host && _autoUpdated.Add(host))
-            _ = UpdateFirmwareAsync();
-    }
-
-    /// <param name="prerelease">Include prereleases. Default true so an already pinned prerelease stays installable.</param>
+    /// <param name="prerelease">Include prereleases. Default true so any listed version stays installable.</param>
     private static (GithubSource Source, UpdateManager Manager) CreateGithub(bool prerelease = true, bool allowDowngrade = true)
     {
         var source = new GithubSource(RepoUrl, null!, prerelease);

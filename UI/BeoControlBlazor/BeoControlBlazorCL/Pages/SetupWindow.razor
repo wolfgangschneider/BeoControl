@@ -4,6 +4,7 @@
 @using BeoControlBlazorCL.Components.Setup
 @using Microsoft.AspNetCore.Components.Sections
 @inject DeviceService DeviceService
+@inject UpdateService UpdateService
 @implements IDisposable
 
 
@@ -32,7 +33,11 @@
             {
                 <span class="led led-green">@DeviceTab.Label(connected.Type)</span>
             }
-            <span class="led @(DeviceService.Settings.SpotifyEnabled ? "led-green" : "led-off") bo-push bo-wide">SPOTIFY</span>
+            @if (UpdateService.AvailableVersion is { } update)
+            {
+                <span class="led led-red bo-push">UPDATE V@(update.ToUpperInvariant())</span>
+            }
+            <span class="led @(DeviceService.Settings.SpotifyEnabled ? "led-green" : "led-off") @(UpdateService.AvailableVersion is null ? "bo-push" : "") bo-wide">SPOTIFY</span>
             <span class="led led-red bo-wide">@_menu</span>
         </div>
         @* line 2: rendered by the selected tab - all options shown, red = selected, green = connected/on, dark = not selected *@
@@ -99,12 +104,15 @@
     protected override void OnInitialized()
     {
         DeviceService.OnStatusChanged += OnServiceStatusChanged;
+        UpdateService.Changed += OnUpdateChanged;
     }
 
     private async void OnServiceStatusChanged(StatusMessage msg) => await InvokeAsync(StateHasChanged);
+    private async void OnUpdateChanged() => await InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {
         DeviceService.OnStatusChanged -= OnServiceStatusChanged;
+        UpdateService.Changed -= OnUpdateChanged;
     }
 }

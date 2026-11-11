@@ -122,15 +122,9 @@ internal class Program : IHostedService
         });
     }
 
-    private async Task CheckForUpdatesAsync()
-    {
-        var updates = _serviceProvider.GetRequiredService<UpdateService>();
-        if (await updates.CheckOnStartupAsync())
-        {
-            Console.WriteLine("Velopack: quitting app so update can be applied");
-            _app.Quit();
-        }
-    }
+    // only looks for a newer release; installing is a manual step in the SYSTEM tab
+    private Task CheckForUpdatesAsync() =>
+        _serviceProvider.GetRequiredService<UpdateService>().CheckForUpdateAsync();
 
     bool _gtkExited;
     readonly IServiceProvider _serviceProvider;
