@@ -1,0 +1,48 @@
+@using BeoControl.Interfaces
+@using BeoControlBlazorServices
+@using BeoControlBlazorCL.Pages
+@using Microsoft.AspNetCore.Components.Sections
+@inject DeviceService DeviceService
+@inject UpdateService UpdateService
+@implements IDisposable
+
+<SectionContent SectionName="@SetupWindow.DisplayLine2">
+    <span class="led @(DeviceService.FirmwareVersion is null ? "led-off" : "led-green")">@(DeviceService.FirmwareVersion is { } v ? $"FW V{v.ToUpperInvariant()}" : "NO FIRMWARE")</span>
+    @if (UpdateService.FirmwareUpdateAvailable)
+    {
+        <span class="led led-red">UPDATE V@(UpdateService.AppVersion.ToUpperInvariant())</span>
+    }
+</SectionContent>
+
+<div class="bo-label">FIRMWARE</div>
+<div class="bo-inline">
+    <div class="bo-field">@(DeviceService.FirmwareVersion is { } fw ? $"v{fw}" : "NO DEVICE CONNECTED")</div>
+    <button class="bo-field bo-compact" @onclick="UpdateService.UpdateFirmwareAsync" disabled="@(!UpdateService.FirmwareUpdateAvailable)">
+        @(UpdateService.FirmwareProgress is { } p ? $"{p} %" : $"UPDATE TO v{UpdateService.AppVersion}")
+    </button>
+</div>
+@if (UpdateService.FirmwareStatus is { } status)
+{
+    <p class="bo-hint">@status.ToUpperInvariant()</p>
+}
+else if (DeviceService.FirmwareVersion is not null && DeviceService.CurrentDevice?.Type != DeviceType.WIFI)
+{
+    <p class="bo-hint">FIRMWARE UPDATE NEEDS A WIFI CONNECTION</p>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        UpdateService.Changed += OnChanged;
+        DeviceService.OnStatusChanged += OnDeviceStatusChanged;
+    }
+
+    private async void OnChanged() => await InvokeAsync(StateHasChanged);
+    private void OnDeviceStatusChanged(StatusMessage _) => OnChanged();
+
+    public void Dispose()
+    {
+        UpdateService.Changed -= OnChanged;
+        DeviceService.OnStatusChanged -= OnDeviceStatusChanged;
+    }
+}
