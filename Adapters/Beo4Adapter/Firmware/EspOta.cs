@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Beo4Adapter.Transport;
+namespace Beo4Adapter.Firmware;
 
 /// <summary>
 /// Firmware upload to an ESP32 running ArduinoOTA (same protocol as PlatformIO's espota.py, no password):

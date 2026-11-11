@@ -1,4 +1,4 @@
-using Beo4Adapter.Transport;
+using Beo4Adapter.Firmware;
 
 using BeoControl.Interfaces;
 
@@ -136,7 +136,16 @@ public sealed class UpdateService
 
     public event Action? FirmwareChanged;
 
-    /// <summary>Pushes the bundled image via OTA; the device reboots afterwards (connection drops).</summary>
+    private static readonly TimeSpan RebootWait = TimeSpan.FromSeconds(10);
+    private const int ReconnectAttempts = 3;
+
+    // hosts that already got an automatic update this session -> no endless loop if a device keeps an old version (rollback)
+    private readonly HashSet<string> _autoUpdated = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Pushes the bundled image via OTA, then reconnects: the device reboots and the old TCP
+    /// connection would otherwise stay "connected" with the stale version.
+    /// </summary>
     public async Task UpdateFirmwareAsync()
     {
         var path = BundledFirmwarePath;
@@ -149,13 +158,26 @@ public sealed class UpdateService
         {
             var image = await File.ReadAllBytesAsync(path);
             await EspOta.UploadAsync(host, image, new Progress<int>(p => SetFirmware(p, FirmwareStatus)));
-            SetFirmware(null, $"Firmware {AppVersion} installed, device restarts.");
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Firmware update failed.");
             SetFirmware(null, $"Firmware update failed: {ex.Message}");
+            return;
         }
+
+        SetFirmware(null, $"Firmware {AppVersion} installed, device restarts…");
+        deviceService.Disconnect();
+        await Task.Delay(RebootWait);
+        for (var attempt = 1; attempt <= ReconnectAttempts && !deviceService.IsConnected; attempt++)
+        {
+            await deviceService.ConnectWifiAsync(host);
+            if (!deviceService.IsConnected)
+                await Task.Delay(RebootWait / 2);
+        }
+        SetFirmware(null, deviceService.IsConnected
+            ? $"Firmware {AppVersion} installed."
+            : $"Firmware {AppVersion} installed, reconnect failed — connect via WIFI.");
     }
 
     private void SetFirmware(int? progress, string? status)
@@ -167,7 +189,8 @@ public sealed class UpdateService
 
     private void OnDeviceStatusChanged(StatusMessage msg)
     {
-        if (msg is FirmwareVersionMessage && Settings.UpdateMode == UpdateMode.Auto && FirmwareUpdateAvailable)
+        if (msg is FirmwareVersionMessage && Settings.UpdateMode == UpdateMode.Auto && FirmwareUpdateAvailable
+            && deviceService.CurrentDevice?.Id is { } host && _autoUpdated.Add(host))
             _ = UpdateFirmwareAsync();
     }
 
