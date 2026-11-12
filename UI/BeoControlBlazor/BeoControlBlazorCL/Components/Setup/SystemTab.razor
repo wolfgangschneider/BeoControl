@@ -13,7 +13,12 @@
     <span class="led led-green">@GetAppVersionDisplay().ToUpperInvariant()</span>
 </SectionContent>
 
-<div class="bo-label">APP UPDATE</div>
+<div class="bo-keys bo-keys-3">
+    @* applies to the update check and the version list *@
+    <button class="bo-key @(Prereleases ? "active" : "")" @onclick="TogglePrereleases">PRERELEASES</button>
+</div>
+
+<div class="bo-label">APP</div>
 @if (UpdateService.AvailableVersion is { } available)
 {
     <p class="bo-hint">UPDATE AVAILABLE: V@(available.ToUpperInvariant())</p>
@@ -24,10 +29,10 @@
         <InputSelect class="bo-field" @bind-Value="_selectedVersion">
             @foreach (var v in _versions)
             {
-                <option value="@v">v@(v)</option>
+                <option value="@v">v@(v)@(v == _installedVersion ? " (INSTALLED)" : "")</option>
             }
         </InputSelect>
-        <button class="bo-field bo-compact" @onclick="InstallAsync" disabled="@_installing">@(_installing ? "INSTALLING…" : "INSTALL")</button>
+        <button class="bo-field bo-compact" @onclick="InstallAsync" disabled="@(_installing || _selectedVersion == _installedVersion)">@(_installing ? "INSTALLING…" : "INSTALL")</button>
     </div>
     <p class="bo-hint">@(_installStatus ?? "INSTALLS THE SELECTED VERSION (ALSO OLDER) AND RESTARTS THE APP")</p>
 }
@@ -35,16 +40,32 @@ else
 {
     <p class="bo-hint">@_versionsStatus</p>
 }
-<div class="bo-keys bo-keys-3">
-    @* applies to the update check and the version list *@
-    <button class="bo-key @(Prereleases ? "active" : "")" @onclick="TogglePrereleases">PRERELEASES</button>
-    <button class="bo-key" @onclick="SearchForUpdateAsync">SEARCH FOR UPDATE</button>
+
+@* the firmware follows the app: only the image bundled with this app version (OTA, WiFi only) *@
+<div class="bo-label">FIRMWARE@(DeviceService.FirmwareVersion is { } fw ? $" — DEVICE HAS V{fw.ToUpperInvariant()}" : "")</div>
+<div class="bo-inline">
+    <select class="bo-field" disabled="@(UpdateService.BundledFirmwarePath is null)">
+        <option>@(UpdateService.BundledFirmwarePath is null ? "NO BUNDLED FIRMWARE"
+                  : $"v{UpdateService.AppVersion}{(DeviceService.FirmwareVersion == UpdateService.AppVersion ? " (INSTALLED)" : "")}")</option>
+    </select>
+    <button class="bo-field bo-compact" @onclick="UpdateService.UpdateFirmwareAsync" disabled="@(!UpdateService.FirmwareUpdateAvailable)">
+        @(UpdateService.FirmwareProgress is { } p ? $"{p} %" : "INSTALL")
+    </button>
 </div>
+@if (UpdateService.FirmwareStatus is { } status)
+{
+    <p class="bo-hint">@status.ToUpperInvariant()</p>
+}
+else if (DeviceService.FirmwareVersion is not null && DeviceService.CurrentDevice?.Type != DeviceType.WIFI)
+{
+    <p class="bo-hint">FIRMWARE UPDATE NEEDS A WIFI CONNECTION</p>
+}
 
 @code {
     private List<string> _versions = [];
     private string _versionsStatus = "LOADING VERSIONS…";
     private string _selectedVersion = "";
+    private readonly string? _installedVersion = UpdateService.AppVersion;   // same as the Velopack version in release builds
     private bool _installing;
     private string? _installStatus;
 
@@ -63,17 +84,16 @@ else
         DeviceService.OnStatusChanged -= OnDeviceStatusChanged;
     }
 
-    protected override Task OnInitializedAsync() => LoadVersionsAsync();
-
-    private async Task TogglePrereleases()
+    // opening the tab refreshes the list and the "UPDATE V…" display hint
+    protected override async Task OnInitializedAsync()
     {
-        Prereleases = !Prereleases;
         await LoadVersionsAsync();
         await UpdateService.CheckForUpdateAsync();
     }
 
-    private async Task SearchForUpdateAsync()
+    private async Task TogglePrereleases()
     {
+        Prereleases = !Prereleases;
         await LoadVersionsAsync();
         await UpdateService.CheckForUpdateAsync();
     }
@@ -99,7 +119,8 @@ else
         try
         {
             _versions = await UpdateService.GetAvailableVersionsAsync();
-            _selectedVersion = _versions.FirstOrDefault() ?? "";
+            // newest version other than the installed one, normally the update
+            _selectedVersion = _versions.FirstOrDefault(v => v != _installedVersion) ?? _versions.FirstOrDefault() ?? "";
             _versionsStatus = "ONLY AVAILABLE IN INSTALLED RELEASE BUILDS";
         }
         catch (Exception ex)
