@@ -412,4 +412,4 @@ Rechts an der 5V-Leitung, runter nach GND:
 
 ## License
 
-This project is provided as-is for personal/hobbyist use with Bang & Olufsen audio equipment.
+BeoControl is released under the [MIT License](LICENSE). Third-party components keep their own licenses (see Credits & Acknowledgements).
