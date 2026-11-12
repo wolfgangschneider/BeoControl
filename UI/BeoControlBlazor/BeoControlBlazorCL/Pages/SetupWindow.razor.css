@@ -93,6 +93,9 @@
 .bo-controls ::deep .bo-keys-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .bo-controls ::deep .bo-keys-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
+/* two sections side by side (PC2: SOUND | OPTION), stacked on phones */
+.bo-controls ::deep .bo-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); column-gap: 24px; }
+
 .bo-controls ::deep .bo-actions { margin-top: 10px; }
 
 .bo-controls ::deep .bo-key {
@@ -231,21 +234,23 @@
 
     .bo-nameplate { padding: 6px 14px; letter-spacing: 2px; }
 
-    /* menu strip swipes sideways, close dot stays on the right */
+    /* side-by-side sections (PC2: SOUND | OPTION) stack */
+    .bo-controls ::deep .bo-columns { grid-template-columns: minmax(0, 1fr); row-gap: 16px; }
+
+    /* display line 2: only the active LEDs, the dark (not selected) ones would not fit */
+    .bo-display-row + .bo-display-row ::deep .led-off { display: none; }
+
+    /* menu strip in two rows of three, no scrolling (mouse on Linux can't swipe); close dot top right */
     .bo-menu {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) 20px;
+        gap: 12px 10px;
         padding: 12px 14px;
-        gap: 22px;
-        overflow-x: auto;
-        scrollbar-width: none;
     }
 
-    .bo-menu-item { flex-shrink: 0; }
-
     .bo-close {
-        position: sticky;
-        right: 0;
-        flex-shrink: 0;
-        margin-left: 18px;                 /* plus gap: keeps SYSTEM out of reach of the close tap */
-        box-shadow: 0 0 0 10px #0d0d0d;   /* covers tabs scrolling underneath */
+        grid-column: 4;
+        grid-row: 1;
+        margin-left: 0;
     }
 }
