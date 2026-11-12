@@ -237,6 +237,10 @@
     /* side-by-side sections (PC2: SOUND | OPTION) stack */
     .bo-controls ::deep .bo-columns { grid-template-columns: minmax(0, 1fr); row-gap: 16px; }
 
+    /* UPDATE tab: label above its row instead of left of it */
+    .bo-controls ::deep .bo-row { flex-wrap: wrap; }
+    .bo-controls ::deep .bo-row-label { flex: 0 0 100%; }
+
     /* display line 2: only the active LEDs, the dark (not selected) ones would not fit */
     .bo-display-row + .bo-display-row ::deep .led-off { display: none; }
 

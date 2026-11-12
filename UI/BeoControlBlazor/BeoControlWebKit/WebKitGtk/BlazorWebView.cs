@@ -54,6 +54,8 @@ class WebViewManager : Microsoft.AspNetCore.Components.WebView.WebViewManager
 		Dispatcher.InvokeAsync(async () =>
 		{
 			await AddRootComponentAsync(rootComponent, "#app", ParameterView.Empty);
+			// <HeadContent> of pages (e.g. setup lifts the remote's fixed body width) needs a HeadOutlet, like MAUI and Blazor Server
+			await AddRootComponentAsync(typeof(Microsoft.AspNetCore.Components.Web.HeadOutlet), "head::after", ParameterView.Empty);
 		});
 
 		var ucm = webView.GetUserContentManager();
