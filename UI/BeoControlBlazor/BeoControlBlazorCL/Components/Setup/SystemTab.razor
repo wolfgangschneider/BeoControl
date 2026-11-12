@@ -18,14 +18,10 @@
     <button class="bo-key @(Prereleases ? "active" : "")" @onclick="TogglePrereleases">PRERELEASES</button>
 </div>
 
-<div class="bo-label">APP</div>
-@if (UpdateService.AvailableVersion is { } available)
-{
-    <p class="bo-hint">UPDATE AVAILABLE: V@(available.ToUpperInvariant())</p>
-}
 @if (_versions.Count > 0)
 {
     <div class="bo-inline">
+        <span class="bo-row-label">APP</span>
         <InputSelect class="bo-field" @bind-Value="_selectedVersion">
             @foreach (var v in _versions)
             {
@@ -34,16 +30,18 @@
         </InputSelect>
         <button class="bo-field bo-compact" @onclick="InstallAsync" disabled="@(_installing || _selectedVersion == _installedVersion)">@(_installing ? "INSTALLING…" : "INSTALL")</button>
     </div>
-    <p class="bo-hint">@(_installStatus ?? "INSTALLS THE SELECTED VERSION (ALSO OLDER) AND RESTARTS THE APP")</p>
+    <p class="bo-hint">@(_installStatus ?? (UpdateService.AvailableVersion is { } available
+                          ? $"UPDATE AVAILABLE: V{available.ToUpperInvariant()}"
+                          : "INSTALLS THE SELECTED VERSION (ALSO OLDER) AND RESTARTS THE APP"))</p>
 }
 else
 {
-    <p class="bo-hint">@_versionsStatus</p>
+    <p class="bo-hint">APP: @_versionsStatus</p>
 }
 
 @* the firmware follows the app: only the image bundled with this app version (OTA, WiFi only) *@
-<div class="bo-label">FIRMWARE@(DeviceService.FirmwareVersion is { } fw ? $" — DEVICE HAS V{fw.ToUpperInvariant()}" : "")</div>
 <div class="bo-inline">
+    <span class="bo-row-label">FIRMWARE</span>
     <select class="bo-field" disabled="@(UpdateService.BundledFirmwarePath is null)">
         <option>@(UpdateService.BundledFirmwarePath is null ? "NO BUNDLED FIRMWARE"
                   : $"v{UpdateService.AppVersion}{(DeviceService.FirmwareVersion == UpdateService.AppVersion ? " (INSTALLED)" : "")}")</option>
@@ -56,9 +54,13 @@ else
 {
     <p class="bo-hint">@status.ToUpperInvariant()</p>
 }
-else if (DeviceService.FirmwareVersion is not null && DeviceService.CurrentDevice?.Type != DeviceType.WIFI)
+else if (!DeviceService.IsConnected || DeviceService.CurrentDevice?.Type != DeviceType.WIFI)
 {
-    <p class="bo-hint">FIRMWARE UPDATE NEEDS A WIFI CONNECTION</p>
+    <p class="bo-hint">FIRMWARE UPDATE: DEVICE MUST BE CONNECTED VIA WIFI</p>
+}
+else if (DeviceService.FirmwareVersion is { } fw)
+{
+    <p class="bo-hint">DEVICE HAS V@(fw.ToUpperInvariant())</p>
 }
 
 @code {

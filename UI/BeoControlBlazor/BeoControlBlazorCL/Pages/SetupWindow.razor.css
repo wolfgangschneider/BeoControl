@@ -129,6 +129,8 @@
 .bo-controls ::deep select.bo-field:disabled { color: #444; }
 .bo-controls ::deep input.bo-field:disabled { color: #444; }
 .bo-controls ::deep .bo-field.connected { color: #3ecf5a; }   /* device connected via this tab, same green as the LEDs */
+/* label left of a field row (UPDATE tab: APP / FIRMWARE), styled like .bo-label */
+.bo-controls ::deep .bo-row-label { flex: 0 0 90px; align-self: center; color: #999; font-size: 11px; letter-spacing: 2px; }
 
 /* fields + compact button in one row (WiFi setup) */
 .bo-controls ::deep .bo-inline { display: flex; gap: 10px; }
