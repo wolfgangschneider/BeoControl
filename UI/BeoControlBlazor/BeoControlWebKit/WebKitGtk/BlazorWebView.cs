@@ -138,16 +138,17 @@ class WebViewManager : Microsoft.AspNetCore.Components.WebView.WebViewManager
 			throw new Exception($"Invalid scheme \"{request.GetScheme()}\"");
 		}
 
+		// page routes ("/", "/setupwindow") get the host page, Blazor's router then shows the page;
+		// not allowFallbackOnHostPage: that also answers missing files (blazor.modules.json) with index.html and breaks the start
 		var uri = request.GetUri();
-		if (request.GetPath() == "/")
+		if (!Path.HasExtension(request.GetPath()))
 		{
-			uri += _relativeHostPath;
+			uri = BaseUri + _relativeHostPath;
 		}
 
 		_logger?.LogDebug($"Fetching \"{uri}\"");
 
-		// allowFallbackOnHostPage: page routes like "/setupwindow" get index.html, Blazor's router then shows the page
-		if (TryGetResponseContent(uri, true, out var statusCode, out var statusMessage, out var content, out var headers))
+		if (TryGetResponseContent(uri, false, out var statusCode, out var statusMessage, out var content, out var headers))
 		{
 			using var ms = new MemoryStream();
 			content.CopyTo(ms);
