@@ -9,7 +9,9 @@ BeoControl lets you control B&O Masterlink devices (TV, Radio, CD, DVD, etc.) fr
 - **Unified command interface** across heterogeneous B&O hardware
 - **Audio control** — volume, bass, treble, balance, loudness
 - **Source switching** — TV, Radio, CD, DVD, SAT, PC and more
-- **Multi-transport support** — USB (PC2), Serial/USB (ESP32), Bluetooth LE (ESP32), WiFi (ESP32)
+- **Four ways to connect** — PC2 via USB, or the ESP32 remote via USB, Bluetooth LE or WiFi
+- **ESP32 firmware from the app** — install it on a new board, update it over WiFi, name each remote and choose its IR pins
+- **App updates** — see when a new version is out and install any version (also older ones) with one click
 - **Spotify playback control** — optional Spotify integration for play, pause, next, previous and now-playing info
 - **UI-agnostic design** — the core logic is fully decoupled from the UI layer, making it straightforward to add new frontends
 - **Shared settings** — all UIs share a single settings file (`%APPDATA%\BeoControl\beocontrol.settings.json`) and auto-connect on startup
@@ -104,8 +106,8 @@ The ESP32 firmware emulates a Beo4 IR remote and communicates with BeoControl ov
 WiFi is optional — without stored credentials the radio stays off.
 
 1. Connect to the ESP32 via **USB** or **BLE** (Setup → DEVICE).
-2. Select the connected device in the list; **WIFI SETUP** appears below it. Enter SSID and password (both case-sensitive) and press **STORE**.  
-   The credentials are sent over the existing link and stored in the ESP32's NVS, so they survive reboots and firmware updates.
+2. Under **WIFI SETUP** enter SSID and password (both case-sensitive) for the connected device (green in the list, its name in the heading) and press **STORE**.  
+   The device keeps them through restarts and firmware updates; only a new install (**INIT**) erases them.
 3. Tap **WIFI** to discover devices on the network and press **CONNECT**.
 
 Details:
@@ -115,6 +117,18 @@ Details:
 - Firmware commands: `wifi` (status, IP), `wifi <ssid> <password>` (store + connect), `wifi off` (erase credentials, radio off). SSIDs with spaces are not supported.
 - ESP32 WiFi is 2.4 GHz only.
 
+#### Firmware from the app
+
+The ESP32 firmware is managed entirely from BeoControl — no extra tools needed.
+
+- **Install** — put the Beo4 firmware on a new board, or on one that no longer works: Setup → **FIRMWARE**, plug the board in via USB, choose it and press **INIT**.
+- **Update over WiFi** — every app version brings the matching firmware along. Setup → **UPDATE** shows whether the device is up to date; one click installs the new firmware over WiFi. If it does not start, the device falls back to the previous one.
+- **Name your remotes** — give each device its own name (e.g. "Livingroom") when installing; it shows up in the USB, BLE and WiFi lists.
+- **Choose the IR pins** — the IR LED can sit on any free pin, and a neighbouring pin can serve as ground so the LED plugs straight into the connector.
+
+Supported out of the box: **M5 AtomS3** and **M5 Stamp S3**.  
+Installing erases the stored WiFi settings — enter them again afterwards. If a board does not respond at all, hold its button while plugging it in, then press **INIT** again.
+
 ## Getting Started
 
 ### Prerequisites
@@ -122,7 +136,7 @@ Details:
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - A B&O Masterlink system with either:
   - A **PC2 USB device** (connect to USB, install LibUSB driver), or
-  - An **ESP32 Beo4** device (M5 Atom S3 with [esp32_beo4](https://github.com/aanban/esp32_beo4) firmware)
+  - An **ESP32 Beo4** device (M5 AtomS3 or Stamp S3; the firmware is installed from the app, see [Firmware from the app](#firmware-from-the-app))
 
 ### Build
 

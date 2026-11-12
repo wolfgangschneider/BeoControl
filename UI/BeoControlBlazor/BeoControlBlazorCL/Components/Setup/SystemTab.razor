@@ -121,8 +121,8 @@ else if (DeviceService.FirmwareVersion is { } fw)
         try
         {
             _versions = await UpdateService.GetAvailableVersionsAsync();
-            // newest version other than the installed one, normally the update
-            _selectedVersion = _versions.FirstOrDefault(v => v != _installedVersion) ?? _versions.FirstOrDefault() ?? "";
+            // newest version, also when it is the installed one (INSTALL is disabled then)
+            _selectedVersion = _versions.FirstOrDefault() ?? "";
             _versionsStatus = "ONLY AVAILABLE IN INSTALLED RELEASE BUILDS";
         }
         catch (Exception ex)
