@@ -11,6 +11,7 @@ BeoControl lets you control B&O Masterlink devices (TV, Radio, CD, DVD, etc.) fr
 - **Source switching** — TV, Radio, CD, DVD, SAT, PC and more
 - **Four ways to connect** — PC2 via USB, or the ESP32 remote via USB, Bluetooth LE or WiFi
 - **ESP32 firmware from the app** — install it on a new board, update it over WiFi, name each remote and choose its IR pins
+- **REST over WiFi** — every ESP32 remote answers `GET /cmd?c=<command>`, so scripts, a browser or Home Assistant can send commands too
 - **App updates** — see when a new version is out and install any version (also older ones) with one click
 - **Spotify playback control** — optional Spotify integration for play, pause, next, previous and now-playing info
 - **UI-agnostic design** — the core logic is fully decoupled from the UI layer, making it straightforward to add new frontends
@@ -25,7 +26,7 @@ The hardware and adapter layers are completely independent of any user interface
 | **Terminal (TUI)** | ✅ included | Full-featured console UI using [RazorConsole](https://github.com/lofcz/razorconsole) — great for headless servers and SSH sessions |
 | **Web (Blazor Server)** | ✅ included | ASP.NET Core Blazor Server UI — browser-based remote control |
 | **Desktop (MAUI)** | ✅ included | Windows tray app — sits in the system tray, pops up above the taskbar on click, xcopy deploy |
-| **REST / API** | 🔧 possible | Wrap `IDevice` in a minimal ASP.NET Core API to integrate with Home Assistant, shortcuts, scripts, etc. |
+| **REST / API** | ✅ ESP32 / 🔧 PC2 | The ESP32 remote has its own REST endpoint (`GET /cmd?c=<command>`, see [WiFi](#wifi)); for the PC2, wrap `IDevice` in a minimal ASP.NET Core API |
 
 The architecture is designed so that **adding a new UI is simply a matter of referencing the `Interfaces` and `Adapters` packages** and calling `device.SendCommand(...)`.
 
@@ -61,7 +62,7 @@ Any UI  ──→  IDevice  ──→  Adapter  ──→  Transport  ──→ 
           │  Transport Layer    │  │    Hardware Layer      │
           │  SerialTransport    │  │  Pc2Core (event loop)  │
           │  BluetoothTransport │  │  Pc2Mixer (audio HW)   │
-          │  TcpTransport (WiFi)│  │  Beolink (Masterlink)  │
+          │  RestTransport(WiFi)│  │  Beolink (Masterlink)  │
           └──┬──────────────┬───┘  └───────────┬────────────┘
              │              │                  │
     ┌────────┴───┐  ┌───────┴────┐    ┌────────┴────┐
@@ -99,7 +100,7 @@ The PC2 implementation and Masterlink protocol knowledge is based on the work of
 
 ### ESP32 Beo4 Remote
 
-The ESP32 firmware emulates a Beo4 IR remote and communicates with BeoControl over Serial/USB, Bluetooth LE (Nordic UART Service) or WiFi (TCP). It runs on an M5 Atom S3 and is based on the excellent [**esp32_beo4**](https://github.com/aanban/esp32_beo4) project by **aanban** — many thanks for this great foundation!
+The ESP32 firmware emulates a Beo4 IR remote and communicates with BeoControl over Serial/USB, Bluetooth LE (Nordic UART Service) or WiFi (REST over HTTP, TCP as fallback). It runs on an M5 Atom S3 and is based on the excellent [**esp32_beo4**](https://github.com/aanban/esp32_beo4) project by **aanban** — many thanks for this great foundation!
 
 #### WiFi
 
@@ -113,7 +114,8 @@ WiFi is optional — without stored credentials the radio stays off.
 Details:
 
 - Discovery uses mDNS (service `_beo4._tcp.local`); the device announces itself as e.g. `beo4remote-atom.local`.
-- Commands run over a plain line-based TCP connection on port 23 — the same text protocol as Serial/BLE (one client at a time).
+- The app sends commands over HTTP: `GET http://<host>/cmd?c=<command>` returns the reply as text — the same commands as Serial/BLE, any number of apps at once. Try it with a browser or `curl "http://beo4remote-atoms3.local/cmd?c=tv"`.
+- The line-based TCP connection on port 23 (one client at a time) is still there as a fallback.
 - Firmware commands: `wifi` (status, IP), `wifi <ssid> <password>` (store + connect), `wifi off` (erase credentials, radio off). SSIDs with spaces are not supported.
 - ESP32 WiFi is 2.4 GHz only.
 

@@ -44,7 +44,7 @@
                 })
                 {
                     <span class="bo-hint" style="margin: 0;">@label</span>
-                    <span style="color: #3ecf5a; font-size: 11px; text-align: right;">@value</span>   @* levels green like the MCP 5500 bar *@
+                    <span style="color: #ccc; font-size: 11px; text-align: right;">@value</span>
                     <button class="bo-key" @onclick="() => DeviceService.SendCommand(down)">◄</button>
                     <button class="bo-key" @onclick="() => DeviceService.SendCommand(up)">►</button>
                 }

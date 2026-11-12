@@ -283,12 +283,17 @@ public class TcpTransport : ITransport
             OnLog?.Invoke(new LogMessage(LogLevel.Error, "Not connected via WiFi."));
             return;
         }
-        Task.Run(async () =>
+        var writer = _writer;
+        Task.Run(() =>
         {
             try
             {
-                await _writer.WriteLineAsync(line);
-                await _writer.WriteLineAsync("status");
+                // one writer at a time: back-to-back sends ("version", "board") failed with "stream in use"
+                lock (writer)
+                {
+                    writer.WriteLine(line);
+                    writer.WriteLine("status");
+                }
             }
             catch (Exception ex)
             {

@@ -152,7 +152,7 @@ if (Serial) {
  }
 */
     btCh.begin(deviceName);
-    wifiCh.begin(deviceName);
+    wifiCh.begin(deviceName, processCommand);
 
     // Beo4 IR TX
     beo4.emplace(-1, irTxPin);

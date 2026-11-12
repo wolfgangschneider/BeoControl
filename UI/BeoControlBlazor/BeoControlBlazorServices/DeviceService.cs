@@ -93,7 +93,7 @@ public class DeviceService : IDisposable
         try
         {
             ReplaceDevice(null);
-            var device = new Beo4Device(new TcpTransport(host));
+            var device = new Beo4Device(new RestTransport(host));   // fallback: new TcpTransport(host)
             await device.Connect();
             ReplaceDevice(device);
             PersistDevice();
