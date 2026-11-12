@@ -14,10 +14,14 @@ namespace WebKitGtk;
 [UnsupportedOSPlatform("Windows")]
 public class BlazorWebView : WebView
 {
-	public BlazorWebView(IServiceProvider serviceProvider)
+	/// <param name="startPath">First page, e.g. "/setupwindow" for a second window.</param>
+	public BlazorWebView(IServiceProvider serviceProvider, string startPath = "/")
 	{
-		_ = new WebViewManager(this, serviceProvider);
+		_ = new WebViewManager(this, serviceProvider, startPath, message => HostMessageReceived?.Invoke(message));
 	}
+
+	/// <summary>Raised for messages the page posts to <c>window.webkit.messageHandlers.beocontrol</c> (e.g. "open-setup").</summary>
+	public event Action<string>? HostMessageReceived;
 }
 
 [UnsupportedOSPlatform("OSX")]
@@ -27,7 +31,11 @@ class WebViewManager : Microsoft.AspNetCore.Components.WebView.WebViewManager
 	const string Scheme = "app";
 	static readonly Uri BaseUri = new($"{Scheme}://localhost/");
 
-	public WebViewManager(WebView webView, IServiceProvider serviceProvider) : base(
+	// all web views share the default WebContext, where a URI scheme can be registered only once:
+	// one handler, each request goes to the manager of the web view that sent it
+	static readonly List<WebViewManager> Managers = [];
+
+	public WebViewManager(WebView webView, IServiceProvider serviceProvider, string startPath, Action<string> hostMessage) : base(
 		serviceProvider,
 		Dispatcher.CreateDefault(),
 		BaseUri,
@@ -49,7 +57,14 @@ class WebViewManager : Microsoft.AspNetCore.Components.WebView.WebViewManager
 		{
 			throw new Exception("WebView.WebContext is null");
 		}
-		_webView.WebContext.RegisterUriScheme(Scheme, HandleUriScheme);
+		if (Managers.Count == 0)
+			_webView.WebContext.RegisterUriScheme(Scheme, request => FindManager(request)?.HandleUriScheme(request));
+		Managers.Add(this);
+		_webView.OnDestroy += (_, _) =>
+		{
+			Managers.Remove(this);
+			_ = DisposeAsync();
+		};
 
 		Dispatcher.InvokeAsync(async () =>
 		{
@@ -94,10 +109,25 @@ class WebViewManager : Microsoft.AspNetCore.Components.WebView.WebViewManager
 			throw new Exception("Could not register script message handler");
 		}
 
-		Navigate("/");
+		// app messages to the host (open/close the setup window), apart from Blazor's own channel
+		UserContentManager.ScriptMessageReceivedSignal.Connect(ucm, (_, signalArgs) =>
+			hostMessage(signalArgs.Value.ToString() ?? ""), true, "beocontrol");
+		if (!ucm.RegisterScriptMessageHandler("beocontrol", null))
+		{
+			throw new Exception("Could not register beocontrol message handler");
+		}
+
+		Navigate(startPath);
 	}
 
 	readonly WebView _webView;
+
+	// newest first: a destroyed view's handle may be reused by a newer one
+	static WebViewManager? FindManager(URISchemeRequest request)
+	{
+		var handle = request.GetWebView().Handle.DangerousGetHandle();
+		return Managers.LastOrDefault(m => m._webView.Handle.DangerousGetHandle() == handle);
+	}
 	readonly string _relativeHostPath;
 	readonly ILogger<WebViewManager>? _logger;
 

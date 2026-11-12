@@ -80,6 +80,12 @@ internal class Program : IHostedService
             _window.SetDefaultSize(lastWinPosition.WindowWidth, lastWinPosition.WindowHeight);
 
             var webView = new BlazorWebView(_serviceProvider);
+            // gear button: setup in its own window like on Windows, the remote stays narrow
+            webView.HostMessageReceived += message =>
+            {
+                if (message == "open-setup")
+                    OpenSetupWindow();
+            };
             webView.Hexpand = true;
             webView.Vexpand = true;
             _window.SetChild(webView);
@@ -126,6 +132,40 @@ internal class Program : IHostedService
     private Task CheckForUpdatesAsync() =>
         _serviceProvider.GetRequiredService<UpdateService>().CheckForUpdateAsync();
 
+    private void OpenSetupWindow()
+    {
+        if (_setupWindow is not null)
+        {
+            _setupWindow.Present();
+            return;
+        }
+
+        var setupWindow = Gtk.Window.New();
+        setupWindow.SetApplication(_app);
+        setupWindow.Title = "Setup";
+        setupWindow.SetDefaultSize(700, 460);
+
+        var webView = new BlazorWebView(_serviceProvider, "/setupwindow");
+        webView.HostMessageReceived += message =>
+        {
+            if (message == "close-setup")
+                setupWindow.Close();
+        };
+        webView.Hexpand = true;
+        webView.Vexpand = true;
+        webView.GetSettings().EnableDeveloperExtras = true;
+        setupWindow.SetChild(webView);
+
+        setupWindow.OnCloseRequest += (_, _) =>
+        {
+            _setupWindow = null;
+            return false;
+        };
+        _setupWindow = setupWindow;
+        setupWindow.Present();
+    }
+
+    Gtk.Window? _setupWindow;
     bool _gtkExited;
     readonly IServiceProvider _serviceProvider;
     readonly DeviceService _deviceService;

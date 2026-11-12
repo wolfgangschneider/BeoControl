@@ -69,7 +69,7 @@
                 @m
             </button>
         }
-        <button class="bo-close" title="Close" aria-label="Close" onclick="window.opener || window.chrome?.webview ? window.close() : history.back()"></button>
+        <button class="bo-close" title="Close" aria-label="Close" onclick="window.webkit?.messageHandlers?.beocontrol ? window.webkit.messageHandlers.beocontrol.postMessage('close-setup') : window.opener || window.chrome?.webview ? window.close() : history.back()"></button>
     </nav>
 
 </div>
