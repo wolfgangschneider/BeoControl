@@ -3,8 +3,10 @@
 @using BeoControlBlazorCL.Pages
 @using Microsoft.AspNetCore.Components.Sections
 @inject DeviceService DeviceService
+@inject IAutostartRegistrationService AutostartRegistrationService
 
 <SectionContent SectionName="@SetupWindow.DisplayLine2">
+    <span class="led @(_launchOnWindowsSignIn ? "led-green" : "led-off")">AUTOSTART</span>
     @foreach (var r in Enum.GetValues<RemoteType>())
     {
         <span class="led @(SelectedRemote == r ? "led-red" : "led-off")">@r.ToString().ToUpperInvariant()</span>
@@ -14,6 +16,19 @@
         <span class="led @(RemoteButtonZoom == option.Value ? "led-red" : "led-off")">@option.Label.ToUpperInvariant()</span>
     }
 </SectionContent>
+
+<div class="bo-label">AUTOSTART</div>
+@if (AutostartRegistrationService.IsSupported)
+{
+    <div class="bo-keys bo-keys-3">
+        <button class="bo-key @(_launchOnWindowsSignIn ? "active" : "")"
+                @onclick="() => { _launchOnWindowsSignIn = !_launchOnWindowsSignIn; AutostartRegistrationService.SetEnabled(_launchOnWindowsSignIn); }">START WITH WINDOWS</button>
+    </div>
+}
+else
+{
+    <p class="bo-hint">AUTOSTART CAN ONLY BE CONFIGURED IN THE WINDOWS MAUI APP</p>
+}
 
 <div class="bo-label">TYPE</div>
 <div class="bo-keys bo-keys-3">
@@ -39,6 +54,7 @@
     ];
 
     private int _remoteButtonZoom = 100;
+    private bool _launchOnWindowsSignIn;
 
     private int RemoteButtonZoom
     {
@@ -70,7 +86,11 @@
         }
     }
 
-    protected override void OnInitialized() => _remoteButtonZoom = NormalizeZoom(DeviceService.Settings.RemoteButtonZoom);
+    protected override void OnInitialized()
+    {
+        _remoteButtonZoom = NormalizeZoom(DeviceService.Settings.RemoteButtonZoom);
+        _launchOnWindowsSignIn = AutostartRegistrationService.IsEnabled();
+    }
 
     private static int NormalizeZoom(int zoom) => zoom switch
     {

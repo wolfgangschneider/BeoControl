@@ -19,7 +19,7 @@ internal sealed class ApplePickerBluetoothDiscovery : IBluetoothDiscovery
 
         try
         {
-            var device = await Bluetooth.RequestDeviceAsync(BuildOptions(namePrefix));
+            var device = await Bluetooth.RequestDeviceAsync(BuildOptions());
             ct.ThrowIfCancellationRequested();
             return device is null ? [] : [device];
         }
@@ -30,13 +30,10 @@ internal sealed class ApplePickerBluetoothDiscovery : IBluetoothDiscovery
         }
     }
 
-    private static RequestDeviceOptions BuildOptions(string namePrefix)
+    private static RequestDeviceOptions BuildOptions()
     {
-        // Constrain the Apple picker to Beo4Remote devices advertising the Nordic UART service.
-        var filter = new BluetoothLEScanFilter
-        {
-            NamePrefix = namePrefix
-        };
+        // Constrain the Apple picker to devices advertising the Nordic UART service; no name prefix, devices can be renamed ("name <new>").
+        var filter = new BluetoothLEScanFilter();
         filter.Services.Add(BluetoothTransport.NusService);
 
         var options = new RequestDeviceOptions();

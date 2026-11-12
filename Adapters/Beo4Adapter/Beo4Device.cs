@@ -24,9 +24,11 @@ public sealed class Beo4Device : IDevice
         _transport.OnStatusChanged += s => OnStatusChanged?.Invoke(s);
         _transport.OnLog += m =>
         {
-            // reply to "version" (sent on connect)
+            // replies to "version" and "board" (sent on connect)
             if (m.Text.StartsWith("Version:", StringComparison.OrdinalIgnoreCase))
                 OnStatusChanged?.Invoke(new FirmwareVersionMessage(m.Text["Version:".Length..].Trim()));
+            if (m.Text.StartsWith("Board:", StringComparison.OrdinalIgnoreCase))
+                OnStatusChanged?.Invoke(new FirmwareBoardMessage(m.Text["Board:".Length..].Trim()));
             OnLog?.Invoke(m);
         };
     }
@@ -36,6 +38,7 @@ public sealed class Beo4Device : IDevice
         var r = await _transport.Connect();
         Info = r ?? throw new Exception("Transport connect failed");
         _transport.SendLine("version");
+        _transport.SendLine("board");
     }
 
     public void CancelAutoDetect() => _transport.CancelAutoDetect();

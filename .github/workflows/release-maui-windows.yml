@@ -110,16 +110,15 @@ jobs:
           cd Hardware/esp32_beo4
           # file name = firmware DEVICE_NAME, so the app picks "<name>.bin" without a mapping table
           declare -A names=(
-            [m5stack-atom]=Beo4Remote_Atom
-            [m5atoms3]=Beo4Remote_AtomS3
-            [m5stamps3]=Beo4Remote_StampS3
-            [esp32-s3-mini-1-N4R2]=Beo4Remote_S3Mini
-            [esp32dev]=Beo4Remote_ESP32
+            [m5stack-atom-s3]=Beo4Remote_AtomS3
+            [m5stack-stamp-s3]=Beo4Remote_StampS3
           )
           mkdir -p "$RUNNER_TEMP/firmware"
           for env in "${!names[@]}"; do
             pio run -e "$env"
             cp ".pio/build/$env/firmware.bin" "$RUNNER_TEMP/firmware/${names[$env]}.bin"
+            # factory image for the USB init (merge_factory.py), written at 0x0
+            cp ".pio/build/$env/$env-factory.bin" "$RUNNER_TEMP/firmware/${names[$env]}-factory.bin"
           done
 
       - name: Upload firmware workflow artifact

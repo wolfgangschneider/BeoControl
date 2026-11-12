@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <esp_ota_ops.h>
 #include <Preferences.h>
+#include <optional>
 #include "IrBeo4.h"
 #include "SerialChannel.h"
 
@@ -61,7 +62,8 @@
 // ── Beo4 IR ─────────────────────────────────────────────────────────
 uint8_t irTxPin  = IR_TX_PIN;          // referenced by CommandProcessor.h
 int8_t  irGndPin = IR_GND_PIN;         // soft GND return for the IR LED, -1 = none
-static IrBeo4* beo4;
+char    deviceName[33] = DEVICE_NAME; // NVS "dev"/"name" overrides the board name (BLE, mDNS, "name"); referenced by CommandProcessor.h
+static std::optional<IrBeo4> beo4;     // static storage is zeroed: IrBeo4 relies on that for fields its ctor leaves unset
 QueueHandle_t beo4_tx_queue;           // referenced by CommandProcessor.h
 
 // ── Channels ─────────────────────────────────────────────────────────
@@ -89,7 +91,7 @@ static bool appValid = false;
 
 static void printStartup(Channel& channel, bool irReady) {
     channel.print("===> start beo4... ");
-    channel.print(DEVICE_NAME);
+    channel.print(deviceName);
     channel.print("  IR TX pin ");
    channel.printf("%d GND pin %d ", irTxPin, irGndPin);
     channel.println(irReady ? "OK" : "failed");
@@ -130,6 +132,9 @@ void setup() {
     irTxPin  = prefs.getUChar("txpin", IR_TX_PIN);
     irGndPin = prefs.getChar("gndpin", IR_GND_PIN);
     prefs.end();
+    prefs.begin("dev", true);
+    prefs.getString("name", DEVICE_NAME).toCharArray(deviceName, sizeof(deviceName));
+    prefs.end();
     if (irGndPin >= 0) {
         pinMode(irGndPin, OUTPUT);
         digitalWrite(irGndPin, LOW);  // soft GND return for the IR LED on irTxPin
@@ -146,11 +151,11 @@ if (Serial) {
     
  }
 */
-    btCh.begin(DEVICE_NAME);
-    wifiCh.begin(DEVICE_NAME);
+    btCh.begin(deviceName);
+    wifiCh.begin(deviceName);
 
     // Beo4 IR TX
-    beo4 = new IrBeo4(-1, irTxPin);
+    beo4.emplace(-1, irTxPin);
     pinMode(irTxPin, OUTPUT);
     beo4_tx_queue = xQueueCreate(50, sizeof(uint32_t));
     bool irReady = beo4->Begin(NULL, beo4_tx_queue) == 0;

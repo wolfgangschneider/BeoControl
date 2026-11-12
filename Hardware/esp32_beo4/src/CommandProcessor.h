@@ -7,6 +7,7 @@
 extern WifiChannel wifiCh;   // defined in main.cpp
 extern uint8_t irTxPin;      // defined in main.cpp
 extern int8_t  irGndPin;     // defined in main.cpp
+extern char    deviceName[33]; // defined in main.cpp
 
 // Release version, set by CI via PLATFORMIO_BUILD_FLAGS (-DFW_VERSION=\"1.2.3\")
 #ifndef FW_VERSION
@@ -137,6 +138,9 @@ static void printHelp(Channel& reply) {
     reply.println("  wifi              - show WiFi status");
     reply.println("  wifi <ssid> <pass> - store credentials + connect");
     reply.println("  wifi off          - erase credentials, radio off");
+    reply.println("  name              - show device name");
+    reply.println("  name <new>        - store device name (BLE, WiFi) + restart");
+    reply.println("  board             - show board firmware name");
     reply.println("  txpin             - show IR TX + soft-GND pin");
     reply.println("  txpin <tx> [gnd]  - store pins (gnd -1 = none) + restart");
     reply.println("");
@@ -165,6 +169,23 @@ static void handleTxPinCommand(char* args, Channel& reply) {
     ESP.restart();
 }
 
+// ── name command: "name <new>" stores the device name (BLE, mDNS) to NVS and restarts ──
+static void handleNameCommand(char* name, Channel& reply) {
+    while (*name == ' ') name++;
+    size_t n = strlen(name);
+    bool valid = n > 0 && n < sizeof(deviceName);
+    for (size_t i = 0; valid && i < n; i++)
+        valid = isalnum((unsigned char)name[i]) || name[i] == '_' || name[i] == '-';
+    if (!valid) { reply.println("  invalid name (1-32 chars: A-Z a-z 0-9 _ -)"); return; }
+    Preferences prefs;
+    prefs.begin("dev", false);
+    prefs.putString("name", name);
+    prefs.end();
+    reply.printf("Name %s stored, restarting...\n", name);
+    delay(200);
+    ESP.restart();
+}
+
 // ── wifi command (case-sensitive args: works on the original line) ──
 static void handleWifiCommand(char* args, Channel& reply) {
     while (*args == ' ') args++;
@@ -189,6 +210,10 @@ static void processCommand(char* line, Channel& reply) {
         line[--len] = '\0';
     if (len == 0) return;
 
+    if (strncasecmp(line, "name ", 5) == 0) {
+        handleNameCommand(line + 5, reply);
+        return;
+    }
     if (strncasecmp(line, "wifi", 4) == 0 && (line[4] == '\0' || line[4] == ' ')) {
         handleWifiCommand(line + 4, reply);
         return;
@@ -200,7 +225,11 @@ static void processCommand(char* line, Channel& reply) {
     lower[sizeof(lower)-1] = '\0';
 
     if (strcmp(lower, "name") == 0) {
-        reply.println("Name: " DEVICE_NAME);
+        reply.printf("Name: %s\n", deviceName);
+        return;
+    }
+    if (strcmp(lower, "board") == 0) {
+        reply.println("Board: " DEVICE_NAME);
         return;
     }
     if (strcmp(lower, "version") == 0) {

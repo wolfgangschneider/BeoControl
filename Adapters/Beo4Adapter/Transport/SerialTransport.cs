@@ -333,7 +333,9 @@ public class SerialTransport : ITransport
                 Thread.Sleep(1500);            // on Linux, DTR resets the ESP32 on open — wait for boot
             probe.DiscardInBuffer();
             probe.WriteLine("name");
-            for (int i = 0; i < 25; i++)
+            // read until "Name:" or 3 s: a fresh S3 boot prints banner + help (> 25 lines) before the reply
+            var deadline = Environment.TickCount64 + 3000;
+            while (Environment.TickCount64 < deadline)
             {
                 try
                 {

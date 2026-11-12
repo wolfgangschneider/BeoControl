@@ -32,7 +32,7 @@
     @foreach (var d in usb)
     {
         <div class="bo-inline">
-            <button class="bo-field @(SelectedSerial == d.Id ? "active" : "")" @onclick="() => SelectedSerial = d.Id">@d.Id  @d.Name</button>
+            <button class="bo-field @(SelectedSerial == d.Id ? "active" : "") @(IsCurrentId(DeviceType.USB, d.Id) ? "connected" : "")" @onclick="() => SelectedSerial = d.Id">@d.Id  @d.Name</button>
             <button class="bo-field bo-compact bo-conn" @onclick="() => Toggle(DeviceType.USB, d.Id, ConnectSerial)" disabled="@IsBusy">@ConnLabel(DeviceType.USB, d.Id)</button>
         </div>
     }
@@ -47,7 +47,7 @@
     @foreach (var d in ble)
     {
         <div class="bo-inline">
-            <button class="bo-field @(SelectedBt == d.Id ? "active" : "")" @onclick="() => SelectedBt = d.Id">@(d.Name ?? "UNKNOWN")</button>
+            <button class="bo-field @(SelectedBt == d.Id ? "active" : "") @(IsCurrentId(DeviceType.BT, d.Id) ? "connected" : "")" @onclick="() => SelectedBt = d.Id">@(d.Name ?? "UNKNOWN")</button>
             <button class="bo-field bo-compact bo-conn" @onclick="() => Toggle(DeviceType.BT, d.Id, ConnectBluetooth)" disabled="@IsBusy">@ConnLabel(DeviceType.BT, d.Id)</button>
         </div>
     }
@@ -86,18 +86,23 @@
     }
 }
 
-@if (ActiveTab is DeviceType.USB or DeviceType.BT && IsCurrentId(ActiveTab, ActiveTab == DeviceType.USB ? SelectedSerial : SelectedBt))
+@if (ActiveTab is DeviceType.USB or DeviceType.BT)
 {
-    @* credentials go over the USB/BLE link to exactly the selected, connected device *@
-    <div class="bo-label">WIFI SETUP  @DeviceService.CurrentDevice?.Name</div>
+    @* credentials go over the USB/BLE link to the device connected via this tab (green row) *@
+    var wifiTarget = IsConnectedVia(ActiveTab) ? DeviceService.CurrentDevice?.Name : null;
+    <div class="bo-label">WIFI SETUP — @(wifiTarget ?? $"NO DEVICE CONNECTED VIA {Label(ActiveTab)}")</div>
     <div class="bo-inline">
-        <input class="bo-field" @bind="WifiSsid" placeholder="SSID" />
+        <input class="bo-field" @bind="WifiSsid" placeholder="SSID" disabled="@(wifiTarget is null)" />
         <span class="bo-pass">
-            <input class="bo-field" type="@(ShowPass ? "text" : "password")" @bind="WifiPass" placeholder="PASSWORD" />
+            <input class="bo-field" type="@(ShowPass ? "text" : "password")" @bind="WifiPass" placeholder="PASSWORD" disabled="@(wifiTarget is null)" />
             <button type="button" class="bo-eye" @onclick="() => ShowPass = !ShowPass" title="@(ShowPass ? "Hide password" : "Show password")">@(ShowPass ? "🙈" : "👁")</button>
         </span>
-        <button class="bo-field bo-compact" @onclick="StoreWifi" disabled="@string.IsNullOrWhiteSpace(WifiSsid)">STORE</button>
+        <button class="bo-field bo-compact" @onclick="StoreWifi" disabled="@(wifiTarget is null || string.IsNullOrWhiteSpace(WifiSsid))">STORE</button>
     </div>
+    @if (wifiTarget is null)
+    {
+        <p class="bo-hint">CONNECT A DEVICE ABOVE TO STORE ITS WIFI SETTINGS</p>
+    }
 }
 
 @code {

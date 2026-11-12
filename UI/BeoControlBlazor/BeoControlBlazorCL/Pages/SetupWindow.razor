@@ -52,10 +52,10 @@
         {
             case "DEVICE":  <DeviceTab />  break;
             case "PC2":     <Pc2Tab />     break;
-            case "REMOTE":  <RemoteTab />  break;
+            case "APP":     <RemoteTab />  break;
             case "SPOTIFY": <SpotifyTab /> break;
             case "FIRMWARE": <FirmwareTab /> break;
-            case "SYSTEM":  <SystemTab />  break;
+            case "UPDATE":  <SystemTab />  break;
         }
     </div>
 
@@ -77,7 +77,7 @@
     /// <summary>Section name of display line 2; each tab fills it with SectionContent.</summary>
     public const string DisplayLine2 = "setup-display-line2";
 
-    private static readonly string[] Menus = ["DEVICE", "PC2", "REMOTE", "SPOTIFY", "FIRMWARE", "SYSTEM"];
+    private static readonly string[] Menus = ["DEVICE", "PC2", "APP", "SPOTIFY", "FIRMWARE", "UPDATE"];
 
     private string _menu = "DEVICE";
 

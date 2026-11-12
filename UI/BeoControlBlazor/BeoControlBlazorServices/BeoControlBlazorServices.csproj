@@ -22,4 +22,10 @@
 
 	</ItemGroup>
 
+	<!-- Debug: bundle locally built factory images (merge_factory.py) for the USB init; releases get them from CI -->
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<None Include="..\..\..\Hardware\esp32_beo4\.pio\build\**\*-factory.bin" Exclude="..\..\..\Hardware\esp32_beo4\.pio\build\**\*-ota-factory.bin"
+		      Link="Firmware\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
 </Project>

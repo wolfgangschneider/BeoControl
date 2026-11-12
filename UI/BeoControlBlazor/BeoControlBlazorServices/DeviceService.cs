@@ -217,6 +217,9 @@ public class DeviceService : IDisposable
     /// <summary>Firmware version of the connected ESP32, or null (not reported yet / PC2).</summary>
     public string? FirmwareVersion { get; private set; }
 
+    /// <summary>Board the connected ESP32 firmware was built for, or null (older firmware without "board" / PC2).</summary>
+    public string? FirmwareBoard { get; private set; }
+
     /// <summary>Speaker and routing state when a PC2 is connected, otherwise null.</summary>
     public Pc2Adapter.Pc2RoutingState? Pc2Routing => (_device as Pc2Adapter.Pc2Device)?.Routing;
 
@@ -318,6 +321,7 @@ public class DeviceService : IDisposable
         }
         _device = next;
         FirmwareVersion = null;
+        FirmwareBoard = null;
         if (_device is not null)
         {
             _device.OnStatusChanged += OnDeviceStatusChanged;
@@ -335,6 +339,8 @@ public class DeviceService : IDisposable
             LastSource = source;
         if (msg is FirmwareVersionMessage firmware)
             FirmwareVersion = firmware.Version;
+        if (msg is FirmwareBoardMessage board)
+            FirmwareBoard = board.Board;
         if (msg is AudioSetupMessage setup)
         {
             SyncPc2AudioSetup(ToAudioSetup(setup), save: true);

@@ -176,6 +176,12 @@ public sealed record FirmwareVersionMessage(string Version) : StatusMessage
     public override string Text => $"Firmware {Version}";
 }
 
+/// <summary>Board the ESP32 firmware was built for ("board" command, e.g. "Beo4Remote_AtomS3"); stays fixed when the device is renamed.</summary>
+public sealed record FirmwareBoardMessage(string Board) : StatusMessage
+{
+    public override string Text => $"Board {Board}";
+}
+
 /// <summary>Current PC2 audio setup values.</summary>
 public sealed record AudioSetupMessage(int Volume, int Bass, int Treble, int Balance, bool Loudness) : StatusMessage
 {

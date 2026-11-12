@@ -22,7 +22,7 @@ namespace BeoControlBlazorServices;
 /// Versions come from the GitHub releases, prereleases only with AppSettings.IncludePrereleases.
 /// (The Pages feed stays stable-only for installs that predate this service.)
 /// The ESP32 firmware follows the app: the image bundled in Firmware/ has the app's version and is
-/// pushed via OTA on request (<see cref="UpdateFirmwareAsync"/>).
+/// pushed via OTA on request (<see cref="UpdateFirmwareAsync"/>), or installed over USB from the factory image (<see cref="InitFirmwareAsync"/>).
 /// </summary>
 public sealed class UpdateService(DeviceService deviceService, ILogger<UpdateService> logger)
 {
@@ -101,9 +101,9 @@ public sealed class UpdateService(DeviceService deviceService, ILogger<UpdateSer
         (Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "")
             .Split('+')[0];
 
-    /// <summary>Bundled image for the connected device (Firmware/&lt;device name&gt;.bin), or null.</summary>
+    /// <summary>Bundled image for the connected device (Firmware/&lt;board&gt;.bin; older firmware without "board": device name), or null.</summary>
     public string? BundledFirmwarePath =>
-        deviceService.CurrentDevice?.Name is { } name
+        (deviceService.FirmwareBoard ?? deviceService.CurrentDevice?.Name) is { } name
         && Path.Combine(AppContext.BaseDirectory, "Firmware", name + ".bin") is var path
         && File.Exists(path) ? path : null;
 
@@ -167,6 +167,83 @@ public sealed class UpdateService(DeviceService deviceService, ILogger<UpdateSer
         SetFirmware(null, deviceService.FirmwareVersion == AppVersion
             ? $"Firmware {AppVersion} installed."
             : $"Update not applied: device reports {deviceService.FirmwareVersion ?? "no version"} instead of {AppVersion}.");
+    }
+
+    /// <summary>Boards with a bundled factory image (Firmware/&lt;board&gt;-factory.bin), e.g. "Beo4Remote_AtomS3".</summary>
+    public IReadOnlyList<string> FactoryImages =>
+        Directory.Exists(Path.Combine(AppContext.BaseDirectory, "Firmware"))
+            ? Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Firmware"), "*-factory.bin")
+                .Select(f => Path.GetFileName(f)[..^"-factory.bin".Length]).Order().ToList()
+            : [];
+
+    /// <summary>
+    /// First install over USB: overwrites bootloader, partitions and app with the factory image of
+    /// <paramref name="board"/>, whatever ran before; the image is contiguous from 0x0, so it also clears NVS (WiFi credentials, pins).
+    /// Then optionally stores the device name ("name") and the IR pins ("txpin"), each restarts the device;
+    /// without <paramref name="name"/> / <paramref name="txPin"/> the board defaults stay.
+    /// </summary>
+    public async Task InitFirmwareAsync(string port, string board, string? name, int? txPin, int? gndPin)
+    {
+        if (FirmwareProgress is not null)
+            return;
+
+        // the flasher needs the port for itself
+        if (deviceService.IsConnected && deviceService.CurrentDevice?.Type == DeviceType.USB)
+            deviceService.Disconnect();
+
+        SetFirmware(0, $"Installing {board} {AppVersion} on {port}…");
+        try
+        {
+            var image = await File.ReadAllBytesAsync(Path.Combine(AppContext.BaseDirectory, "Firmware", board + "-factory.bin"));
+            var chip = await EspFlasher.FlashAsync(port, image, 0, new Progress<int>(p => SetFirmware(p, FirmwareStatus)));
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                SetFirmware(100, "Firmware written, setting name…");
+                await SendAfterBootAsync(port, $"name {name.Trim()}");
+            }
+            if (txPin is { } tx)
+            {
+                SetFirmware(100, "Firmware written, setting IR pins…");
+                await SendAfterBootAsync(port, gndPin is { } gnd ? $"txpin {tx} {gnd}" : $"txpin {tx}");
+            }
+            SetFirmware(null, $"{board} {AppVersion} installed on {chip}.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Firmware init failed.");
+            SetFirmware(null, $"Init failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>Waits for the (re)booting device (USB-CDC re-enumerates) and sends <paramref name="command"/>.</summary>
+    private static async Task SendAfterBootAsync(string port, string command)
+    {
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            await Task.Delay(500);
+            try
+            {
+                using var sp = new System.IO.Ports.SerialPort(port, 115200);
+                sp.Open();
+                await Task.Delay(3500);              // S3 boards wait up to 3 s for the host before reading commands
+                sp.DiscardInBuffer();
+                sp.WriteLine(command);
+                // "... stored, restarting..." proves the device got it; else the port was still the one before the reset
+                var reply = "";
+                for (var i = 0; i < 20 && !reply.Contains("stored"); i++)
+                {
+                    await Task.Delay(100);
+                    reply += sp.ReadExisting();
+                }
+                if (reply.Contains("stored"))
+                    return;
+            }
+            catch (Exception) when (attempt < 19)
+            {
+                // port not back yet
+            }
+        }
+        throw new TimeoutException($"Device did not confirm \"{command}\".");
     }
 
     private void SetFirmware(int? progress, string? status)

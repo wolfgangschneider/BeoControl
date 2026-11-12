@@ -30,6 +30,12 @@ public static class EspFlasher
         [0x6921506f] = "ESP32-C3",
     };
 
+    // chip id in the image header (esp_image_header_t.chip_id) per chip name
+    private static readonly Dictionary<string, ushort> ImageChipIds = new()
+    {
+        ["ESP32"] = 0, ["ESP32-S2"] = 2, ["ESP32-C3"] = 5, ["ESP32-S3"] = 9,
+    };
+
     /// <summary>Resets the board into the ROM bootloader, writes <paramref name="image"/> at <paramref name="offset"/> and resets it.</summary>
     /// <returns>Detected chip name, e.g. "ESP32-S3".</returns>
     public static Task<string> FlashAsync(string port, byte[] image, uint offset = 0, IProgress<int>? progress = null,
@@ -45,6 +51,14 @@ public static class EspFlasher
         var (chipId, chip) = Connect(link, ct)
             ?? throw new Exception("No ESP32 bootloader answered. Hold the boot button, press reset, release boot and retry.");
         var esp32Classic = chipId == 0x00f01d83;
+
+        // factory images start with the bootloader (0x0, ESP32 classic 0x1000), app images at offset 0x10000 with the app
+        var header = offset == 0 && image.Length > 0x1000 && image[0] != 0xE9 ? 0x1000 : 0;
+        if (image.Length < header + 14 || image[header] != 0xE9)
+            throw new Exception("Not an ESP32 image.");
+        var imageChip = BinaryPrimitives.ReadUInt16LittleEndian(image.AsSpan(header + 12));
+        if (ImageChipIds[chip] != imageChip)
+            throw new Exception($"Image is for another chip (id {imageChip}), the board is an {chip}. Nothing was written.");
 
         if (baud > 115200)
         {
