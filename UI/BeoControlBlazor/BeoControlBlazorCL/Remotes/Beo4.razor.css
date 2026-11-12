@@ -14,9 +14,12 @@
 
 /* ── Display ──────────────────────────────────── */
 
+/* inside the black outer frame (3px), set off by a fine line; wider at the bottom like the original */
 .beo4-display-frame {
     background: #111111;
-    padding: 10px 14px 12px;
+    margin: 3px 3px 0;
+    padding: 6px 6px 12px;
+    border: 1px solid #333;
 }
 
 .beo4-display {

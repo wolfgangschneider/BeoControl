@@ -8,14 +8,28 @@
     box-shadow: 2px 4px 16px rgba(0,0,0,0.45);
     font-family: 'Arial Narrow', Arial, sans-serif;
     user-select: none;
+    container-type: size;   /* the key spacing below is computed from this height (cqh) */
 }
 
+/* spacing like the original: key 5 mm, rows 4 mm apart, groups (and last row to the black cover) 9 mm.
+   Unit u = 1 mm (4.5px at 22px keys), grows with --zoom; when the height is short, u shrinks so that
+   14 key rows + 81 u (9 row gaps x 4 + 5 group gaps x 9) + 90px header/footer fit. */
 .bl1000-section {
+    --u: clamp(0.5px, (100cqh - 14 * 22px * var(--zoom) - 90px) / 81, 4.5px * var(--zoom));
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 3px;
-    margin-bottom: 8px;
-    padding: 0 2px;
+    column-gap: 1px;
+    row-gap: calc(4 * var(--u));
+    margin-bottom: calc(9 * var(--u));
+    padding: 0 3px;   /* keys 3px from the edge (silver), like the Beo4 frame width */
+}
+
+.bl1000-section:not(.bl1000-section--sides) ::deep .remoteBtn {
+    border-radius: 0;
+}
+
+.bl1000-section--sides {
+    column-gap: 3px;
 }
 
 .bl1000-header {

@@ -2,7 +2,7 @@
 @using BeoControlBlazorCL.Components
 @* Pure layout component — no service knowledge *@
 
-<div class="bl1000">
+<div class="bl1000" style="--zoom:@((RemoteButton.Zoom / 100.0).ToString(System.Globalization.CultureInfo.InvariantCulture))">
     <div class="bl1000-header"></div>
 
     <div>
@@ -52,7 +52,8 @@
             <RemoteButton CommandId="@CommandId.Goto" OnCommand="SendCommand" disabled />
         </div>
 
-        <div class="bl1000-section">
+        @* only side keys here: they stay separate, not edge to edge *@
+        <div class="bl1000-section bl1000-section--sides">
             <RemoteButton CommandId="@CommandId.Picture" OnCommand="SendCommand" />
             <span></span>
             <RemoteButton CommandId="@CommandId.VolumeUp" OnCommand="SendCommand" Caption="▲" />
