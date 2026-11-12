@@ -1,6 +1,8 @@
 .beo4 {
     display: grid;
-    grid-template-rows: 1fr auto 1fr;
+    /* display grows up to 9 keys high (LCD 9 x 22px x zoom + 23px frame); beyond that the extra height
+       goes to the silver part below the keys, which is only decoration (at least 40px for the brand) */
+    grid-template-rows: minmax(min-content, calc(9 * 22px * var(--zoom) + 23px)) auto minmax(40px, 1fr);
     height: 100%;
     width: var(--remote-width);
     background: linear-gradient(170deg, #e2e2e2 0%, #c8c8c8 100%);
@@ -10,6 +12,7 @@
     font-family: 'Arial Narrow', Arial, sans-serif;
     user-select: none;
     overflow: hidden;
+    container-type: size;   /* the key row spacing below is computed from this height (cqh) */
 }
 
 /* ── Display ──────────────────────────────────── */
@@ -87,6 +90,18 @@
 .beo4-section-volume ::deep .remoteBtn {
     border-radius: 0;
 }
+
+/* key rows like the original: key 5 mm, rows 4 mm apart, groups 8 mm, 8 mm below the display, navigation keys 6 mm above and below.
+   Unit u = 1 mm (4.5px at 22px keys), grows with --zoom; when the height is short, u shrinks so that
+   10 key rows + ~290px display/nav/footer + 48 u (5 row gaps x 4 + 8 + 8 + 6 + 6) fit. */
+.beo4-section,
+.beo4-nav-area {
+    --u: clamp(0.5px, (100cqh - 10 * 22px * var(--zoom) - 290px) / 48, 4.5px * var(--zoom));
+}
+.beo4-section { grid-row-gap: max(1px, 4 * var(--u) - 4px); }   /* 14px instead of 18 (4 mm) at full height: looks closer to the original */
+.beo4-section:first-child { margin-top: calc(8 * var(--u)); }
+.beo4-section:has(+ .beo4-section) { margin-bottom: 0; }
+.beo4-section + .beo4-section { margin-top: calc(8 * var(--u)); }
 .beo4-section-volume {
     
     grid-template-rows: auto auto auro;
@@ -98,6 +113,8 @@
     /*margin: 8px 10px;
     margin: 14px 14px;*/
     margin: 14px auto;
+    margin-top: calc(6 * var(--u));
+    margin-bottom: calc(6 * var(--u));
     width: 135px;
     /* background: #c8c8c8;*/
     overflow: clip;

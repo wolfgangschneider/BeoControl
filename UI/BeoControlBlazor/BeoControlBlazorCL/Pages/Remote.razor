@@ -20,7 +20,7 @@
     var status = RemoteStatus();
 }
 <div class="remote-shell"
-     onmousedown="if (event.button === 0 && window.chrome?.webview && !event.target.closest('button,select,input')) window.chrome.webview.postMessage('beocontrol:drag')">
+     onmousedown="if (event.button === 0 && window.chrome?.webview && !event.target.closest('button,select,input')) window.chrome.webview.postMessage(event.target.matches('.beo4,.bl1000') && event.offsetY < 6 ? 'beocontrol:resize' : 'beocontrol:drag')">
 
     @if (Selected == RemoteType.Beolink1000)
     {

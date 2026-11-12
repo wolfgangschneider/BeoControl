@@ -25,6 +25,22 @@ body {
     margin: 0 auto;
 }
 
+/* Windows: the top 6px of the remote resize the borderless window (Remote.razor posts 'beocontrol:resize') */
+.beo4, .bl1000 {
+    position: relative;
+}
+
+.beo4::before, .bl1000::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    cursor: ns-resize;
+    z-index: 20;
+}
+
 
 a, .btn-link {
     color: #006bb7;

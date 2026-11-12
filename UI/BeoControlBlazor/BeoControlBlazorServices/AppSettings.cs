@@ -114,7 +114,7 @@ public class AppSettings
     public sealed class WindowGeometry
     {
         public const int DefaultWindowWidth = 300;
-        public const int DefaultWindowHeight = 950;
+        public const int DefaultWindowHeight = 800;
 
         public int WindowWidth { get; set; } = DefaultWindowWidth;
         public int WindowHeight { get; set; } = DefaultWindowHeight;

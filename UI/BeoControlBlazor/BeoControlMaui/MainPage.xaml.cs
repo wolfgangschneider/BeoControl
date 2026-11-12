@@ -41,6 +41,9 @@ namespace BeoControlMaui
                     }
                     StartMove(Dispatcher, hWnd);
                 }
+                // mouse down on the top edge of the remote: resize the window there (bottom edge stays)
+                else if (message == "beocontrol:resize" && Window?.Handler?.PlatformView is Microsoft.UI.Xaml.Window resized)
+                    StartResize(Dispatcher, WinRT.Interop.WindowNative.GetWindowHandle(resized));
                 else if (message?.StartsWith("beocontrol:shape:") == true && Window?.Handler?.PlatformView is Microsoft.UI.Xaml.Window shaped)
                     ApplyShape(WinRT.Interop.WindowNative.GetWindowHandle(shaped), message["beocontrol:shape:".Length..]);
             };
@@ -68,6 +71,34 @@ namespace BeoControlMaui
                 Win32.GetCursorPos(out var now);
                 Win32.SetWindowPos(hWnd, IntPtr.Zero, window.Left + now.X - start.X, window.Top + now.Y - start.Y, 0, 0,
                     Win32.SWP_NOSIZE | Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE);
+            };
+            timer.Start();
+        }
+
+        private const int MinResizeHeight = 400;   // physical px
+
+        /// <summary>
+        /// Resizes the window at its top edge until the left button is released; the bottom edge stays
+        /// (the window sits above the taskbar). Own loop: the borderless window is not resizable (white strip).
+        /// The new size is saved by App.OnAppWindowChanged.
+        /// </summary>
+        private static void StartResize(IDispatcher dispatcher, IntPtr hWnd)
+        {
+            Win32.GetCursorPos(out var start);
+            Win32.GetWindowRect(hWnd, out var window);
+            var timer = dispatcher.CreateTimer();
+            timer.Interval = TimeSpan.FromMilliseconds(10);
+            timer.Tick += (_, _) =>
+            {
+                if ((Win32.GetAsyncKeyState(Win32.VK_LBUTTON) & 0x8000) == 0)
+                {
+                    timer.Stop();
+                    return;
+                }
+                Win32.GetCursorPos(out var now);
+                var height = Math.Max(MinResizeHeight, window.Bottom - window.Top - (now.Y - start.Y));
+                Win32.SetWindowPos(hWnd, IntPtr.Zero, window.Left, window.Bottom - height, window.Right - window.Left, height,
+                    Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE);
             };
             timer.Start();
         }

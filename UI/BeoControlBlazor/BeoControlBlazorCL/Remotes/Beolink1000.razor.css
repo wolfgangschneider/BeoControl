@@ -1,7 +1,8 @@
 .bl1000 {
     height: 100%;
     display: grid;
-    grid-template-rows: 1fr auto 2fr;
+    /* silver head grows up to 5 keys high; beyond that the extra height goes to the black cover below (at least 40px) */
+    grid-template-rows: minmax(0, calc(5 * 22px * var(--zoom))) auto minmax(40px, 1fr);
     width: var(--remote-width);
     background: linear-gradient(170deg, #e2e2e2 0%, #c8c8c8 100%);
     border-radius: 6px 6px 0 0;
@@ -19,7 +20,7 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     column-gap: 1px;
-    row-gap: calc(4 * var(--u));
+    row-gap: max(1px, 4 * var(--u) - 4px);   /* 14px instead of 18 (4 mm) at full height, like the Beo4 */
     margin-bottom: calc(9 * var(--u));
     padding: 0 3px;   /* keys 3px from the edge (silver), like the Beo4 frame width */
 }
