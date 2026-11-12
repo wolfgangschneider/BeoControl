@@ -114,8 +114,15 @@ public sealed class UpdateService(DeviceService deviceService, ILogger<UpdateSer
     /// <summary>Upload progress in percent, null when idle.</summary>
     public int? FirmwareProgress { get; private set; }
 
-    /// <summary>Result of the last upload (e.g. "Firmware 1.4.0 installed"), null before the first one.</summary>
-    public string? FirmwareStatus { get; private set; }
+    /// <summary>
+    /// Result of the last upload (e.g. "Firmware 1.4.0 installed"), null before the first one
+    /// and while another device than the one it belongs to is connected.
+    /// </summary>
+    public string? FirmwareStatus =>
+        deviceService.CurrentDevice is not { } device || device.Id == _firmwareStatusDevice ? _firmwareStatus : null;
+
+    private string? _firmwareStatus;
+    private string? _firmwareStatusDevice;
 
     private static readonly TimeSpan RebootWait = TimeSpan.FromSeconds(10);
     private const int ReconnectAttempts = 3;
@@ -247,7 +254,8 @@ public sealed class UpdateService(DeviceService deviceService, ILogger<UpdateSer
     private void SetFirmware(int? progress, string? status)
     {
         FirmwareProgress = progress;
-        FirmwareStatus = status;
+        _firmwareStatus = status;
+        _firmwareStatusDevice = deviceService.CurrentDevice?.Id;
         Changed?.Invoke();
     }
 

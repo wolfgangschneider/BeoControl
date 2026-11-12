@@ -39,11 +39,10 @@ else
         </select>
     </div>
     <div class="bo-inline">
-        <input class="bo-field" type="text" maxlength="32" placeholder="NAME (BOARD DEFAULT, A-Z 0-9 _ -)" @bind="_name" />
-    </div>
-    <div class="bo-inline">
-        <input class="bo-field" type="number" placeholder="TX PIN (BOARD DEFAULT)" @bind="_txPin" />
-        <input class="bo-field" type="number" placeholder="GND PIN (-1 = NONE)" @bind="_gndPin" />
+        @* empty = board default; name A-Z 0-9 _ -, GND -1 = none *@
+        <input class="bo-field" style="flex-grow: 2" type="text" maxlength="32" placeholder="NAME (A-Z 0-9 _ -)" title="Empty = board default" @bind="_name" />
+        <input class="bo-field" type="number" placeholder="TX PIN" title="Empty = board default" @bind="_txPin" />
+        <input class="bo-field" type="number" placeholder="GND PIN" title="Empty = board default, -1 = none" @bind="_gndPin" />
     </div>
     <div class="bo-keys bo-keys-3">
         <button class="bo-key" @onclick="InitAsync" disabled="@(string.IsNullOrEmpty(_port) || UpdateService.FirmwareProgress is not null)">

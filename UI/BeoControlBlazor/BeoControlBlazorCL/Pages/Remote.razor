@@ -185,6 +185,7 @@
         {
             DeviceType.USB => dev.Name is not null ? $"{dev.Name}  |  {dev.Id}" : dev.Id ?? "Serial",
             DeviceType.BT     => dev.Name is not null ? $"{dev.Name}  |  BT" : "BT",
+            DeviceType.WIFI   => dev.Name is not null ? $"{dev.Name}  |  WIFI" : dev.Id ?? "WIFI",
             DeviceType.PC2    => "PC2",
             _                 => dev.Id ?? "Unknown"
         };
