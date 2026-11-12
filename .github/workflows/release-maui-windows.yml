@@ -413,7 +413,7 @@ jobs:
             '-p:Version=${{ needs.prepare-release.outputs.release_version }}',
             '-p:AndroidPackageFormats=apk',
             '-p:AndroidCreatePackagePerAbi=false',
-            '-p:RunAOTCompilation=false',
+            '-p:PublishReadyToRun=false',   # .NET 11 (CoreCLR on Android): replaces RunAOTCompilation
             '-p:PublishTrimmed=false',
             '-o', $publishDir
           )

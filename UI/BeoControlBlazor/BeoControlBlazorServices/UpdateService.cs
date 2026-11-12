@@ -19,7 +19,7 @@ namespace BeoControlBlazorServices;
 /// Manual updates, shared by the desktop hosts — nothing installs by itself:
 /// the hosts call <see cref="CheckForUpdateAsync"/> on startup, which only sets <see cref="AvailableVersion"/>;
 /// the user installs any listed version (also downgrade) via <see cref="InstallVersionAsync"/>.
-/// Versions come from the GitHub releases, prereleases only with AppSettings.IncludePrereleases.
+/// Versions come from the GitHub releases, prereleases included (everybody decides what to install).
 /// (The Pages feed stays stable-only for installs that predate this service.)
 /// The ESP32 firmware follows the app: the image bundled in Firmware/ has the app's version and is
 /// pushed via OTA on request (<see cref="UpdateFirmwareAsync"/>), or installed over USB from the factory image (<see cref="InitFirmwareAsync"/>).
@@ -28,8 +28,6 @@ public sealed class UpdateService(DeviceService deviceService, ILogger<UpdateSer
 {
     private const string FeedUrl = "https://wolfgangschneider.github.io/BeoControl/updates/";
     private const string RepoUrl = "https://github.com/wolfgangschneider/BeoControl";
-
-    private AppSettings Settings => deviceService.Settings;
 
     /// <summary>Raised when <see cref="AvailableVersion"/> or the firmware upload state changes.</summary>
     public event Action? Changed;
@@ -52,7 +50,7 @@ public sealed class UpdateService(DeviceService deviceService, ILogger<UpdateSer
     {
         try
         {
-            var (_, manager) = CreateGithub(Settings.IncludePrereleases, allowDowngrade: false);
+            var (_, manager) = CreateGithub(allowDowngrade: false);
             if (!manager.IsInstalled)
                 return;
             var update = await manager.CheckForUpdatesAsync();
@@ -65,10 +63,10 @@ public sealed class UpdateService(DeviceService deviceService, ILogger<UpdateSer
         }
     }
 
-    /// <summary>Versions on the GitHub releases for this install's channel (prereleases only with IncludePrereleases), newest first. Empty when not installed.</summary>
+    /// <summary>Versions on the GitHub releases for this install's channel (also prereleases), newest first. Empty when not installed.</summary>
     public async Task<List<string>> GetAvailableVersionsAsync()
     {
-        var (source, manager) = CreateGithub(Settings.IncludePrereleases);
+        var (source, manager) = CreateGithub();
         if (!manager.IsInstalled)
             return [];
         var assets = await GetFullAssetsAsync(source, manager);
@@ -253,10 +251,9 @@ public sealed class UpdateService(DeviceService deviceService, ILogger<UpdateSer
         Changed?.Invoke();
     }
 
-    /// <param name="prerelease">Include prereleases. Default true so any listed version stays installable.</param>
-    private static (GithubSource Source, UpdateManager Manager) CreateGithub(bool prerelease = true, bool allowDowngrade = true)
+    private static (GithubSource Source, UpdateManager Manager) CreateGithub(bool allowDowngrade = true)
     {
-        var source = new GithubSource(RepoUrl, null!, prerelease);
+        var source = new GithubSource(RepoUrl, null!, prerelease: true);
         return (source, new UpdateManager(source, new UpdateOptions { AllowVersionDowngrade = allowDowngrade }));
     }
 

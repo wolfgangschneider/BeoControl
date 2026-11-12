@@ -33,11 +33,12 @@
             {
                 <span class="led led-green">@DeviceTab.Label(connected.Type)</span>
             }
-            @if (UpdateService.AvailableVersion is { } update)
+            @* short hint, the version itself is shown in the UPDATE tab *@
+            @if (ShowNewApp)
             {
-                <span class="led led-red bo-push">UPDATE V@(update.ToUpperInvariant())</span>
+                <span class="led led-red bo-push">NEW APP</span>
             }
-            <span class="led @(DeviceService.Settings.SpotifyEnabled ? "led-green" : "led-off") @(UpdateService.AvailableVersion is null ? "bo-push" : "") bo-wide">SPOTIFY</span>
+            <span class="led @(DeviceService.Settings.SpotifyEnabled ? "led-green" : "led-off") @(ShowNewApp ? "" : "bo-push") bo-wide">SPOTIFY</span>
             <span class="led led-red bo-wide">@_menu</span>
         </div>
         @* line 2: rendered by the selected tab - all options shown, red = selected, green = connected/on, dark = not selected *@
@@ -80,6 +81,8 @@
     private static readonly string[] Menus = ["DEVICE", "PC2", "APP", "SPOTIFY", "FIRMWARE", "UPDATE"];
 
     private string _menu = "DEVICE";
+
+    private bool ShowNewApp => UpdateService.AvailableVersion is not null && _menu != "UPDATE";
 
     private bool IsConnecting =>
         !DeviceService.IsConnected && DeviceService.Status is DeviceStatus.Connecting or DeviceStatus.Discovering;

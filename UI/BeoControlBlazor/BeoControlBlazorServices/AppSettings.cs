@@ -55,9 +55,6 @@ public class AppSettings
     public SpotifyLaunchMode SpotifyLaunchMode { get; set; } = SpotifyLaunchMode.Web;
     public string Pc2TriggerCommand { get; set; } = string.Empty;
 
-    /// <summary>Update check and version list also include prereleases (e.g. 1.5.0-beta).</summary>
-    public bool IncludePrereleases { get; set; }
-
     public static AppSettings Load()
     {
         try

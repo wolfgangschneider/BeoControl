@@ -9,18 +9,13 @@
 @implements IDisposable
 
 <SectionContent SectionName="@SetupWindow.DisplayLine2">
-    <span class="led @(Prereleases ? "led-red" : "led-off")">PRERELEASES</span>
-    <span class="led led-green">@GetAppVersionDisplay().ToUpperInvariant()</span>
+    <span class="led led-green">APP @GetAppVersionDisplay().ToUpperInvariant()</span>
+    <span class="led @(DeviceService.FirmwareVersion is null ? "led-off" : "led-green")">FW @(DeviceService.FirmwareVersion is { } fw ? $"V{fw.ToUpperInvariant()}" : "—")</span>
 </SectionContent>
-
-<div class="bo-keys bo-keys-3">
-    @* applies to the update check and the version list *@
-    <button class="bo-key @(Prereleases ? "active" : "")" @onclick="TogglePrereleases">PRERELEASES</button>
-</div>
 
 @if (_versions.Count > 0)
 {
-    <div class="bo-inline">
+    <div class="bo-inline bo-row">
         <span class="bo-row-label">APP</span>
         <InputSelect class="bo-field" @bind-Value="_selectedVersion">
             @foreach (var v in _versions)
@@ -40,13 +35,21 @@ else
 }
 
 @* the firmware follows the app: only the image bundled with this app version (OTA, WiFi only) *@
-<div class="bo-inline">
+<div class="bo-inline bo-row">
     <span class="bo-row-label">FIRMWARE</span>
-    <select class="bo-field" disabled="@(UpdateService.BundledFirmwarePath is null)">
-        <option>@(UpdateService.BundledFirmwarePath is null ? "NO BUNDLED FIRMWARE"
-                  : $"v{UpdateService.AppVersion}{(DeviceService.FirmwareVersion == UpdateService.AppVersion ? " (INSTALLED)" : "")}")</option>
+    @* like APP: the bundled version (installable) plus the device's current version marked "(INSTALLED)" *@
+    <select class="bo-field" @bind="_selectedFirmware" disabled="@(FirmwareVersions.Count == 0)">
+        @if (FirmwareVersions.Count == 0)
+        {
+            <option value="">NO BUNDLED FIRMWARE</option>
+        }
+        @foreach (var v in FirmwareVersions)
+        {
+            <option value="@v">v@(v)@(v == DeviceService.FirmwareVersion ? " (INSTALLED)" : "")</option>
+        }
     </select>
-    <button class="bo-field bo-compact" @onclick="UpdateService.UpdateFirmwareAsync" disabled="@(!UpdateService.FirmwareUpdateAvailable)">
+    <button class="bo-field bo-compact" @onclick="UpdateService.UpdateFirmwareAsync"
+            disabled="@(!UpdateService.FirmwareUpdateAvailable || SelectedFirmware != UpdateService.AppVersion)">
         @(UpdateService.FirmwareProgress is { } p ? $"{p} %" : "INSTALL")
     </button>
 </div>
@@ -54,16 +57,22 @@ else
 {
     <p class="bo-hint">@status.ToUpperInvariant()</p>
 }
-else if (!DeviceService.IsConnected || DeviceService.CurrentDevice?.Type != DeviceType.WIFI)
+else
 {
-    <p class="bo-hint">FIRMWARE UPDATE: DEVICE MUST BE CONNECTED VIA WIFI</p>
-}
-else if (DeviceService.FirmwareVersion is { } fw)
-{
-    <p class="bo-hint">DEVICE HAS V@(fw.ToUpperInvariant())</p>
+    <p class="bo-hint">FIRMWARE UPDATES ONLY OVER WIFI</p>
 }
 
 @code {
+    private string? _selectedFirmware;
+
+    // bundled image first (newest), then the version running on the device
+    private List<string> FirmwareVersions =>
+        new[] { UpdateService.BundledFirmwarePath is null ? null : UpdateService.AppVersion, DeviceService.FirmwareVersion }
+            .OfType<string>().Distinct().ToList();
+
+    private string? SelectedFirmware =>
+        _selectedFirmware is { } s && FirmwareVersions.Contains(s) ? s : FirmwareVersions.FirstOrDefault();
+
     private List<string> _versions = [];
     private string _versionsStatus = "LOADING VERSIONS…";
     private string _selectedVersion = "";
@@ -89,13 +98,6 @@ else if (DeviceService.FirmwareVersion is { } fw)
     // opening the tab refreshes the list and the "UPDATE V…" display hint
     protected override async Task OnInitializedAsync()
     {
-        await LoadVersionsAsync();
-        await UpdateService.CheckForUpdateAsync();
-    }
-
-    private async Task TogglePrereleases()
-    {
-        Prereleases = !Prereleases;
         await LoadVersionsAsync();
         await UpdateService.CheckForUpdateAsync();
     }
@@ -128,16 +130,6 @@ else if (DeviceService.FirmwareVersion is { } fw)
         catch (Exception ex)
         {
             _versionsStatus = $"VERSIONS NOT AVAILABLE: {ex.Message}";
-        }
-    }
-
-    private bool Prereleases
-    {
-        get => DeviceService.Settings.IncludePrereleases;
-        set
-        {
-            DeviceService.Settings.IncludePrereleases = value;
-            DeviceService.Settings.Save();
         }
     }
 

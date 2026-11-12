@@ -20,7 +20,8 @@
 .bo-display-row {
     display: flex;
     align-items: baseline;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;          /* one line each; too long LED texts are cut with "…" */
+    overflow: hidden;
     gap: 8px 20px;
 }
 
@@ -30,6 +31,10 @@
 .bo-display ::deep .led {
     font-size: 11px;
     letter-spacing: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 
 .bo-display ::deep .led-red    { color: #ff3b2f; }
@@ -130,6 +135,7 @@
 .bo-controls ::deep input.bo-field:disabled { color: #444; }
 .bo-controls ::deep .bo-field.connected { color: #3ecf5a; }   /* device connected via this tab, same green as the LEDs */
 /* label left of a field row (UPDATE tab: APP / FIRMWARE), styled like .bo-label */
+.bo-controls ::deep .bo-row { margin-top: 16px; }   /* same gap as above a .bo-label section */
 .bo-controls ::deep .bo-row-label { flex: 0 0 90px; align-self: center; color: #999; font-size: 11px; letter-spacing: 2px; }
 
 /* fields + compact button in one row (WiFi setup) */
