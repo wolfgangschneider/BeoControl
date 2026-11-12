@@ -146,7 +146,8 @@ class WebViewManager : Microsoft.AspNetCore.Components.WebView.WebViewManager
 
 		_logger?.LogDebug($"Fetching \"{uri}\"");
 
-		if (TryGetResponseContent(uri, false, out var statusCode, out var statusMessage, out var content, out var headers))
+		// allowFallbackOnHostPage: page routes like "/setupwindow" get index.html, Blazor's router then shows the page
+		if (TryGetResponseContent(uri, true, out var statusCode, out var statusMessage, out var content, out var headers))
 		{
 			using var ms = new MemoryStream();
 			content.CopyTo(ms);

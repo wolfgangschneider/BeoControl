@@ -77,7 +77,8 @@ internal class Program : IHostedService
             _window.Title = "BC";
 
             var lastWinPosition = _deviceService.Settings.LastWinPosition;
-            _window.SetDefaultSize(lastWinPosition.WindowWidth, lastWinPosition.WindowHeight);
+            // width = remote body (--body-width in wwwroot/css/app.css), no grey margin; only the height is remembered
+            _window.SetDefaultSize(RemoteWidth, lastWinPosition.WindowHeight);
 
             var webView = new BlazorWebView(_serviceProvider);
             // gear button: setup in its own window like on Windows, the remote stays narrow
@@ -164,6 +165,8 @@ internal class Program : IHostedService
         _setupWindow = setupWindow;
         setupWindow.Present();
     }
+
+    const int RemoteWidth = 210;   // keep in sync with --body-width in wwwroot/css/app.css
 
     Gtk.Window? _setupWindow;
     bool _gtkExited;
