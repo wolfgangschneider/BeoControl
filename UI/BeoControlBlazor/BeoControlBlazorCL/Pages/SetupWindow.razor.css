@@ -39,7 +39,6 @@
 
 .bo-display ::deep .led-red    { color: #ff3b2f; }
 .bo-display ::deep .led-green  { color: #3ecf5a; }
-.bo-display ::deep .led-alt    { color: #3ecf5a; }   /* option selectable right now (Beomaster touch commands) */
 .bo-display ::deep .led-blink  { animation: bo-pulse 1.2s ease-in-out infinite; }   /* connecting */
 .bo-display ::deep .led-off    { color: #3a3a3a; }
 
@@ -64,6 +63,7 @@
 
 .bo-display ::deep .bo-dots span:nth-child(2) { animation-delay: 0.2s; }
 .bo-display ::deep .bo-dots span:nth-child(3) { animation-delay: 0.4s; }
+.bo-display ::deep .led-off .bo-dots span { animation: none; opacity: 0.6; }   /* SEARCHING idle: bars dark like unlit LEDs (dimmed: solid bars look lighter than thin text) */
 
 .bo-push { margin-left: auto; }
 
@@ -243,8 +243,7 @@
     .bo-controls ::deep .bo-row-label { flex: 0 0 100%; }
 
     /* display line 2: only the active LEDs, the dark (not selected) ones would not fit */
-    .bo-display-row + .bo-display-row ::deep .led-off,
-    .bo-display-row + .bo-display-row ::deep .led-alt { display: none; }
+    .bo-display-row + .bo-display-row ::deep .led-off { display: none; }
 
     /* menu strip in two rows of three, no scrolling (mouse on Linux can't swipe); close dot top right */
     .bo-menu {

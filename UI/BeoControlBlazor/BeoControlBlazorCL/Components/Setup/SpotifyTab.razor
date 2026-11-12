@@ -11,8 +11,9 @@
     <span class="led @(SpotifyEnabled ? "led-red" : "led-off")">@FormatSource(SpotifyTriggerCommand)</span>
     @foreach (var mode in Enum.GetValues<SpotifyLaunchMode>())
     {
-        <span class="led @(!SpotifyEnabled ? "led-off" : SpotifyLaunchModeSetting == mode ? "led-red" : "led-alt")">@mode.ToString().ToUpperInvariant()</span>
+        <span class="led @(SpotifyEnabled && SpotifyLaunchModeSetting == mode ? "led-red" : "led-off")">@mode.ToString().ToUpperInvariant()</span>
     }
+    <span class="led @(IsLoadingSpotifyDevices ? "led-green" : "led-off") bo-push">SEARCHING<span class="bo-dots"><span></span><span></span><span></span></span></span>
 </SectionContent>
 
 <div class="bo-keys bo-keys-3">
@@ -165,11 +166,9 @@
 
     private async Task LoadSpotifyDevicesAsync()
     {
+        // SEARCHING in display line 2 while loading (may wait for the Spotify login); only "none" and errors as text
         IsLoadingSpotifyDevices = true;
-        SpotifyDevicesStatus = "Stage 1/3: starting Spotify device load…";
-        await InvokeAsync(StateHasChanged);
-
-        SpotifyDevicesStatus = "Stage 2/3: waiting for Spotify login or cached token…";
+        SpotifyDevicesStatus = string.Empty;
         await InvokeAsync(StateHasChanged);
 
         try
@@ -179,9 +178,7 @@
                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            SpotifyDevicesStatus = SpotifyDevices.Count == 0
-                ? "Stage 3/3: Spotify device request returned 0 devices."
-                : $"Stage 3/3: Spotify device request returned {SpotifyDevices.Count} device(s).";
+            SpotifyDevicesStatus = SpotifyDevices.Count == 0 ? "No Spotify devices found" : string.Empty;
         }
         catch (Exception ex)
         {

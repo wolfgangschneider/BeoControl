@@ -99,7 +99,7 @@
     [Parameter] public string? DeviceStatus { get; set; }
     /// <summary>LIST to "BC SETUP" (first entry), then GO: opens the setup, nothing is sent.</summary>
     [Parameter] public EventCallback OnSetup { get; set; }
-    /// <summary>Connection problem (CONNECTING, DISCONNECTED, SPOTIFY DISCONNECTED): shown instead of the source.</summary>
+    /// <summary>Connection problem (CONNECTING, OFFLINE, NO SPOTIFY): shown instead of the source.</summary>
     [Parameter] public string? Status { get; set; }
     [Parameter] public string? Song { get; set; }
     [Parameter] public string? Info { get; set; }

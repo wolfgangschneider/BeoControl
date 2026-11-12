@@ -6,7 +6,6 @@
 @inject DeviceService DeviceService
 @implements IDisposable
 
-@* own copy of PC2Setup in bo style - PC2Setup itself stays for the old /setup page *@
 <SectionContent SectionName="@SetupWindow.DisplayLine2">
     @if (IsPc2Connected || true) 
     {
@@ -14,11 +13,11 @@
         var a = DeviceService.CurrentPc2AudioSetup;
         @foreach (var option in Pc2OptionValues)
         {
-            <span class="led @(a.NodeOption == option ? "led-red" : "led-alt")">@option</span>
+            <span class="led @(a.NodeOption == option ? "led-red" : "led-off")">@option</span>
         }
         @foreach (var source in Pc2DefaultSources)
         {
-            <span class="led @(a.DefaultSource == source.Value ? "led-red" : "led-alt")">@source.Label</span>
+            <span class="led @(a.DefaultSource == source.Value ? "led-red" : "led-off")">@source.Label</span>
         }
         <span class="led @(string.IsNullOrEmpty(Pc2TriggerCommand) ? "led-off" : "led-red")">@(string.IsNullOrEmpty(Pc2TriggerCommand) ? "NO TRIGGER" : SpotifyTab.FormatSource(Pc2TriggerCommand))</span>
     }

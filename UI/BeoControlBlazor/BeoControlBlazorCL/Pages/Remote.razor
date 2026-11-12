@@ -183,8 +183,8 @@
 
     // device problem always, Spotify problem only while the Spotify source is selected; null = all fine
     private string? RemoteStatus() =>
-        !DeviceService.IsConnected ? (IsConnecting ? "CONNECTING" : "DISCONNECTED")
-        : Spotify.IsSourceSelected() && DeviceService.Settings.SpotifyEnabled && !Spotify.IsSpotifyConnected() ? "SPOTIFY DISCONNECTED"
+        !DeviceService.IsConnected ? (IsConnecting ? "CONNECTING" : "OFFLINE")
+        : Spotify.IsSourceSelected() && DeviceService.Settings.SpotifyEnabled && !Spotify.IsSpotifyConnected() ? "NO SPOTIFY"
         : null;
 
     private static int NormalizeZoom(int zoom) => zoom switch

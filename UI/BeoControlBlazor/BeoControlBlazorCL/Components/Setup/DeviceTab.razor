@@ -8,13 +8,9 @@
 <SectionContent SectionName="@SetupWindow.DisplayLine2">
     @foreach (var tab in Tabs)
     {
-        <span class="led @(ActiveTab == tab ? "led-red" : "led-alt")">@Label(tab)</span>
+        <span class="led @(ActiveTab == tab ? "led-red" : "led-off")">@Label(tab)</span>
     }
-    @if (!string.IsNullOrEmpty(ScanStatus))
-    {
-        <span class="led led-red">@ScanLedText()@if (IsScanning)
-        {<span class="bo-dots"><span></span><span></span><span></span></span>}</span>
-    }
+    <span class="led @(IsScanning ? "led-green" : "led-off") bo-push">SEARCHING<span class="bo-dots"><span></span><span></span><span></span></span></span>
 </SectionContent>
 
 <div class="bo-label">CONNECTION</div>
@@ -26,6 +22,10 @@
 </div>
 
 <div class="bo-label">DEVICES</div>
+@if (!IsScanning && !string.IsNullOrEmpty(ScanStatus))
+{
+    <div class="bo-field">@ScanStatus.ToUpperInvariant().TrimEnd('.')</div>   @* in place of the device rows: no devices found, connect failed, errors *@
+}
 @if (ActiveTab == DeviceType.USB)
 {
     var usb = WithCurrent(SerialDevices, DeviceType.USB);
@@ -36,7 +36,7 @@
             <button class="bo-field bo-compact bo-conn" @onclick="() => Toggle(DeviceType.USB, d.Id, ConnectSerial)" disabled="@IsBusy">@ConnLabel(DeviceType.USB, d.Id)</button>
         </div>
     }
-    @if (usb.Count == 0 && !IsScanning)
+    @if (usb.Count == 0 && !IsScanning && ScanStatus == "")
     {
         <p class="bo-hint">TAP USB TO DISCOVER USB DEVICES</p>
     }
@@ -51,7 +51,7 @@
             <button class="bo-field bo-compact bo-conn" @onclick="() => Toggle(DeviceType.BT, d.Id, ConnectBluetooth)" disabled="@IsBusy">@ConnLabel(DeviceType.BT, d.Id)</button>
         </div>
     }
-    @if (ble.Count == 0 && !IsScanning)
+    @if (ble.Count == 0 && !IsScanning && ScanStatus == "")
     {
         <p class="bo-hint">TAP BLE TO DISCOVER BLE DEVICES</p>
     }
@@ -80,7 +80,7 @@
             <button class="bo-field bo-compact bo-conn" @onclick="() => Toggle(DeviceType.WIFI, d.Id, ConnectWifi)" disabled="@IsBusy">@ConnLabel(DeviceType.WIFI, d.Id)</button>
         </div>
     }
-    @if (wifi.Count == 0 && !IsScanning)
+    @if (wifi.Count == 0 && !IsScanning && ScanStatus == "")
     {
         <p class="bo-hint">TAP WIFI TO DISCOVER WIFI DEVICES</p>
     }
@@ -148,15 +148,6 @@
 
     private async void OnServiceStatusChanged(StatusMessage msg) => await InvokeAsync(StateHasChanged);
 
-    // Display text for scan progress: "SCANNING USB COM8", "SCANNING BLE"
-    private string ScanLedText()
-    {
-        var s = ScanStatus.TrimStart('○', ' ').TrimEnd('.', '…', ' ');
-        if (!IsScanning) return s.ToUpperInvariant();
-        var what = ActiveTab == DeviceType.USB && s.StartsWith("Probing ") ? s["Probing ".Length..] : "";
-        return $"SCANNING {Label(ActiveTab)} {what.ToUpperInvariant()}".TrimEnd();
-    }
-
     private async Task SelectTab(DeviceType tab)
     {
         var stopOnly = tab == ActiveTab && IsScanning;
@@ -188,7 +179,7 @@
                 cts.Token);
             if (SerialDevices.Count > 0 && SelectedSerial is null)
                 SelectedSerial = SerialDevices[0].Id;
-            ScanStatus = $"Found {SerialDevices.Count} device(s).";
+            ScanStatus = SerialDevices.Count > 0 ? "" : "No devices found.";
         }
         catch (OperationCanceledException) { if (cts == _scanCts) ScanStatus = "Scan cancelled."; }
         catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
@@ -220,7 +211,7 @@
             if (BtDevices.Count > 0 && SelectedBt is null)
                 SelectedBt = BtDevices[0].Id;
             ScanStatus = BtDevices.Count > 0
-                ? $"Found {BtDevices.Count} device(s)."
+                ? ""
                 : GetBluetoothEmptyScanMessage();
         }
         catch (OperationCanceledException) { if (cts == _scanCts) ScanStatus = "Scan cancelled."; }
@@ -243,7 +234,7 @@
                 cts.Token);
             if (WifiDevices.Count > 0 && SelectedWifi is null)
                 SelectedWifi = WifiDevices[0].Id;
-            ScanStatus = $"Found {WifiDevices.Count} device(s).";
+            ScanStatus = WifiDevices.Count > 0 ? "" : "No devices found.";
         }
         catch (OperationCanceledException) { if (cts == _scanCts) ScanStatus = "Scan cancelled."; }
         catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
@@ -264,7 +255,7 @@
                 s => { ScanStatus = s; InvokeAsync(StateHasChanged); },
                 cts.Token);
             Pc2Available = found;
-            ScanStatus = found ? "Found PC2 device." : "No PC2 device found.";
+            ScanStatus = found ? "" : "No PC2 device found.";
         }
         catch (OperationCanceledException) { if (cts == _scanCts) ScanStatus = "Scan cancelled."; }
         catch (Exception ex)               { ScanStatus = $"Error: {ex.Message}"; }
@@ -356,7 +347,7 @@
     private static string GetBluetoothEmptyScanMessage()
     {
         if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsMacCatalyst())
-            return "Found 0 device(s).";
+            return "No devices found.";
 
         return "No Bluetooth device selected. On macOS, Scan opens the Apple Bluetooth chooser. If it does not appear, check Bluetooth permission for the host app you launched this app from.";
     }

@@ -86,7 +86,7 @@
 @code {
     [Parameter, EditorRequired] public EventCallback<BeoCommand> OnCommand { get; set; }
     [Parameter] public string? DeviceStatus { get; set; }
-    /// <summary>Connection problem (CONNECTING, DISCONNECTED, SPOTIFY DISCONNECTED): red in the footer.</summary>
+    /// <summary>Connection problem (CONNECTING, OFFLINE, NO SPOTIFY): red in the footer.</summary>
     [Parameter] public string? Status { get; set; }
     /// <summary>SHIFT, then MENU: opens the setup instead of sending MENU.</summary>
     [Parameter] public EventCallback OnSetup { get; set; }

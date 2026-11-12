@@ -8,10 +8,8 @@
 
 <SectionContent SectionName="@SetupWindow.DisplayLine2">
     <span class="led @(DeviceService.FirmwareVersion is null ? "led-off" : "led-red")">@(DeviceService.FirmwareVersion is { } v ? $"FW V{v.ToUpperInvariant()}" : "NO FIRMWARE")</span>
-    @if (UpdateService.FirmwareUpdateAvailable)
-    {
-        <span class="led led-green">UPDATE V@(UpdateService.AppVersion.ToUpperInvariant())</span>
-    }
+    <span class="led @(UpdateService.FirmwareUpdateAvailable ? "led-green" : "led-off")">UPDATE V@(UpdateService.AppVersion.ToUpperInvariant())</span>
+    <span class="led @(_scanning ? "led-green" : "led-off") bo-push">SEARCHING<span class="bo-dots"><span></span><span></span><span></span></span></span>
 </SectionContent>
 
 <div class="bo-label">INIT (USB)</div>
@@ -22,13 +20,20 @@
 else
 {
     <div class="bo-inline">
-        <select class="bo-field" @bind="_port">
-            @foreach (var (port, caption) in _ports)
-            {
-                <option value="@port">@caption</option>
-            }
-        </select>
-        <button class="bo-field bo-compact" @onclick="RefreshPorts">REFRESH</button>
+        @if (_ports.Length == 0 && !_scanning)
+        {
+            <div class="bo-field">NO PORTS FOUND</div>
+        }
+        else
+        {
+            <select class="bo-field" @bind="_port" disabled="@_scanning">
+                @foreach (var (port, caption) in _ports)
+                {
+                    <option value="@port">@caption</option>
+                }
+            </select>
+        }
+        <button class="bo-field bo-compact" @onclick="RefreshPortsAsync" disabled="@_scanning">REFRESH</button>
     </div>
     <div class="bo-inline">
         <select class="bo-field" @bind="_board">
@@ -59,6 +64,7 @@ else
     private string? _name;
     private int? _txPin;
     private int? _gndPin;
+    private bool _scanning;
 
     protected override void OnInitialized()
     {
@@ -66,23 +72,34 @@ else
         DeviceService.OnStatusChanged += OnDeviceStatusChanged;
         _board = UpdateService.FactoryImages.FirstOrDefault() ?? "";
         if (_board != "")
-            RefreshPorts();             // no images on Android, where serial ports are not supported
+            _ = RefreshPortsAsync();    // no images on Android, where serial ports are not supported
     }
 
-    private void RefreshPorts()
+    // WMI query takes a moment: in the background, SCANNING in display line 2 meanwhile
+    private async Task RefreshPortsAsync()
     {
-        // Windows: WMI captions without Bluetooth ports; elsewhere (no WMI) the plain port names
-        var detailed = Beo4Adapter.Transport.SerialTransport.ListPortsDetailed();
-        _ports = detailed.Count > 0
-            ? detailed.Where(kv => !kv.Value.PnpId.StartsWith("BTHENUM", StringComparison.OrdinalIgnoreCase))
-                      .Select(kv => (kv.Key, kv.Value.Caption)).OrderBy(p => p.Key).ToArray()
-            : System.IO.Ports.SerialPort.GetPortNames().Order().Select(p => (p, p)).ToArray();
-        if (_ports.Any(p => p.Port == _port))
-            return;
-        // prefer an Espressif USB port (VID 303A), then a CP210x bridge
-        _port = detailed.Where(kv => kv.Value.PnpId.Contains("VID_303A", StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key).FirstOrDefault()
-             ?? detailed.Where(kv => kv.Value.Caption.Contains("CP210", StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key).FirstOrDefault()
-             ?? _ports.Select(p => p.Port).FirstOrDefault() ?? "";
+        _scanning = true;
+        StateHasChanged();
+        try
+        {
+            // Windows: WMI captions without Bluetooth ports; elsewhere (no WMI) the plain port names
+            var detailed = await Task.Run(Beo4Adapter.Transport.SerialTransport.ListPortsDetailed);
+            _ports = detailed.Count > 0
+                ? detailed.Where(kv => !kv.Value.PnpId.StartsWith("BTHENUM", StringComparison.OrdinalIgnoreCase))
+                          .Select(kv => (kv.Key, kv.Value.Caption)).OrderBy(p => p.Key).ToArray()
+                : System.IO.Ports.SerialPort.GetPortNames().Order().Select(p => (p, p)).ToArray();
+            if (_ports.Any(p => p.Port == _port))
+                return;
+            // prefer an Espressif USB port (VID 303A), then a CP210x bridge
+            _port = detailed.Where(kv => kv.Value.PnpId.Contains("VID_303A", StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key).FirstOrDefault()
+                 ?? detailed.Where(kv => kv.Value.Caption.Contains("CP210", StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key).FirstOrDefault()
+                 ?? _ports.Select(p => p.Port).FirstOrDefault() ?? "";
+        }
+        finally
+        {
+            _scanning = false;
+            StateHasChanged();
+        }
     }
 
     private Task InitAsync() => UpdateService.InitFirmwareAsync(_port, _board, _name, _txPin, _gndPin);

@@ -11,6 +11,7 @@
 <SectionContent SectionName="@SetupWindow.DisplayLine2">
     <span class="led led-red">APP @GetAppVersionDisplay().ToUpperInvariant()</span>
     <span class="led @(DeviceService.FirmwareVersion is null ? "led-off" : "led-red")">FW @(DeviceService.FirmwareVersion is { } fw ? $"V{fw.ToUpperInvariant()}" : "—")</span>
+    <span class="led @(_searching ? "led-green" : "led-off") bo-push">SEARCHING<span class="bo-dots"><span></span><span></span><span></span></span></span>
 </SectionContent>
 
 @if (_versions.Count > 0)
@@ -78,6 +79,7 @@ else
     private string _selectedVersion = "";
     private readonly string? _installedVersion = UpdateService.AppVersion;   // same as the Velopack version in release builds
     private bool _installing;
+    private bool _searching = true;   // opening the tab: versions and update check running
     private string? _installStatus;
 
     protected override void OnInitialized()
@@ -100,6 +102,7 @@ else
     {
         await LoadVersionsAsync();
         await UpdateService.CheckForUpdateAsync();
+        _searching = false;
     }
 
     private async Task InstallAsync()

@@ -35,11 +35,8 @@
                 <span class="led led-red">@DeviceTab.Label(connected.Type)</span>
             }
             @* short hint, the version itself is shown in the UPDATE tab *@
-            @if (ShowNewApp)
-            {
-                <span class="led led-green bo-push">NEW APP</span>
-            }
-            <span class="led @(DeviceService.Settings.SpotifyEnabled ? "led-red" : "led-off") @(ShowNewApp ? "" : "bo-push") bo-wide">SPOTIFY</span>
+            <span class="led @(ShowNewApp ? "led-green" : "led-off") bo-push">NEW APP</span>
+            <span class="led @(DeviceService.Settings.SpotifyEnabled ? "led-red" : "led-off") bo-wide">SPOTIFY</span>
             <span class="led led-red bo-wide">@_menu</span>
         </div>
         @* line 2: rendered by the selected tab - all options shown, red = selected, green = connected/on, dark = not selected *@
@@ -109,6 +106,7 @@
     {
         DeviceService.OnStatusChanged += OnServiceStatusChanged;
         UpdateService.Changed += OnUpdateChanged;
+        DeviceService.Settings.Changed += OnUpdateChanged;   // e.g. SPOTIFY ON/OFF in line 1
     }
 
     private async void OnServiceStatusChanged(StatusMessage msg) => await InvokeAsync(StateHasChanged);
@@ -118,5 +116,6 @@
     {
         DeviceService.OnStatusChanged -= OnServiceStatusChanged;
         UpdateService.Changed -= OnUpdateChanged;
+        DeviceService.Settings.Changed -= OnUpdateChanged;
     }
 }

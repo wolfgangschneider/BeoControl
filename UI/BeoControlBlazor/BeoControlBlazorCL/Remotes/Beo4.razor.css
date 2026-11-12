@@ -58,6 +58,10 @@
     font-size: 28px;
     letter-spacing: 1px;
     text-transform: uppercase;
+    /* one line, never wider than the display: long texts must not resize the remote */
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 100%;
 }
 
 .beo4-display-info {

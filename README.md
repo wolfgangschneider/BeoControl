@@ -330,7 +330,7 @@ Once connected, type any B&O command directly (e.g. `tv`, `radio`, `vol+`, `stan
 
 - **Open the setup** — on the Beo4 press **LIST** (the display shows **BC SETUP**), then **GO**. On the Beolink 1000 press **SHIFT**, then **MENU** (it reads **BC SETUP** while shifted). Nothing is sent to the B&O system.
 - **Close the setup** — the red dot at the bottom right of the setup panel.
-- **Status** — connection problems show inside the remote: Beo4 in its display instead of the source, Beolink 1000 in red above BANG & OLUFSEN. CONNECTING (blinking), DISCONNECTED, and SPOTIFY DISCONNECTED while the Spotify source is selected.
+- **Status** — connection problems show inside the remote: Beo4 in its display instead of the source, Beolink 1000 in red above BANG & OLUFSEN. CONNECTING (blinking), OFFLINE, and NO SPOTIFY while the Spotify source is selected.
 
 On Windows the remote and the setup are borderless windows:
 
