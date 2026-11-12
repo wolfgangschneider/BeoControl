@@ -18,7 +18,10 @@
 <div class="bo-inline">
     <div class="bo-field">@(DeviceService.FirmwareVersion is { } fw ? $"v{fw}" : "NO DEVICE CONNECTED")</div>
     <button class="bo-field bo-compact" @onclick="UpdateService.UpdateFirmwareAsync" disabled="@(!UpdateService.FirmwareUpdateAvailable)">
-        @(UpdateService.FirmwareProgress is { } p ? $"{p} %" : $"UPDATE TO v{UpdateService.AppVersion}")
+        @(UpdateService.FirmwareProgress is { } p ? $"{p} %"
+          : UpdateService.BundledFirmwarePath is null ? "NO BUNDLED FIRMWARE"
+          : DeviceService.FirmwareVersion == UpdateService.AppVersion ? "UP TO DATE"
+          : $"UPDATE TO v{UpdateService.AppVersion}")
     </button>
 </div>
 @if (UpdateService.FirmwareStatus is { } status)
