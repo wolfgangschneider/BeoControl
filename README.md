@@ -26,7 +26,7 @@ The hardware and adapter layers are completely independent of any user interface
 | **Terminal (TUI)** | ✅ included | Full-featured console UI using [RazorConsole](https://github.com/lofcz/razorconsole) — great for headless servers and SSH sessions |
 | **Web (Blazor Server)** | ✅ included | ASP.NET Core Blazor Server UI — browser-based remote control |
 | **Desktop (MAUI)** | ✅ included | Windows tray app — sits in the system tray, pops up above the taskbar on click, xcopy deploy |
-| **REST / API** | ✅ ESP32 / 🔧 PC2 | The ESP32 remote has its own REST endpoint (`GET /cmd?c=<command>`, see [WiFi](#wifi)); for the PC2, wrap `IDevice` in a minimal ASP.NET Core API |
+| **REST / API** | 🔧 possible | Wrap `IDevice` in a minimal ASP.NET Core API to integrate with Home Assistant, shortcuts, scripts, etc. — or use the ESP32 remote's own REST endpoint directly (`GET /cmd?c=<command>`, see [WiFi](#wifi)) |
 
 The architecture is designed so that **adding a new UI is simply a matter of referencing the `Interfaces` and `Adapters` packages** and calling `device.SendCommand(...)`.
 
