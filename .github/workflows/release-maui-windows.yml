@@ -22,8 +22,8 @@ permissions:
 env:
   PROJECT_PATH: UI\BeoControlBlazor\BeoControlMaui\BeoControlMaui.csproj
   WEBKIT_PROJECT_PATH: UI\BeoControlBlazor\BeoControlWebKit\BeoControlWebKit\BeoControlWebKit.csproj
-  TARGET_FRAMEWORK: net10.0-windows10.0.19041.0
-  ANDROID_TARGET_FRAMEWORK: net10.0-android
+  TARGET_FRAMEWORK: net11.0-windows10.0.19041.0
+  ANDROID_TARGET_FRAMEWORK: net11.0-android
   CONFIGURATION: Release
   VELOPACK_VERSION: 0.0.1298
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -163,10 +163,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up .NET 10
+      - name: Set up .NET 11
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Install MAUI Windows workload
         run: dotnet workload install maui-windows
@@ -285,10 +285,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up .NET 10
+      - name: Set up .NET 11
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Install vpk
         shell: pwsh
@@ -377,10 +377,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up .NET 10
+      - name: Set up .NET 11
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Install MAUI Android workload
         run: dotnet workload install maui-android

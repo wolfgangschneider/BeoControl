@@ -1,6 +1,6 @@
 # BeoControl
 
-A .NET 10 control system for Bang & Olufsen audio equipment via the Masterlink bus. BeoControl bridges legacy B&O hardware with modern software, supporting both USB PC2 controllers and ESP32-based Beo4 remote emulators over Serial/USB, Bluetooth LE or WiFi.
+A .NET 11 control system for Bang & Olufsen audio equipment via the Masterlink bus. BeoControl bridges legacy B&O hardware with modern software, supporting both USB PC2 controllers and ESP32-based Beo4 remote emulators over Serial/USB, Bluetooth LE or WiFi.
 
 ## Overview
 
@@ -133,7 +133,7 @@ Installing erases the stored WiFi settings — enter them again afterwards. If a
 
 ### Prerequisites
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [.NET 11 SDK](https://dotnet.microsoft.com/download)
 - A B&O Masterlink system with either:
   - A **PC2 USB device** (connect to USB, install LibUSB driver), or
   - An **ESP32 Beo4** device (M5 AtomS3 or Stamp S3; the firmware is installed from the app, see [Firmware from the app](#firmware-from-the-app))
@@ -163,7 +163,7 @@ Build and run from Visual Studio, or publish for xcopy deployment:
 
 ```powershell
 cd UI/BeoControlBlazor/BeoControlMaui
-dotnet publish -f net10.0-windows10.0.19041.0 -c Release -r win-arm64 --self-contained true -p:PublishTrimmed=false
+dotnet publish -f net11.0-windows10.0.19041.0 -c Release -r win-arm64 --self-contained true -p:PublishTrimmed=false
 ```
 
 Copy the `publish\` folder to any Windows machine — no installer or runtime install needed.
@@ -281,7 +281,7 @@ Notes:
 
 ```bash
 # Run targeting the non-Windows framework
-dotnet run --project UI/BeoControlTUI --framework net10.0
+dotnet run --project UI/BeoControlTUI --framework net11.0
 
 # Grant serial port access (one-time, requires re-login)
 sudo usermod -aG dialout $USER

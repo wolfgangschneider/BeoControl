@@ -14,43 +14,43 @@
 
 	<!-- Standard: immer Windows -->
 	<PropertyGroup>
-		<TargetFrameworks>net10.0-windows10.0.19041.0;net10.0-android</TargetFrameworks>
+		<TargetFrameworks>net11.0-windows10.0.19041.0;net11.0-android</TargetFrameworks>
 	</PropertyGroup>
 
 	<!-- Lokale Builds: abhängig vom VS-Dropdown -->
 	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
 		<TargetFrameworks Condition="$(RuntimeIdentifier.StartsWith('android'))">
-			$(TargetFrameworks);net10.0-android
+			$(TargetFrameworks);net11.0-android
 		</TargetFrameworks>
 
 		<TargetFrameworks Condition="$(RuntimeIdentifier.StartsWith('ios')) or $(RuntimeIdentifier.StartsWith('maccatalyst'))">
-			$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst
+			$(TargetFrameworks);net11.0-ios;net11.0-maccatalyst
 		</TargetFrameworks>
 	</PropertyGroup>
 
 	<!-- GitHub Actions: abhängig vom Agent -->
 	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' and '$(RUNNER_OS)' == 'Windows'">
-		<TargetFrameworks>net10.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks>net11.0-windows10.0.19041.0</TargetFrameworks>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' and '$(RUNNER_OS)' == 'Linux'">
-		<TargetFrameworks>net10.0-android</TargetFrameworks>
+		<TargetFrameworks>net11.0-android</TargetFrameworks>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' and '$(RUNNER_OS)' == 'macOS'">
-		<TargetFrameworks>net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+		<TargetFrameworks>net11.0-ios;net11.0-maccatalyst</TargetFrameworks>
 	</PropertyGroup>
 
 	<!-- Android-only build on any host (the CI APK job passes -p:BuildAndroid=true) -->
 	<PropertyGroup Condition="'$(BuildAndroid)' == 'true'">
-		<TargetFrameworks>net10.0-android</TargetFrameworks>
+		<TargetFrameworks>net11.0-android</TargetFrameworks>
 	</PropertyGroup>
 
 	<PropertyGroup>
 		<!--
-        <TargetFrameworks>net10.0-android</TargetFrameworks>
-        <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
-        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+        <TargetFrameworks>net11.0-android</TargetFrameworks>
+        <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net11.0-ios;net11.0-maccatalyst</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net11.0-windows10.0.19041.0</TargetFrameworks>
 -->
 		<!-- Note for MacCatalyst:
             The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
@@ -99,7 +99,7 @@
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     </PropertyGroup>
 
-	<PropertyGroup Condition="'$(TargetFramework)'=='net10.0-android'">
+	<PropertyGroup Condition="'$(TargetFramework)'=='net11.0-android'">
 		<RuntimeIdentifiers>android-arm;android-arm64</RuntimeIdentifiers>
 		<DebugSymbols>true</DebugSymbols>
 		<AndroidIncludeDebugSymbols>true</AndroidIncludeDebugSymbols>
@@ -110,42 +110,42 @@
 
 
 
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-android|AnyCPU'">
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net11.0-android|AnyCPU'">
       <ApplicationTitle>BeoControl</ApplicationTitle>
       <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-ios|AnyCPU'">
+    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net11.0-ios|AnyCPU'">
       <ApplicationTitle>BeoControl</ApplicationTitle>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-maccatalyst|AnyCPU'">
+    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net11.0-maccatalyst|AnyCPU'">
       <ApplicationTitle>BeoControl</ApplicationTitle>
       <CodesignEntitlements>Platforms\MacCatalyst\Entitlements.Debug.plist</CodesignEntitlements>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-windows10.0.19041.0|AnyCPU'">
+    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net11.0-windows10.0.19041.0|AnyCPU'">
       <ApplicationTitle>BeoControl</ApplicationTitle>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-android|AnyCPU'">
+    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net11.0-android|AnyCPU'">
       <ApplicationTitle>BeoControl</ApplicationTitle>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-ios|AnyCPU'">
+    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net11.0-ios|AnyCPU'">
       <ApplicationTitle>BeoControl</ApplicationTitle>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-maccatalyst|AnyCPU'">
+    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net11.0-maccatalyst|AnyCPU'">
       <ApplicationTitle>BeoControl</ApplicationTitle>
       <CodesignEntitlements>Platforms\MacCatalyst\Entitlements.plist</CodesignEntitlements>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-windows10.0.19041.0|AnyCPU'">
+    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net11.0-windows10.0.19041.0|AnyCPU'">
       <ApplicationTitle>BeoControl</ApplicationTitle>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(TargetFramework)'=='net10.0-ios'">
+    <PropertyGroup Condition="'$(TargetFramework)'=='net11.0-ios'">
       <ProvisioningType>manual</ProvisioningType>
     </PropertyGroup>
 
@@ -176,7 +176,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="11.0.0" />
     </ItemGroup>
 
     <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
