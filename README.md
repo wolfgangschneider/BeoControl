@@ -326,16 +326,27 @@ Once connected, type any B&O command directly (e.g. `tv`, `radio`, `vol+`, `stan
 
 **Power:** `standby`, `allstandby`
 
+## Using the remote
+
+- **Open the setup** — on the Beo4 press **LIST** (the display shows **BC SETUP**), then **GO**. On the Beolink 1000 press **SHIFT**, then **MENU** (it reads **BC SETUP** while shifted). Nothing is sent to the B&O system.
+- **Close the setup** — the red dot at the bottom right of the setup panel.
+- **Status** — connection problems show inside the remote: Beo4 in its display instead of the source, Beolink 1000 in red above BANG & OLUFSEN. CONNECTING (blinking), DISCONNECTED, and SPOTIFY DISCONNECTED while the Spotify source is selected.
+
+On Windows the remote and the setup are borderless windows:
+
+- **Move** — hold the left mouse button on the silver surface of the remote (setup: on its display or nameplate) and drag.
+- **Hide** — double-click the silver surface; the remote goes to the tray. Click the tray icon to bring it back.
+
 ## MAUI Tray App
 
 The Windows tray app provides a compact always-available remote:
 
 - **Starts hidden** to the system tray on launch
 - **Click tray icon** → window appears just above the taskbar, centered on the icon
-- **X button** hides to tray (does not exit); right-click for Show / Exit
+- **Double-click the silver surface** hides to tray (does not exit); right-click the tray icon for Show / Exit
 - **Auto-connects** on startup to the last used device (shared settings with Blazor Server)
-- **Remembers window size** — resize once, persisted across restarts
-- **Connection indicator** — tray icon and in-app bar show green/red connection state
+- **Remembers window position** — move it once, persisted across restarts
+- **Connection indicator** — tray icon shows the connection state, the remote shows any problem
 - **Xcopy deployment** — no installer needed; copy the `publish\` folder to any Windows ARM64 or x64 machine
 
 ## Shared Settings

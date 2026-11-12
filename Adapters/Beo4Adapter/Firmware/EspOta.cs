@@ -22,7 +22,10 @@ public static class EspOta
     /// <param name="progress">Percent 0..100.</param>
     public static async Task UploadAsync(string host, byte[] image, IProgress<int>? progress = null, CancellationToken ct = default)
     {
-        var address = (await Dns.GetHostAddressesAsync(host, AddressFamily.InterNetwork, ct)).FirstOrDefault()
+        // ".local" via mDNS first: Android can't resolve it with the system resolver
+        var address = (host.EndsWith(".local", StringComparison.OrdinalIgnoreCase)
+                          ? await Transport.TcpTransport.ResolveMdnsAsync(host, ct) : null)
+            ?? (await Dns.GetHostAddressesAsync(host, AddressFamily.InterNetwork, ct)).FirstOrDefault()
             ?? throw new Exception($"Cannot resolve {host}.");
 
         using var listener = new TcpListener(IPAddress.Any, 0);

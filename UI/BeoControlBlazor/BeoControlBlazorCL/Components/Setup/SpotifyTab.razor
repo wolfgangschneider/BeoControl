@@ -11,7 +11,7 @@
     <span class="led @(SpotifyEnabled ? "led-red" : "led-off")">@FormatSource(SpotifyTriggerCommand)</span>
     @foreach (var mode in Enum.GetValues<SpotifyLaunchMode>())
     {
-        <span class="led @(SpotifyEnabled && SpotifyLaunchModeSetting == mode ? "led-red" : "led-off")">@mode.ToString().ToUpperInvariant()</span>
+        <span class="led @(!SpotifyEnabled ? "led-off" : SpotifyLaunchModeSetting == mode ? "led-red" : "led-alt")">@mode.ToString().ToUpperInvariant()</span>
     }
 </SectionContent>
 

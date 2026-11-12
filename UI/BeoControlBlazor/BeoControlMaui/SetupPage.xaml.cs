@@ -19,6 +19,12 @@ namespace BeoControlMaui
                     if (Window is { } window)
                         Application.Current?.CloseWindow(window);
                 });
+            // borderless window: mouse down on the display or the nameplate moves it
+            e.WebView.CoreWebView2.WebMessageReceived += (_, args) =>
+            {
+                if (args.TryGetWebMessageAsString() == "beocontrol:drag" && Window?.Handler?.PlatformView is Microsoft.UI.Xaml.Window native)
+                    MainPage.StartMove(Dispatcher, WinRT.Interop.WindowNative.GetWindowHandle(native));
+            };
 #endif
         }
     }

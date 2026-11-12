@@ -5,7 +5,8 @@
     width: var(--remote-width);
     background: linear-gradient(170deg, #e2e2e2 0%, #c8c8c8 100%);
     border-radius: 6px 6px 6px 6px;
-    box-shadow: 2px 4px 16px rgba(0,0,0,0.45);
+    /* black frame around the aluminium face like the original Beo4 (inset: no layout change) */
+    box-shadow: inset 0 0 0 3px #151515, 2px 4px 16px rgba(0,0,0,0.45);
     font-family: 'Arial Narrow', Arial, sans-serif;
     user-select: none;
     overflow: hidden;
@@ -69,9 +70,15 @@
 .beo4-section-volume {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    grid-column-gap: 3px;
-    grid-row-gap: 3px;
-    margin: 8px 2px;
+    /* key rows like the original: square keys, 1px apart, running to the edge over the black frame */
+    grid-column-gap: 1px;
+    grid-row-gap: 5px;
+    margin: 8px 0;
+}
+
+.beo4-section ::deep .remoteBtn,
+.beo4-section-volume ::deep .remoteBtn {
+    border-radius: 0;
 }
 .beo4-section-volume {
     
@@ -155,3 +162,7 @@
     font-weight: normal;
     padding: 0 0 2em 0;
 }
+
+/* CONNECTING pulses like in the setup display */
+.beo4-blink { animation: beo4-pulse 1.2s ease-in-out infinite; }
+@keyframes beo4-pulse { 50% { opacity: 0.15; } }

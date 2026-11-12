@@ -9,8 +9,8 @@
 @implements IDisposable
 
 <SectionContent SectionName="@SetupWindow.DisplayLine2">
-    <span class="led led-green">APP @GetAppVersionDisplay().ToUpperInvariant()</span>
-    <span class="led @(DeviceService.FirmwareVersion is null ? "led-off" : "led-green")">FW @(DeviceService.FirmwareVersion is { } fw ? $"V{fw.ToUpperInvariant()}" : "—")</span>
+    <span class="led led-red">APP @GetAppVersionDisplay().ToUpperInvariant()</span>
+    <span class="led @(DeviceService.FirmwareVersion is null ? "led-off" : "led-red")">FW @(DeviceService.FirmwareVersion is { } fw ? $"V{fw.ToUpperInvariant()}" : "—")</span>
 </SectionContent>
 
 @if (_versions.Count > 0)

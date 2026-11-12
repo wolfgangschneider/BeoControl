@@ -19,7 +19,7 @@
             <RemoteButton CommandId="@CommandId.Record" OnCommand="SendCommand" />
             <RemoteButton CommandId="@ShiftedCommandId(CommandId.Atape)" OnCommand="SendCommand" />
 
-            <RemoteButton CommandId="@CommandId.Menu" OnCommand="SendCommand" />
+            <RemoteButton CommandId="@CommandId.Menu" Caption="@(_shifted ? "BC SETUP" : null)" OnCommand="OnMenu" />
             <RemoteButton style="@ShiftButtonStyle" OnClick="ToggleShift" Caption="SHIFT" />
             <RemoteButton CommandId="@ShiftedCommandId(CommandId.Phono)" OnCommand="SendCommand" />
         </div>
@@ -74,6 +74,10 @@
 
     </div>
     <div class="bl1000-footer">
+        @if (Status is not null)
+        {
+            <span class="bl1000-status @(Status == "CONNECTING" ? "bl1000-blink" : "")">@Status</span>
+        }
         <span class="bl1000-brand">BANG &amp; OLUFSEN</span>
     </div>
 
@@ -82,12 +86,24 @@
 @code {
     [Parameter, EditorRequired] public EventCallback<BeoCommand> OnCommand { get; set; }
     [Parameter] public string? DeviceStatus { get; set; }
+    /// <summary>Connection problem (CONNECTING, DISCONNECTED, SPOTIFY DISCONNECTED): red in the footer.</summary>
+    [Parameter] public string? Status { get; set; }
+    /// <summary>SHIFT, then MENU: opens the setup instead of sending MENU.</summary>
+    [Parameter] public EventCallback OnSetup { get; set; }
 
     private bool _shifted;
 
     private void ToggleShift() => _shifted = !_shifted;
 
     private Task SendCommand(BeoCommand command) => OnCommand.InvokeAsync(command);
+
+    private Task OnMenu(BeoCommand command)
+    {
+        if (!_shifted)
+            return SendCommand(command);
+        _shifted = false;
+        return OnSetup.InvokeAsync();
+    }
 
     private string? ShiftButtonStyle => _shifted ? "background:#555;outline:1px solid #aaa;" : null;
 

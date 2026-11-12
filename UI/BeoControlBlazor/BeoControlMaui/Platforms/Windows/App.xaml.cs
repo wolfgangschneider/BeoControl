@@ -43,6 +43,11 @@ namespace BeoControlMaui.WinUI
         [DllImport("user32.dll")] static extern bool BringWindowToTop(IntPtr hWnd);
         [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hWnd);
         [DllImport("user32.dll")] static extern bool IsIconic(IntPtr hWnd);
+        [DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr hWnd, int attribute, ref uint value, int size);
+
+        const int DWMWA_WINDOW_CORNER_PREFERENCE = 33, DWMWCP_DONOTROUND = 1;
+        const int DWMWA_BORDER_COLOR = 34;
+        const uint DWMWA_COLOR_NONE = 0xFFFFFFFE;
 
         private const int SwShow = 5;
         private const int SwRestore = 9;
@@ -107,7 +112,17 @@ namespace BeoControlMaui.WinUI
 
 
                 if (_appWindow.Presenter is OverlappedPresenter presenter)
+                {
                     presenter.SetBorderAndTitleBar(false, false);
+                    // a resizable borderless WinUI window keeps a white resize strip at the top, outside the window region
+                    presenter.IsResizable = false;
+                    presenter.IsMaximizable = false;
+                }
+
+                // Windows 11 still draws a thin border and rounds the corners of borderless windows
+                uint corner = DWMWCP_DONOTROUND, border = DWMWA_COLOR_NONE;
+                DwmSetWindowAttribute(_windowHandle, DWMWA_WINDOW_CORNER_PREFERENCE, ref corner, sizeof(uint));
+                DwmSetWindowAttribute(_windowHandle, DWMWA_BORDER_COLOR, ref border, sizeof(uint));
 
                 _settings = AppSettings.Load();
                 var lastWinPosition = _settings.LastWinPosition;
@@ -286,6 +301,11 @@ namespace BeoControlMaui.WinUI
         private void ShowWindowAboveTray(System.Drawing.Point cursor)
         {
             if (_appWindow is null) return;
+
+            // shown again from the tray or by a second start (single instance): a dropped connection would
+            // otherwise stay DISCONNECTED; AutoConnectAsync joins an attempt that is already running
+            if (_deviceService is { IsConnected: false })
+                _ = _deviceService.AutoConnectAsync();
 
             //var pos = CalcWindowsPosition(_settings);
             //_appWindow.Move(new PointInt32(pos.X, pos.Y));

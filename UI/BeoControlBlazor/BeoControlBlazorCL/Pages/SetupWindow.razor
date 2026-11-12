@@ -16,7 +16,8 @@
 <div class="bo-panel">
 
     @* ── LED display (MCP 5500) ── *@
-    <div class="bo-display">
+    @* Windows: dragging the display or the nameplate moves the borderless setup window *@
+    <div class="bo-display" onmousedown="if (event.button === 0 && window.chrome?.webview) window.chrome.webview.postMessage('beocontrol:drag')">
         @* line 1: general info for all menus *@
         <div class="bo-display-row">
             <span class="led @StatusLedClass">@StatusLedText@if (IsConnecting)
@@ -31,14 +32,14 @@
             }
             @if (DeviceService.IsConnected && DeviceService.CurrentDevice is { } connected)
             {
-                <span class="led led-green">@DeviceTab.Label(connected.Type)</span>
+                <span class="led led-red">@DeviceTab.Label(connected.Type)</span>
             }
             @* short hint, the version itself is shown in the UPDATE tab *@
             @if (ShowNewApp)
             {
-                <span class="led led-red bo-push">NEW APP</span>
+                <span class="led led-green bo-push">NEW APP</span>
             }
-            <span class="led @(DeviceService.Settings.SpotifyEnabled ? "led-green" : "led-off") @(ShowNewApp ? "" : "bo-push") bo-wide">SPOTIFY</span>
+            <span class="led @(DeviceService.Settings.SpotifyEnabled ? "led-red" : "led-off") @(ShowNewApp ? "" : "bo-push") bo-wide">SPOTIFY</span>
             <span class="led led-red bo-wide">@_menu</span>
         </div>
         @* line 2: rendered by the selected tab - all options shown, red = selected, green = connected/on, dark = not selected *@
@@ -61,7 +62,7 @@
     </div>
 
     @* ── Aluminium nameplate + menu strip (Beomaster 4500) ── *@
-    <div class="bo-nameplate"><span>BEOCONTROL SETUP PANEL</span></div>
+    <div class="bo-nameplate" onmousedown="if (event.button === 0 && window.chrome?.webview) window.chrome.webview.postMessage('beocontrol:drag')"><span>BEOCONTROL SETUP PANEL</span></div>
     <nav class="bo-menu">
         @foreach (var m in Menus)
         {
@@ -101,9 +102,8 @@
         : "DISCONNECTED";
 
     private string StatusLedClass =>
-        DeviceService.IsConnected ? "led-green"
-        : DeviceService.Status is DeviceStatus.Connecting or DeviceStatus.Discovering ? "led-yellow"
-        : "led-red";
+        // like the Beomaster 4500: states are red (connected and disconnected alike), connecting blinks
+        IsConnecting ? "led-red led-blink" : "led-red";
 
     protected override void OnInitialized()
     {

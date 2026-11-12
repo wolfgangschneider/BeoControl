@@ -50,7 +50,12 @@ public class TcpTransport : ITransport
             using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct))
             {
                 timeout.CancelAfter(ConnectTimeout);
-                await _client.ConnectAsync(_host, Port, timeout.Token);
+                // Android (and Linux without avahi) can't resolve ".local": ask the device via mDNS, else the system resolver
+                if (_host.EndsWith(".local", StringComparison.OrdinalIgnoreCase)
+                    && await ResolveMdnsAsync(_host, timeout.Token) is { } address)
+                    await _client.ConnectAsync(address, Port, timeout.Token);
+                else
+                    await _client.ConnectAsync(_host, Port, timeout.Token);
             }
 
             var stream = _client.GetStream();
@@ -137,6 +142,65 @@ public class TcpTransport : ITransport
         return found.Values.ToList();
     }
 
+    /// <summary>
+    /// IPv4 address of an mDNS host name (e.g. "beo4remote-atoms3.local") by an A query to 224.0.0.251,
+    /// sent from an ephemeral port so the device answers unicast; null when nobody answers within 2 s.
+    /// </summary>
+    public static async Task<IPAddress?> ResolveMdnsAsync(string host, CancellationToken ct)
+    {
+        var query = BuildQuery(host, type: 1);                                  // A
+        var group = new IPEndPoint(IPAddress.Parse("224.0.0.251"), 5353);
+
+        using var udp = new UdpClient(new IPEndPoint(IPAddress.Any, 0));
+        foreach (var local in LocalIPv4Addresses())
+        {
+            try
+            {
+                udp.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, local.GetAddressBytes());
+                await udp.SendAsync(query, group, ct);
+            }
+            catch (SocketException) { /* interface not usable for multicast */ }
+        }
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(ScanDuration);
+        try
+        {
+            while (true)
+            {
+                var reply = await udp.ReceiveAsync(timeout.Token);
+                try
+                {
+                    if (ParseARecord(reply.Buffer, host) is { } address)
+                        return address;
+                }
+                catch (Exception ex) when (ex is IndexOutOfRangeException or ArgumentException) { /* malformed packet */ }
+            }
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { /* nobody answered */ }
+        return null;
+    }
+
+    /// <summary>The IPv4 address of <paramref name="host"/> from the A records of a DNS packet, or null.</summary>
+    private static IPAddress? ParseARecord(byte[] b, string host)
+    {
+        int questions = b[4] << 8 | b[5];
+        int records   = (b[6] << 8 | b[7]) + (b[8] << 8 | b[9]) + (b[10] << 8 | b[11]);
+        int pos = 12;
+        for (int i = 0; i < questions; i++) { ReadName(b, ref pos); pos += 4; }
+        for (int i = 0; i < records; i++)
+        {
+            var name  = ReadName(b, ref pos);
+            int type  = b[pos] << 8 | b[pos + 1];
+            int rdLen = b[pos + 8] << 8 | b[pos + 9];
+            pos += 10;
+            if (type == 1 && rdLen == 4 && name.Equals(host, StringComparison.OrdinalIgnoreCase))
+                return new IPAddress(b.AsSpan(pos, 4));
+            pos += rdLen;
+        }
+        return null;
+    }
+
     private static IEnumerable<IPAddress> LocalIPv4Addresses() =>
         NetworkInterface.GetAllNetworkInterfaces()
             .Where(n => n.OperationalStatus == OperationalStatus.Up && n.SupportsMulticast
@@ -145,7 +209,9 @@ public class TcpTransport : ITransport
             .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
             .Select(a => a.Address);
 
-    private static byte[] BuildPtrQuery(string name)
+    private static byte[] BuildPtrQuery(string name) => BuildQuery(name, type: 12);   // PTR
+
+    private static byte[] BuildQuery(string name, byte type)
     {
         var packet = new List<byte> { 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 };   // id 0, flags 0, 1 question
         foreach (var label in name.Split('.'))
@@ -153,7 +219,7 @@ public class TcpTransport : ITransport
             packet.Add((byte)label.Length);
             packet.AddRange(Encoding.ASCII.GetBytes(label));
         }
-        packet.AddRange(new byte[] { 0, 0, 12, 0, 1 });                        // end, type PTR, class IN
+        packet.AddRange(new byte[] { 0, 0, type, 0, 1 });                      // end, type, class IN
         return packet.ToArray();
     }
 

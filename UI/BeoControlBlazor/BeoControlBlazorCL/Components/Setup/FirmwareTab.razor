@@ -7,10 +7,10 @@
 @implements IDisposable
 
 <SectionContent SectionName="@SetupWindow.DisplayLine2">
-    <span class="led @(DeviceService.FirmwareVersion is null ? "led-off" : "led-green")">@(DeviceService.FirmwareVersion is { } v ? $"FW V{v.ToUpperInvariant()}" : "NO FIRMWARE")</span>
+    <span class="led @(DeviceService.FirmwareVersion is null ? "led-off" : "led-red")">@(DeviceService.FirmwareVersion is { } v ? $"FW V{v.ToUpperInvariant()}" : "NO FIRMWARE")</span>
     @if (UpdateService.FirmwareUpdateAvailable)
     {
-        <span class="led led-red">UPDATE V@(UpdateService.AppVersion.ToUpperInvariant())</span>
+        <span class="led led-green">UPDATE V@(UpdateService.AppVersion.ToUpperInvariant())</span>
     }
 </SectionContent>
 

@@ -8,7 +8,7 @@
         <div class="beo4-display-frame">
         <div style="min-height:6rem" class="beo4-display">
             <span class="beo4-display-song">@Song</span>
-            <span class="beo4-display-source">@DisplayText</span>
+            <span class="beo4-display-source @(!InListMode && Status == "CONNECTING" ? "beo4-blink" : "")">@DisplayText</span>
             <span class="beo4-display-info">@Info</span>
         </div>
     </div>
@@ -97,6 +97,10 @@
 @code {
     [Parameter, EditorRequired] public EventCallback<BeoCommand> OnCommand { get; set; }
     [Parameter] public string? DeviceStatus { get; set; }
+    /// <summary>LIST to "BC SETUP" (first entry), then GO: opens the setup, nothing is sent.</summary>
+    [Parameter] public EventCallback OnSetup { get; set; }
+    /// <summary>Connection problem (CONNECTING, DISCONNECTED, SPOTIFY DISCONNECTED): shown instead of the source.</summary>
+    [Parameter] public string? Status { get; set; }
     [Parameter] public string? Song { get; set; }
     [Parameter] public string? Info { get; set; }
 
@@ -139,7 +143,7 @@
     }
 
     private string DisplayText =>
-        InListMode ? _activeList[_listIndex].RemoteLabel : ExtractSource(DeviceStatus);
+        InListMode ? _activeList[_listIndex].RemoteLabel : Status ?? ExtractSource(DeviceStatus);
 
     private void OnListPressed()
     {
@@ -155,6 +159,13 @@
         if (InListMode)
         {
             var selectedCommand = _activeList[_listIndex];
+            if (ReferenceEquals(selectedCommand, SetupEntry))
+            {
+                _activeList = _mainList;
+                _listIndex = -1;
+                await OnSetup.InvokeAsync();
+                return;
+            }
             if (!InSubList && selectedCommand.SubCommands is { Count: > 0 })
             {
                 _activeList = selectedCommand.SubCommands;
@@ -221,6 +232,7 @@
             ];
             return
             [
+                SetupEntry,
                 speakerCommand,
                 BeoCommands.Get(CommandId.Phono),
                 BeoCommands.Get(CommandId.Pc),
@@ -229,6 +241,9 @@
             ];
         }
     }
+
+    // app-only LIST entry, never sent (the command id is a placeholder)
+    private static readonly BeoCommand SetupEntry = new(CommandId.Menu, "", "BC SETUP", CommandCategory.Misc);
 
    
 

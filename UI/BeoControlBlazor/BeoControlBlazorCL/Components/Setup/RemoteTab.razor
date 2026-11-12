@@ -6,14 +6,14 @@
 @inject IAutostartRegistrationService AutostartRegistrationService
 
 <SectionContent SectionName="@SetupWindow.DisplayLine2">
-    <span class="led @(_launchOnWindowsSignIn ? "led-green" : "led-off")">AUTOSTART</span>
+    <span class="led @(!AutostartRegistrationService.IsSupported ? "led-off" : _launchOnWindowsSignIn ? "led-red" : "led-alt")">AUTOSTART</span>
     @foreach (var r in Enum.GetValues<RemoteType>())
     {
-        <span class="led @(SelectedRemote == r ? "led-red" : "led-off")">@r.ToString().ToUpperInvariant()</span>
+        <span class="led @(SelectedRemote == r ? "led-red" : "led-alt")">@r.ToString().ToUpperInvariant()</span>
     }
     @foreach (var option in ZoomOptions)
     {
-        <span class="led @(RemoteButtonZoom == option.Value ? "led-red" : "led-off")">@option.Label.ToUpperInvariant()</span>
+        <span class="led @(RemoteButtonZoom == option.Value ? "led-red" : "led-alt")">@option.Label.ToUpperInvariant()</span>
     }
 </SectionContent>
 

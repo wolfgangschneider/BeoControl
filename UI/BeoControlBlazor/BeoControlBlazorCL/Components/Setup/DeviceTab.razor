@@ -8,7 +8,7 @@
 <SectionContent SectionName="@SetupWindow.DisplayLine2">
     @foreach (var tab in Tabs)
     {
-        <span class="led @(ActiveTab == tab ? "led-red" : "led-off")">@Label(tab)</span>
+        <span class="led @(ActiveTab == tab ? "led-red" : "led-alt")">@Label(tab)</span>
     }
     @if (!string.IsNullOrEmpty(ScanStatus))
     {

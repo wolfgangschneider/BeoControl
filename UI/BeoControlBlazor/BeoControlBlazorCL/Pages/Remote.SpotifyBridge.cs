@@ -16,8 +16,7 @@ public partial class Remote
         public bool IsSourceSelected() =>
             string.Equals(owner._currentSource?.AddIn, SpotifyAddInName, StringComparison.Ordinal);
 
-
-        public async Task<bool> HandleCommandAsync2(BeoCommand command)
+        public async Task<bool> HandleCommandAsync(BeoCommand command)
         {
 
             if (command.Cmd == owner.DeviceService.Settings.SpotifyTriggerCommand)
@@ -148,20 +147,6 @@ public partial class Remote
             {
                 await SetErrorStateAsync(ex.Message);
             }
-        }
-
-        public string SpotifyConnectionLabel()
-        {
-            if (!owner.DeviceService.Settings.SpotifyEnabled)
-                return "SPOTIFY DISABLED";
-
-            if (!string.IsNullOrWhiteSpace(Error))
-                return Error;
-
-            if (!string.IsNullOrWhiteSpace(ConnectedDeviceName))
-                return $"{ConnectedDeviceName}  |  SPOTIFY";
-
-            return "SPOTIFY DISCONNECTED";
         }
 
         public bool IsSpotifyConnected() =>

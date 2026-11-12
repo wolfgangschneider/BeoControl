@@ -27,9 +27,23 @@
     background: #111111;
     border-radius: 0 0 6px 6px;
     display: flex;
-    align-items: flex-end;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
 }
+
+/* connection problem, above BANG & OLUFSEN */
+.bl1000-status {
+    color: #e04444;
+    font-size: 7px;
+    letter-spacing: 1.5px;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    padding-bottom: 0.8em;
+}
+
+.bl1000-blink { animation: bl1000-pulse 1.2s ease-in-out infinite; }
+@keyframes bl1000-pulse { 50% { opacity: 0.15; } }
 
 .bl1000-brand {
     color: #888888;

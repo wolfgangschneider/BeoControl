@@ -8,46 +8,34 @@
 @inject DeviceService DeviceService
 @inject ISpotifyService LaunchSpotifyService
 @inject NavigationManager Nav
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
 @implements IDisposable
 
 
 <PageTitle>B&amp;O Remote</PageTitle>
 
-<div class="remote-shell" style="background-color:transparent">
+@* connection problems show inside the remote (Beo4 display, Beolink 1000 footer), no extra space *@
+@{
+    var status = RemoteStatus();
+}
+<div class="remote-shell"
+     onmousedown="if (event.button === 0 && window.chrome?.webview && !event.target.closest('button,select,input')) window.chrome.webview.postMessage('beocontrol:drag')">
 
     @if (Selected == RemoteType.Beolink1000)
     {
-        <Beolink1000 OnCommand="SendCommand" DeviceStatus="@CurrentSourceDisplayText()" />
+        <Beolink1000 OnCommand="SendCommand" OnSetup="OpenSetup" DeviceStatus="@CurrentSourceDisplayText()" Status="@status" />
     }
     else
     {
-         string  song = Spotify.IsSourceSelected() ? Spotify.Song : string.Empty;
-         string interpret = Spotify.IsSourceSelected() ? Spotify.Interpret : string.Empty;
-         string source = CurrentSourceDisplayText();
-
-
-        <Beo4 OnCommand="SendCommand" DeviceStatus="@source" Song="@song" Info="@interpret" />
+        var song = Spotify.IsSourceSelected() ? Spotify.Song : string.Empty;
+        var interpret = Spotify.IsSourceSelected() ? Spotify.Interpret : string.Empty;
+        <Beo4 OnCommand="SendCommand" OnSetup="OpenSetup" DeviceStatus="@CurrentSourceDisplayText()" Status="@status" Song="@song" Info="@interpret" />
     }
     
-    <div style="width:var(--remote-width); margin:0 auto;">
-        <div style="padding:4px;" class="conn-bar conn-bar--@ConnectionState()">
-            <div style="display:flex; flex-direction:column; gap:4px; width:100%;">
-                <div style="display:flex; align-items:center; gap:6px;">
-                    <span class="conn-dot"></span>
-                    <span class="conn-text">@ConnectionLabel()</span>
-                    <button class="gear-btn" style="margin-left:auto;" title="Setup" onclick="window.chrome?.webview ? window.chrome.webview.postMessage('beocontrol:open-setup') : window.webkit?.messageHandlers?.beocontrol ? window.webkit.messageHandlers.beocontrol.postMessage('open-setup') : /Android|iPhone|iPad/.test(navigator.userAgent) ? Blazor.navigateTo('/setupwindow') : window.open('/setupwindow', 'beoSetup', `width=700,height=460,left=${screenX + outerWidth},top=${screenY}`)">⚙</button>
-                </div>
-                @if (DeviceService.Settings.SpotifyEnabled)
-                {
-                    var spotyCss = Spotify.IsSpotifyConnected() ? "connected" : "disconnected";
-                    <div style="display:flex; align-items:center; gap:6px;" class="conn-row--@spotyCss">
-                        <span class="conn-dot conn-row-dot--@spotyCss"></span>
-                        <span class="conn-text">@Spotify.SpotifyConnectionLabel()</span>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
+    @* hidden: setup opens from the remote (Beo4: LIST to BC SETUP, GO; Beolink 1000: SHIFT, MENU), which clicks this button *@
+    <button id="beo-setup" style="display:none;" title="Setup" onclick="window.chrome?.webview ? window.chrome.webview.postMessage('beocontrol:open-setup') : window.webkit?.messageHandlers?.beocontrol ? window.webkit.messageHandlers.beocontrol.postMessage('open-setup') : /Android|iPhone|iPad/.test(navigator.userAgent) ? Blazor.navigateTo('/setupwindow') : window.open('/setupwindow', 'beoSetup', `width=700,height=460,left=${screenX + outerWidth},top=${screenY}`)"></button>
+
 </div>
 
 
@@ -60,10 +48,6 @@
     private SourceStatusMessage? _sourceStatus;
     private BeoCommand? _currentSource;
     private SpotifyBridge Spotify =>  field ??= new(this);
-
-
-
-
 
     protected override void OnInitialized()
     {
@@ -100,8 +84,34 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    // Setup window changed zoom or remote type: reload, like Zoom() does
+    // Setup window changed zoom or remote type: reload
     private void OnSettingsChanged() => InvokeAsync(() => Nav.NavigateTo("/", true));
+
+    // Windows (WebView2) only: report the outline of the remote, the host cuts the
+    // borderless window to it ("beocontrol:shape:" + JSON, CSS px); re-reported on every size change
+    private const string ShapeReporter = """
+        (() => {
+          if (window.__beoShape || !window.chrome?.webview) return;
+          window.__beoShape = true;
+          let pending = 0;
+          const send = () => {
+            pending = 0;
+            const rects = [...document.querySelectorAll('.beo4, .bl1000')].map(e => {
+              const r = e.getBoundingClientRect();
+              return { x: r.left, y: r.top, w: r.width, h: r.height, r: parseFloat(getComputedStyle(e).borderTopLeftRadius) || 0 };
+            }).filter(r => r.w > 0 && r.h > 0);
+            window.chrome.webview.postMessage('beocontrol:shape:' + JSON.stringify({ dpr: devicePixelRatio, rects }));
+          };
+          const schedule = () => { if (!pending) pending = requestAnimationFrame(send); };
+          new ResizeObserver(schedule).observe(document.body);
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          window.addEventListener('resize', schedule);
+          schedule();
+        })()
+        """;
+
+    protected override Task OnAfterRenderAsync(bool firstRender) =>
+        firstRender ? JS.InvokeVoidAsync("eval", ShapeReporter).AsTask() : Task.CompletedTask;
 
     public void Dispose()
     {
@@ -110,14 +120,14 @@
         DeviceService.Settings.Changed -= OnSettingsChanged;
     }
 
+    // the hidden button knows how to open the setup on each host (WebView2, WebKitGTK, phone, browser)
+    private Task OpenSetup() => JS.InvokeVoidAsync("eval", "document.getElementById('beo-setup').click()").AsTask();
 
     private async Task SendCommand(BeoCommand command)
     {
-        var commandCaptured = await Spotify.HandleCommandAsync2(command);
-        
+        var commandCaptured = await Spotify.HandleCommandAsync(command);
         if (!commandCaptured)
             DeviceService.SendCommand(MapPc2TriggerCommand(command).Cmd);
-        
         await InvokeAsync(StateHasChanged);
     }
 
@@ -168,46 +178,14 @@
             : source;
     }
 
-   
     private bool IsConnecting =>
         !DeviceService.IsConnected && DeviceService.Status is DeviceStatus.Connecting or DeviceStatus.Discovering;
 
-    private string ConnectionState() =>
-        DeviceService.IsConnected ? "connected" : IsConnecting ? "working" : "disconnected";
-
-    private string ConnectionLabel()
-    {
-        var dev = DeviceService.CurrentDevice;
-        if (dev is null || !DeviceService.IsConnected)
-            return IsConnecting ? "CONNECTING…" : "DISCONNECTED";
-
-        var detail = dev.Type switch
-        {
-            DeviceType.USB => dev.Name is not null ? $"{dev.Name}  |  {dev.Id}" : dev.Id ?? "Serial",
-            DeviceType.BT     => dev.Name is not null ? $"{dev.Name}  |  BT" : "BT",
-            DeviceType.WIFI   => dev.Name is not null ? $"{dev.Name}  |  WIFI" : dev.Id ?? "WIFI",
-            DeviceType.PC2    => "PC2",
-            _                 => dev.Id ?? "Unknown"
-        };
-        return $"{detail}";
-    }
-
-   
-    
-
-    private void Zoom(MouseEventArgs args)
-    {
-        RemoteButton.Zoom = RemoteButton.Zoom switch
-        {
-            100 => 150,
-            150 => 200,
-            _ => 100
-        };
-        DeviceService.Settings.RemoteButtonZoom = RemoteButton.Zoom;
-        DeviceService.Settings.Save();
-        StateHasChanged();
-        Nav.NavigateTo("/", true);
-    }
+    // device problem always, Spotify problem only while the Spotify source is selected; null = all fine
+    private string? RemoteStatus() =>
+        !DeviceService.IsConnected ? (IsConnecting ? "CONNECTING" : "DISCONNECTED")
+        : Spotify.IsSourceSelected() && DeviceService.Settings.SpotifyEnabled && !Spotify.IsSpotifyConnected() ? "SPOTIFY DISCONNECTED"
+        : null;
 
     private static int NormalizeZoom(int zoom) => zoom switch
     {
