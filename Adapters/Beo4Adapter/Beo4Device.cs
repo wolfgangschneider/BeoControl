@@ -13,6 +13,10 @@ public sealed class Beo4Device : IDevice
     public bool IsConnected => _transport.IsConnected;
     public DeviceInfo Info { get; private set; } = new(DeviceType.USB, null, null);
 
+    /// <summary>Last "version" / "board" reply, kept for listeners that subscribe after Connect().</summary>
+    public string? FirmwareVersion { get; private set; }
+    public string? FirmwareBoard { get; private set; }
+
     public event Action<StatusMessage>? OnStatusChanged;
     public event Action<LogMessage>? OnLog;
 
@@ -26,9 +30,9 @@ public sealed class Beo4Device : IDevice
         {
             // replies to "version" and "board" (sent on connect)
             if (m.Text.StartsWith("Version:", StringComparison.OrdinalIgnoreCase))
-                OnStatusChanged?.Invoke(new FirmwareVersionMessage(m.Text["Version:".Length..].Trim()));
+                OnStatusChanged?.Invoke(new FirmwareVersionMessage(FirmwareVersion = m.Text["Version:".Length..].Trim()));
             if (m.Text.StartsWith("Board:", StringComparison.OrdinalIgnoreCase))
-                OnStatusChanged?.Invoke(new FirmwareBoardMessage(m.Text["Board:".Length..].Trim()));
+                OnStatusChanged?.Invoke(new FirmwareBoardMessage(FirmwareBoard = m.Text["Board:".Length..].Trim()));
             OnLog?.Invoke(m);
         };
     }

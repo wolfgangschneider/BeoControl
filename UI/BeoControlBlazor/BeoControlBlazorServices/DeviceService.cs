@@ -325,6 +325,9 @@ public class DeviceService : IDisposable
         if (_device is not null)
         {
             _device.OnStatusChanged += OnDeviceStatusChanged;
+            // replies that arrived during Connect(), before this subscription (fast over USB)
+            if (_device is Beo4Device beo4)
+                (FirmwareVersion, FirmwareBoard) = (beo4.FirmwareVersion, beo4.FirmwareBoard);
             if (_device is Pc2Device nextPc2)
             {
                 nextPc2.OnStore += OnPc2Store;
